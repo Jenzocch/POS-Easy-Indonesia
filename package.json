@@ -39,6 +39,10 @@
   "build": {
     "appId": "com.posEasy.desktop",
     "productName": "POS Easy",
+    "publish": {
+      "provider": "github",
+      "releaseType": "release"
+    },
     "copyright": "Copyright © 2026 Chroma Street Studio",
     "directories": {
       "output": "release"
