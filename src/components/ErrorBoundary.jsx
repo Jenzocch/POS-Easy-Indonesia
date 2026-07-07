@@ -1,4 +1,5 @@
 import React from 'react'
+import { t } from '../i18n'
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -26,7 +27,7 @@ export default class ErrorBoundary extends React.Component {
           minHeight: '100vh',
           overflow: 'auto',
         }}>
-          <h2 style={{ color: '#c25550', marginBottom: 16 }}>應用程式發生錯誤</h2>
+          <h2 style={{ color: '#c25550', marginBottom: 16 }}>{t('err.title')}</h2>
           <pre style={{
             background: '#fff',
             padding: 16,
@@ -41,7 +42,7 @@ export default class ErrorBoundary extends React.Component {
             {this.state.error?.stack}
           </pre>
           <details style={{ marginTop: 16, color: '#6b6860' }}>
-            <summary style={{ cursor: 'pointer' }}>元件堆疊</summary>
+            <summary style={{ cursor: 'pointer' }}>{t('err.component_stack')}</summary>
             <pre style={{ fontSize: 11, marginTop: 8 }}>
               {this.state.errorInfo?.componentStack}
             </pre>
@@ -55,9 +56,9 @@ export default class ErrorBoundary extends React.Component {
               borderRadius: 8,
               cursor: 'pointer',
               fontSize: 14,
-            }}>重新載入</button>
+            }}>{t('err.reload')}</button>
             <button onClick={() => {
-              if (confirm('清除所有本地資料？只清 localStorage，SQLite 資料保留')) {
+              if (confirm(t('err.clear_confirm'))) {
                 localStorage.clear()
                 location.reload()
               }
@@ -69,7 +70,7 @@ export default class ErrorBoundary extends React.Component {
               borderRadius: 8,
               cursor: 'pointer',
               fontSize: 14,
-            }}>清除快取重啟</button>
+            }}>{t('err.clear_cache')}</button>
           </div>
         </div>
       )

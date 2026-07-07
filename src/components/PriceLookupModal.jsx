@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { Search, X, Tag } from 'lucide-react'
+import { t, fmtMoney } from '../i18n'
 
 export default function PriceLookupModal({ products, onClose }) {
   const [q, setQ] = useState('')
@@ -21,7 +22,7 @@ export default function PriceLookupModal({ products, onClose }) {
         <div style={pl.head}>
           <Search size={16} color="var(--text-tertiary)"/>
           <input ref={inputRef} value={q} onChange={e=>setQ(e.target.value)}
-            placeholder="搜尋商品名稱、條碼或分類..."
+            placeholder={t('pos.lookup_placeholder')}
             style={{flex:1, fontSize:16, color:'var(--text-primary)'}}
             onKeyDown={e => { if (e.key === 'Escape') onClose() }}/>
           <button onClick={onClose} style={{padding:6}}><X size={18}/></button>
@@ -29,7 +30,7 @@ export default function PriceLookupModal({ products, onClose }) {
         <div style={pl.list}>
           {results.length === 0 ? (
             <div style={{textAlign:'center', padding:40, color:'var(--text-tertiary)', fontSize:13}}>
-              查無商品
+              {t('pos.no_products_found')}
             </div>
           ) : results.map(p => (
             <div key={p.id} style={pl.row}>
@@ -44,7 +45,7 @@ export default function PriceLookupModal({ products, onClose }) {
                       {p.name}
                     </div>
                     <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:2}}>
-                      {p.category} · 庫存 {p.stock} {p.unit}
+                      {p.category} · {t('pos.stock')} {p.stock} {p.unit}
                       {p.barcode && ` · ${p.barcode}`}
                     </div>
                   </div>
@@ -52,7 +53,7 @@ export default function PriceLookupModal({ products, onClose }) {
               </div>
               <div style={{textAlign:'right', flexShrink:0, marginLeft:12}}>
                 <div style={{fontFamily:'var(--font-mono)', fontSize:18, fontWeight:600, color:'var(--gold)'}}>
-                  ${p.price}
+                  {fmtMoney(p.price)}
                 </div>
                 <div style={{fontSize:10, color:'var(--text-tertiary)'}}>/ {p.unit}</div>
               </div>
@@ -60,7 +61,7 @@ export default function PriceLookupModal({ products, onClose }) {
           ))}
         </div>
         <div style={pl.foot}>
-          <span style={{fontSize:11, color:'var(--text-tertiary)'}}>共 {results.length} 項 · 按 Esc 關閉</span>
+          <span style={{fontSize:11, color:'var(--text-tertiary)'}}>{t('pos.lookup_footer', { n: results.length })}</span>
         </div>
       </div>
     </>

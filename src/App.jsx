@@ -21,6 +21,7 @@ import ShiftPage from './pages/ShiftPage'
 import WastePage from './pages/WastePage'
 import { isElectron } from './utils/dataAccess'
 import useIsMobile from './hooks/useIsMobile'
+import { t } from './i18n'
 
 const AUTO_SYNC_INTERVAL_MS = 10 * 60 * 1000 // 上次同步超過 10 分鐘才自動 pull
 
@@ -44,7 +45,7 @@ export default function App() {
 
   const handleLogout = useCallback(() => {
     writeAuditLog('LOGOUT', session, {})
-    if (session) createBackup(session, '自動備份（登出）')
+    if (session) createBackup(session, t('login.backup_logout'))
     destroySession()
     setSession(null)
   }, [session])
@@ -54,7 +55,7 @@ export default function App() {
     const backups = JSON.parse(localStorage.getItem('pos_backups') || '[]')
     const today = new Date().toDateString()
     const hasToday = backups.some(b => new Date(b.createdAt).toDateString() === today)
-    if (!hasToday) createBackup(newSession, '自動備份（' + today + '）')
+    if (!hasToday) createBackup(newSession, t('login.backup_daily', { date: today }))
 
     // 自動拉取雲端最新（只在有設定 + 上次同步太久）
     const cloudCfg = getCloudConfig()
@@ -92,7 +93,7 @@ export default function App() {
 
   if (!store.ready) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',background:'var(--bg-base)',color:'var(--text-secondary)',fontSize:14}}>
-      載入中...
+      {t('common.loading')}
     </div>
   )
   if (!session) return <LoginScreen onLogin={handleLogin}/>
@@ -100,10 +101,10 @@ export default function App() {
   const can = (perm) => hasPermission(session, perm)
 
   const NAV_LABELS = {
-    dashboard:'首頁', pos:'收銀台', shifts:'班別交班',
-    inventory:'庫存管理', purchase:'進貨管理', waste:'損耗管理',
-    stocktake:'每日盤點', promotions:'促銷活動', members:'會員',
-    reports:'報表分析', accounting:'會計帳務', orders:'顧客點餐', settings:'設定',
+    dashboard:t('nav.dashboard'), pos:t('nav.pos'), shifts:t('nav.shifts'),
+    inventory:t('nav.inventory'), purchase:t('nav.purchase'), waste:t('nav.waste'),
+    stocktake:t('nav.stocktake'), promotions:t('nav.promotions'), members:t('nav.members'),
+    reports:t('nav.reports'), accounting:t('nav.accounting'), orders:t('nav.orders'), settings:t('nav.settings'),
   }
 
   return (
@@ -163,13 +164,13 @@ export default function App() {
             }}/>
             <div style={{textAlign:'center'}}>
               <div style={{fontWeight:600, fontSize:15}}>
-                {autoSync === 'syncing' && '同步雲端資料中...'}
-                {autoSync === 'done' && '✓ 同步完成，重新載入中'}
-                {autoSync === 'failed' && '雲端同步失敗，使用本機資料'}
+                {autoSync === 'syncing' && t('login.sync_syncing')}
+                {autoSync === 'done' && t('login.sync_done')}
+                {autoSync === 'failed' && t('login.sync_failed')}
               </div>
               <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:4}}>
-                {autoSync === 'syncing' && '從雲端拉取最新資料'}
-                {autoSync === 'failed' && '檢查網路或稍後再從設定手動同步'}
+                {autoSync === 'syncing' && t('login.sync_pulling')}
+                {autoSync === 'failed' && t('login.sync_check_network')}
               </div>
             </div>
           </div>

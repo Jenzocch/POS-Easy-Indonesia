@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Trash2, Plus, Minus, User, X, CreditCard, Banknote, Check, ChevronRight, Gift, Printer, Pause, Percent, Wallet, Receipt, ShoppingCart } from 'lucide-react'
+import { t, fmtMoney } from '../i18n'
 
 export default function CartPanel({
   cart, cartSubtotal, activeMember,
@@ -47,7 +48,7 @@ export default function CartPanel({
   function handleFindMember() {
     const m = onFindMember(memberQuery)
     if (m) { onSelectMember(m); setMemberError(''); setMemberQuery('') }
-    else setMemberError('查無此會員')
+    else setMemberError(t('pos.member_not_found'))
   }
 
   function handleCheckout() {
@@ -109,41 +110,41 @@ export default function CartPanel({
     <div style={cs.panel}>
       <div style={cs.doneWrap}>
         <div style={cs.doneCheck}><Check size={28} strokeWidth={2.5} /></div>
-        <div style={{fontSize:16, fontWeight:600, color:'var(--text-primary)', marginBottom:6}}>結帳完成</div>
+        <div style={{fontSize:16, fontWeight:600, color:'var(--text-primary)', marginBottom:6}}>{t('pos.checkout_done')}</div>
         <div style={{fontFamily:'var(--font-mono)', fontSize:32, fontWeight:500, letterSpacing:'-.02em', marginBottom:4}}>
-          NT$ {lastOrder.total.toLocaleString()}
+          {fmtMoney(lastOrder.total)}
         </div>
         {lastOrder.payMethod === 'cash' && lastOrder.change > 0 && (
           <div style={{fontSize:13, color:'var(--text-secondary)'}}>
-            找零 <span style={{color:'var(--gold)', fontFamily:'var(--font-mono)', fontWeight:500}}>NT$ {lastOrder.change.toLocaleString()}</span>
+            {t('pos.change')} <span style={{color:'var(--gold)', fontFamily:'var(--font-mono)', fontWeight:500}}>{fmtMoney(lastOrder.change)}</span>
           </div>
         )}
         {lastOrder.payMethod === 'mixed' && lastOrder.payments?.length > 0 && (
           <div style={{fontSize:12, color:'var(--text-secondary)', marginTop:6}}>
             {lastOrder.payments.map((p,i) => (
-              <span key={i}>{i>0?' · ':''}{p.method === 'cash' ? '現金' : '電子'} ${p.amount}</span>
+              <span key={i}>{i>0?' · ':''}{p.method === 'cash' ? t('pos.cash') : t('pos.digital_short')} {fmtMoney(p.amount)}</span>
             ))}
           </div>
         )}
         {lastOrder.taxId && (
-          <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:4}}>統編 {lastOrder.taxId}</div>
+          <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:4}}>{t('pos.tax_id_display', { taxId: lastOrder.taxId })}</div>
         )}
         {lastOrder.pointsEarned > 0 && (
           <div style={{marginTop:12, background:'var(--gold-dim)', borderRadius:8, padding:'8px 14px', fontSize:12, color:'var(--gold-bright)', display:'flex', alignItems:'center', gap:6}}>
-            <Gift size={13}/> 獲得 {lastOrder.pointsEarned} 點
+            <Gift size={13}/> {t('pos.points_earned_msg', { n: lastOrder.pointsEarned })}
           </div>
         )}
-        <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:12}}>訂單 {lastOrder.id}</div>
+        <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:12}}>{t('pos.order_no', { id: lastOrder.id })}</div>
         {window.electronAPI && (
           <button className="btn btn-ghost btn-sm"
             style={{marginTop:12, display:'flex', alignItems:'center', gap:6, justifyContent:'center', width:'100%'}}
             onClick={() => window.electronAPI.printer.printReceipt(lastOrder).catch(() => {})}>
-            <Printer size={14}/> 列印收據
+            <Printer size={14}/> {t('pos.print_receipt')}
           </button>
         )}
       </div>
       <div style={cs.stageFooter}>
-        <button className="btn btn-primary" style={{width:'100%', padding:14}} onClick={reset}>繼續收銀</button>
+        <button className="btn btn-primary" style={{width:'100%', padding:14}} onClick={reset}>{t('pos.continue_sale')}</button>
       </div>
     </div>
   )
@@ -152,7 +153,7 @@ export default function CartPanel({
   if (stage === 'pay') return (
     <div style={cs.panel}>
       <div style={cs.panelHeader}>
-        <span style={{fontWeight:600}}>確認付款</span>
+        <span style={{fontWeight:600}}>{t('pos.confirm_payment')}</span>
         <button className="btn-icon" onClick={() => setStage('cart')}><X size={16}/></button>
       </div>
       <div style={cs.stageContent}>
@@ -162,14 +163,14 @@ export default function CartPanel({
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8}}>
               <div style={{fontSize:12, color:'var(--text-secondary)'}}>
                 <Gift size={12} style={{marginRight:4, verticalAlign:'middle'}}/>
-                {activeMember.name}：{activeMember.points} 點
+                {t('pos.member_points', { name: activeMember.name, points: activeMember.points })}
               </div>
               <button onClick={() => setPointsUsed(p => p > 0 ? 0 : maxPointsByCart)} style={{fontSize:11, color:'var(--gold)', background:'none'}}>
-                {pointsUsed > 0 ? '取消折抵' : '全部折抵'}
+                {pointsUsed > 0 ? t('pos.cancel_redeem') : t('pos.redeem_all')}
               </button>
             </div>
             {pointsUsed > 0 && (
-              <div style={{fontSize:12, color:'var(--gold)'}}>折抵 {pointsUsed} 點 = -NT$ {pointsDiscount}</div>
+              <div style={{fontSize:12, color:'var(--gold)'}}>{t('pos.redeem_line', { n: pointsUsed, amt: fmtMoney(pointsDiscount) })}</div>
             )}
           </div>
         )}
@@ -180,26 +181,26 @@ export default function CartPanel({
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8}}>
               <div style={{fontSize:12, color:'var(--text-secondary)'}}>
                 <Wallet size={12} style={{marginRight:4, verticalAlign:'middle'}}/>
-                儲值餘額 NT$ {memberBalance.toLocaleString()}
+                {t('pos.balance')} {fmtMoney(memberBalance)}
               </div>
               <button onClick={() => {
                 const max = Math.min(memberBalance, cartSubtotal - pointsDiscount - manualDiscount)
                 setBalanceUsed(p => p > 0 ? 0 : Math.max(0, max))
               }} style={{fontSize:11, color:'var(--teal)', background:'none'}}>
-                {balanceUsed > 0 ? '取消使用' : '全額使用'}
+                {balanceUsed > 0 ? t('pos.cancel_use') : t('pos.use_all')}
               </button>
             </div>
             {balanceUsed > 0 && (
-              <div style={{fontSize:12, color:'var(--teal)'}}>使用儲值 NT$ {balanceUsed.toLocaleString()}</div>
+              <div style={{fontSize:12, color:'var(--teal)'}}>{t('pos.balance_used_line', { amt: fmtMoney(balanceUsed) })}</div>
             )}
           </div>
         )}
 
         <div style={cs.totalDisplay}>
-          <div style={{fontSize:11, color:'var(--accent-deep)', fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', marginBottom:6}}>應付金額</div>
+          <div style={{fontSize:11, color:'var(--accent-deep)', fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', marginBottom:6}}>{t('pos.amount_due')}</div>
           {totalDiscount > 0 && (
             <div style={{fontSize:13, color:'var(--text-tertiary)', textDecoration:'line-through', fontFamily:'var(--font-mono)', marginBottom:4}}>
-              NT$ {cartSubtotal.toLocaleString()}
+              {fmtMoney(cartSubtotal)}
             </div>
           )}
           <div style={{
@@ -210,18 +211,18 @@ export default function CartPanel({
             backgroundClip:'text',
             lineHeight:1.1,
           }}>
-            ${total.toLocaleString()}
+            {fmtMoney(total)}
           </div>
           {pointsEarned > 0 && (
             <div style={{fontSize:12, color:'var(--gold-bright)', marginTop:8, fontWeight:600, display:'inline-flex', alignItems:'center', gap:4, padding:'4px 10px', background:'var(--gold-dim)', borderRadius:'var(--r-pill)'}}>
-              <Gift size={11}/> +{pointsEarned} 點
+              <Gift size={11}/> {t('pos.plus_points', { n: pointsEarned })}
             </div>
           )}
         </div>
 
         {/* 付款方式切換 */}
         <div style={{display:'flex', gap:8, marginBottom:12}}>
-          {[['cash','現金',Banknote],['card','電子支付',CreditCard]].map(([k,l,Icon])=>(
+          {[['cash',t('pos.cash'),Banknote],['card',t('pos.card'),CreditCard]].map(([k,l,Icon])=>(
             <button key={k} onClick={()=>{setPayMethod(k); setSplitMode(false)}} style={{...cs.methodBtn,
               background: !splitMode && payMethod===k?'var(--gold)':'var(--bg-overlay)',
               color: !splitMode && payMethod===k?'#fff':'var(--text-secondary)',
@@ -235,7 +236,7 @@ export default function CartPanel({
             color: splitMode?'#fff':'var(--text-secondary)',
             border:`1px solid ${splitMode?'var(--gold)':'var(--border-subtle)'}`,
             flex:'0 0 auto', padding:'10px 12px',
-          }} title="混合付款">
+          }} title={t('pos.mixed_payment')}>
             ＋
           </button>
         </div>
@@ -243,19 +244,19 @@ export default function CartPanel({
         {/* 混合付款 */}
         {splitMode && (
           <div style={{padding:'12px 14px', background:'var(--bg-overlay)', borderRadius:8, marginBottom:12}}>
-            <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:6}}>分開付款</div>
+            <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:6}}>{t('pos.split_payment')}</div>
             <div style={{display:'flex', gap:6, marginBottom:6, alignItems:'center'}}>
               <Banknote size={14} style={{color:'var(--text-secondary)', flexShrink:0}}/>
-              <span style={{fontSize:12, color:'var(--text-secondary)', width:40}}>現金</span>
+              <span style={{fontSize:12, color:'var(--text-secondary)', width:40}}>{t('pos.cash')}</span>
               <input className="field" type="number" value={splitCash} onChange={e=>setSplitCash(e.target.value)} placeholder="0" style={{flex:1, padding:'6px 10px'}}/>
             </div>
             <div style={{display:'flex', gap:6, marginBottom:6, alignItems:'center'}}>
               <CreditCard size={14} style={{color:'var(--text-secondary)', flexShrink:0}}/>
-              <span style={{fontSize:12, color:'var(--text-secondary)', width:40}}>電子</span>
+              <span style={{fontSize:12, color:'var(--text-secondary)', width:40}}>{t('pos.digital_short')}</span>
               <input className="field" type="number" value={splitCard} onChange={e=>setSplitCard(e.target.value)} placeholder="0" style={{flex:1, padding:'6px 10px'}}/>
             </div>
             <div style={{fontSize:11, color: splitOK ? 'var(--green)' : 'var(--red)', marginTop:4}}>
-              {splitOK ? `✓ 合計 NT$ ${splitTotal}` : `差額 NT$ ${(total - splitTotal).toLocaleString()}`}
+              {splitOK ? t('pos.split_ok', { amt: fmtMoney(splitTotal) }) : t('pos.split_diff', { amt: fmtMoney(total - splitTotal) })}
             </div>
           </div>
         )}
@@ -263,23 +264,23 @@ export default function CartPanel({
         {/* 現金付款輸入 */}
         {!splitMode && payMethod === 'cash' && (
           <>
-            <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:6}}>收款金額</div>
-            <input className="field" type="number" value={paidInput} onChange={e=>setPaidInput(e.target.value)} placeholder="輸入金額" style={{fontSize:22, fontFamily:'var(--font-mono)', marginBottom:10, width:'100%'}}/>
+            <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:6}}>{t('pos.amount_received')}</div>
+            <input className="field" type="number" value={paidInput} onChange={e=>setPaidInput(e.target.value)} placeholder={t('pos.enter_amount')} style={{fontSize:22, fontFamily:'var(--font-mono)', marginBottom:10, width:'100%'}}/>
             <div style={{display:'flex', gap:6, flexWrap:'wrap', marginBottom:12}}>
               {quickAmounts.map(a => (
                 <button key={a} onClick={()=>setPaidInput(String(a))} style={{...cs.quickBtn,
                   background: parseFloat(paidInput)===a?'var(--bg-active)':'var(--bg-overlay)',
                   border: parseFloat(paidInput)===a?'1px solid var(--border-mid)':'1px solid var(--border-dim)',
                 }}>
-                  {a === total ? <span style={{color:'var(--green)'}}>剛好</span> : `${a}`}
+                  {a === total ? <span style={{color:'var(--green)'}}>{t('pos.exact_amount')}</span> : fmtMoney(a)}
                 </button>
               ))}
             </div>
             {paid > 0 && (
               <div style={{...cs.changeRow, background: change>=0?'var(--green-dim)':'var(--red-dim)', borderColor: change>=0?'rgba(52,201,122,0.2)':'rgba(229,90,90,0.2)'}}>
-                <span style={{color:'var(--text-secondary)', fontSize:13}}>找零</span>
+                <span style={{color:'var(--text-secondary)', fontSize:13}}>{t('pos.change')}</span>
                 <span style={{fontFamily:'var(--font-mono)', fontWeight:600, color: change>=0?'var(--green)':'var(--red)'}}>
-                  NT$ {change.toLocaleString()}
+                  {fmtMoney(change)}
                 </span>
               </div>
             )}
@@ -290,9 +291,9 @@ export default function CartPanel({
         <details style={{marginTop:8}}>
           <summary style={{fontSize:12, color:'var(--text-secondary)', cursor:'pointer', padding:'4px 0'}}>
             <Receipt size={11} style={{verticalAlign:'middle', marginRight:4}}/>
-            開立統編 {taxId && <span style={{color:'var(--gold)'}}>· {taxId}</span>}
+            {t('pos.tax_id_toggle')} {taxId && <span style={{color:'var(--gold)'}}>· {taxId}</span>}
           </summary>
-          <input className="field" value={taxId} onChange={e=>setTaxId(e.target.value.replace(/\D/g,'').slice(0,8))} placeholder="統一編號 (8 碼)" style={{marginTop:6, width:'100%'}}/>
+          <input className="field" value={taxId} onChange={e=>setTaxId(e.target.value.replace(/\D/g,'').slice(0,8))} placeholder={t('pos.tax_id_placeholder')} style={{marginTop:6, width:'100%'}}/>
         </details>
       </div>
       <div style={cs.stageFooter}>
@@ -302,7 +303,7 @@ export default function CartPanel({
           }}
           disabled={splitMode ? !splitOK : (payMethod==='cash' && paid < total)}
           onClick={handleCheckout}>
-          確認收款
+          {t('pos.confirm_charge')}
         </button>
       </div>
     </div>
@@ -312,14 +313,14 @@ export default function CartPanel({
   if (stage === 'member') return (
     <div style={cs.panel}>
       <div style={cs.panelHeader}>
-        <span style={{fontWeight:600}}>綁定會員</span>
+        <span style={{fontWeight:600}}>{t('pos.bind_member')}</span>
         <button className="btn-icon" onClick={()=>setStage('cart')}><X size={16}/></button>
       </div>
       <div style={cs.stageContent}>
-        <p style={{fontSize:13, color:'var(--text-secondary)', marginBottom:16}}>輸入手機號碼或姓名查詢</p>
+        <p style={{fontSize:13, color:'var(--text-secondary)', marginBottom:16}}>{t('pos.member_search_hint')}</p>
         <div style={{display:'flex', gap:8, marginBottom:8}}>
-          <input className="field" value={memberQuery} onChange={e=>{setMemberQuery(e.target.value);setMemberError('')}} placeholder="0912-345-678 或 姓名" style={{flex:1, minWidth:0}} onKeyDown={e=>e.key==='Enter'&&handleFindMember()}/>
-          <button className="btn btn-ghost btn-sm" onClick={handleFindMember} style={{flexShrink:0}}>查詢</button>
+          <input className="field" value={memberQuery} onChange={e=>{setMemberQuery(e.target.value);setMemberError('')}} placeholder={t('pos.member_search_placeholder')} style={{flex:1, minWidth:0}} onKeyDown={e=>e.key==='Enter'&&handleFindMember()}/>
+          <button className="btn btn-ghost btn-sm" onClick={handleFindMember} style={{flexShrink:0}}>{t('common.search')}</button>
         </div>
         {memberError && <div style={{fontSize:12, color:'var(--red)', marginBottom:12}}>{memberError}</div>}
         {activeMember && (
@@ -329,18 +330,18 @@ export default function CartPanel({
               <div style={{fontWeight:600, fontSize:14, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{activeMember.name}</div>
               <div style={{fontSize:12, color:'var(--text-secondary)'}}>{activeMember.phone}</div>
               <div style={{fontSize:12, color:'var(--gold)', marginTop:2}}>
-                {activeMember.points} 點 · {TIER_LABEL[activeMember.tier]}
-                {memberBalance > 0 && <span style={{color:'var(--teal)'}}> · 餘額 ${memberBalance.toLocaleString()}</span>}
+                {t('pos.points_count', { n: activeMember.points })} · {t(TIER_LABEL_KEY[activeMember.tier])}
+                {memberBalance > 0 && <span style={{color:'var(--teal)'}}> · {t('pos.balance_short')} {fmtMoney(memberBalance)}</span>}
               </div>
             </div>
-            <span className={`badge badge-${TIER_COLOR[activeMember.tier]}`} style={{flexShrink:0}}>{TIER_LABEL[activeMember.tier]}</span>
+            <span className={`badge badge-${TIER_COLOR[activeMember.tier]}`} style={{flexShrink:0}}>{t(TIER_LABEL_KEY[activeMember.tier])}</span>
           </div>
         )}
       </div>
       <div style={{...cs.stageFooter, display:'flex', gap:8}}>
-        {activeMember && <button className="btn btn-ghost" style={{flex:1}} onClick={()=>{ onSelectMember(null); setStage('cart') }}>移除會員</button>}
+        {activeMember && <button className="btn btn-ghost" style={{flex:1}} onClick={()=>{ onSelectMember(null); setStage('cart') }}>{t('pos.remove_member')}</button>}
         <button className="btn btn-primary" style={{flex:1}} onClick={()=>setStage('cart')}>
-          {activeMember ? '確認' : '略過'}
+          {activeMember ? t('common.confirm') : t('pos.skip')}
         </button>
       </div>
     </div>
@@ -351,15 +352,15 @@ export default function CartPanel({
     <div style={cs.panel}>
       <div style={cs.panelHeader}>
         <span style={{fontWeight:600, display:'flex', alignItems:'center', gap:8}}>
-          購物車
-          {cart.length > 0 && <span className="badge badge-blue">{cart.reduce((s,i)=>s+i.qty,0)} 件</span>}
+          {t('pos.cart')}
+          {cart.length > 0 && <span className="badge badge-blue">{t('pos.items_count', { n: cart.reduce((s,i)=>s+i.qty,0) })}</span>}
         </span>
         <div style={{display:'flex', gap:6}}>
           {cart.length > 0 && onHold && (
-            <button className="btn-icon" onClick={()=>setShowHoldDlg(true)} title="掛單"><Pause size={15}/></button>
+            <button className="btn-icon" onClick={()=>setShowHoldDlg(true)} title={t('pos.hold')}><Pause size={15}/></button>
           )}
           {cart.length > 0 && (
-            <button className="btn-icon" onClick={onClear} title="清空購物車"><Trash2 size={15}/></button>
+            <button className="btn-icon" onClick={onClear} title={t('pos.clear_cart')}><Trash2 size={15}/></button>
           )}
         </div>
       </div>
@@ -368,10 +369,10 @@ export default function CartPanel({
         <User size={14} style={{color: activeMember?'var(--gold)':'var(--text-tertiary)'}}/>
         {activeMember
           ? <span style={{color:'var(--gold)', fontWeight:500, fontSize:13}}>
-              {activeMember.name} · {activeMember.points} 點
-              {memberBalance > 0 && <span style={{color:'var(--teal)'}}> · ${memberBalance}</span>}
+              {activeMember.name} · {t('pos.points_count', { n: activeMember.points })}
+              {memberBalance > 0 && <span style={{color:'var(--teal)'}}> · {fmtMoney(memberBalance)}</span>}
             </span>
-          : <span style={{color:'var(--text-tertiary)', fontSize:13}}>綁定會員（選填）</span>
+          : <span style={{color:'var(--text-tertiary)', fontSize:13}}>{t('pos.bind_member_optional')}</span>
         }
         <ChevronRight size={14} style={{marginLeft:'auto', color:'var(--text-tertiary)'}}/>
       </button>
@@ -387,8 +388,8 @@ export default function CartPanel({
             }}>
               <ShoppingCart size={28} color="var(--text-tertiary)"/>
             </div>
-            <div style={{color:'var(--text-secondary)', fontSize:14, fontWeight:600}}>購物車空空的</div>
-            <div style={{color:'var(--text-tertiary)', fontSize:12}}>掃描條碼或點選商品來加入</div>
+            <div style={{color:'var(--text-secondary)', fontSize:14, fontWeight:600}}>{t('pos.cart_empty')}</div>
+            <div style={{color:'var(--text-tertiary)', fontSize:12}}>{t('pos.cart_empty_hint')}</div>
           </div>
         ) : cart.map((item, idx) => (
           <div key={item.id} className="animate-up" style={{...cs.cartItem, animationDelay:`${idx*30}ms`}}>
@@ -397,7 +398,7 @@ export default function CartPanel({
               <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:1}}>
                 {editingPriceId === item.id ? (
                   <span>
-                    <span>$ </span>
+                    <span>Rp </span>
                     <input type="number" value={priceInput} autoFocus
                       onChange={e=>setPriceInput(e.target.value)}
                       onBlur={()=>commitEditPrice(item)}
@@ -406,7 +407,7 @@ export default function CartPanel({
                   </span>
                 ) : (
                   <span onClick={()=>onUpdatePrice && startEditPrice(item)} style={{cursor: onUpdatePrice ? 'pointer' : 'default', textDecoration: onUpdatePrice ? 'underline dotted' : 'none', textUnderlineOffset:2}}>
-                    {item.category} · ${item.price}
+                    {item.category} · {fmtMoney(item.price)}
                   </span>
                 )}
               </div>
@@ -418,9 +419,9 @@ export default function CartPanel({
             </div>
             <div style={{textAlign:'right', minWidth:64}}>
               <div style={{fontFamily:'var(--font-mono)', fontSize:13, color:'var(--text-primary)', fontWeight:500}}>
-                {(item.price * item.qty).toLocaleString()}
+                {fmtMoney(item.price * item.qty)}
               </div>
-              <button style={{fontSize:10, color:'var(--text-tertiary)', marginTop:2, display:'block', marginLeft:'auto'}} onClick={()=>onRemove(item.id)}>移除</button>
+              <button style={{fontSize:10, color:'var(--text-tertiary)', marginTop:2, display:'block', marginLeft:'auto'}} onClick={()=>onRemove(item.id)}>{t('pos.remove')}</button>
             </div>
           </div>
         ))}
@@ -431,19 +432,19 @@ export default function CartPanel({
           {/* 手動折讓 */}
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
             <span style={{color:'var(--text-secondary)', fontSize:13, display:'flex', alignItems:'center', gap:4}}>
-              <Percent size={12}/> 整單折讓
+              <Percent size={12}/> {t('pos.manual_discount')}
             </span>
             <input type="number" value={manualDiscount || ''} onChange={e=>setManualDiscount(parseFloat(e.target.value) || 0)}
               placeholder="0" style={{width:80, textAlign:'right', fontFamily:'var(--font-mono)', fontSize:13, background:'var(--bg-overlay)', borderRadius:4, padding:'4px 8px', border:'1px solid var(--border-dim)'}}/>
           </div>
           <div style={cs.subtotalRow}>
-            <span style={{color:'var(--text-secondary)', fontSize:13}}>小計</span>
+            <span style={{color:'var(--text-secondary)', fontSize:13}}>{t('common.subtotal')}</span>
             <span style={{fontFamily:'var(--font-mono)', fontSize:22, fontWeight:500}}>
-              NT$ {Math.max(0, cartSubtotal - (manualDiscount || 0)).toLocaleString()}
+              {fmtMoney(Math.max(0, cartSubtotal - (manualDiscount || 0)))}
             </span>
           </div>
           <button className="btn btn-primary" style={{width:'100%', padding:'14px', fontSize:15, letterSpacing:'.04em'}} onClick={()=>setStage('pay')}>
-            前往結帳 →
+            {t('pos.go_checkout')} →
           </button>
         </div>
       )}
@@ -452,12 +453,12 @@ export default function CartPanel({
         <>
           <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:998}} onClick={()=>setShowHoldDlg(false)}/>
           <div style={{position:'fixed', top:'40%', left:'50%', transform:'translate(-50%,-50%)', background:'var(--bg-raised)', borderRadius:12, width:340, maxWidth:'90vw', boxShadow:'var(--shadow-lg)', zIndex:999, padding:20}}>
-            <div style={{fontWeight:600, fontSize:15, marginBottom:12}}>掛單</div>
-            <input className="field" placeholder="標籤（選填，例：黃先生）" value={holdLabel} onChange={e=>setHoldLabel(e.target.value)} autoFocus
+            <div style={{fontWeight:600, fontSize:15, marginBottom:12}}>{t('pos.hold')}</div>
+            <input className="field" placeholder={t('pos.hold_label_placeholder')} value={holdLabel} onChange={e=>setHoldLabel(e.target.value)} autoFocus
               onKeyDown={e=>{ if(e.key==='Enter') handleHold() }}/>
             <div style={{display:'flex', gap:8, marginTop:12}}>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setShowHoldDlg(false)}>取消</button>
-              <button className="btn btn-primary" style={{flex:1}} onClick={handleHold}>掛單</button>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setShowHoldDlg(false)}>{t('common.cancel')}</button>
+              <button className="btn btn-primary" style={{flex:1}} onClick={handleHold}>{t('pos.hold')}</button>
             </div>
           </div>
         </>
@@ -466,7 +467,7 @@ export default function CartPanel({
   )
 }
 
-const TIER_LABEL = { normal:'一般', silver:'銀卡', gold:'金卡' }
+const TIER_LABEL_KEY = { normal:'pos.tier_normal', silver:'pos.tier_silver', gold:'pos.tier_gold' }
 const TIER_COLOR = { normal:'blue', silver:'blue', gold:'gold' }
 
 const cs = {

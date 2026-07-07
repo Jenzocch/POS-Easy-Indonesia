@@ -2,21 +2,23 @@ import { useState, useEffect } from 'react'
 import { ShoppingCart, Package, BarChart2, Users, BookOpen, Truck, ClipboardList, Tag, Settings, AlertTriangle, LogOut, Bell, LayoutDashboard, Clock, Trash2, Sparkles } from 'lucide-react'
 import { ROLES, hasPermission } from '../utils/security'
 import SyncStatusBadge from './SyncStatusBadge'
+import { t, fmtMoney, getCurrentLanguage } from '../i18n'
 
+// label 於渲染時以 t('nav.'+key) 取得
 const NAV = [
-  { key:'dashboard',  label:'首頁',     Icon:LayoutDashboard, perm:'pos.use', accent:'gold' },
-  { key:'pos',        label:'收銀台',   Icon:ShoppingCart,    perm:'pos.use', accent:'green' },
-  { key:'shifts',     label:'班別交班', Icon:Clock,           perm:'pos.use', accent:'teal' },
-  { key:'inventory',  label:'庫存管理', Icon:Package,         perm:'inventory.view', accent:'blue' },
-  { key:'purchase',   label:'進貨管理', Icon:Truck,           perm:'purchase.view', accent:'purple' },
-  { key:'waste',      label:'損耗管理', Icon:Trash2,          perm:'inventory.view', accent:'red' },
-  { key:'stocktake',  label:'每日盤點', Icon:ClipboardList,   perm:'stocktake.view', accent:'amber' },
-  { key:'promotions', label:'促銷活動', Icon:Tag,             perm:'promotions.view', accent:'pink' },
-  { key:'members',    label:'會員',     Icon:Users,           perm:'members.view', accent:'gold' },
-  { key:'reports',    label:'報表分析', Icon:BarChart2,       perm:'reports.view', accent:'blue' },
-  { key:'accounting', label:'會計帳務', Icon:BookOpen,        perm:'accounting.view', accent:'teal' },
-  { key:'orders',     label:'顧客點餐', Icon:Bell,            perm:'pos.use', accent:'amber' },
-  { key:'settings',   label:'設定',     Icon:Settings,        perm:'settings.view', accent:'gold' },
+  { key:'dashboard',  Icon:LayoutDashboard, perm:'pos.use', accent:'gold' },
+  { key:'pos',        Icon:ShoppingCart,    perm:'pos.use', accent:'green' },
+  { key:'shifts',     Icon:Clock,           perm:'pos.use', accent:'teal' },
+  { key:'inventory',  Icon:Package,         perm:'inventory.view', accent:'blue' },
+  { key:'purchase',   Icon:Truck,           perm:'purchase.view', accent:'purple' },
+  { key:'waste',      Icon:Trash2,          perm:'inventory.view', accent:'red' },
+  { key:'stocktake',  Icon:ClipboardList,   perm:'stocktake.view', accent:'amber' },
+  { key:'promotions', Icon:Tag,             perm:'promotions.view', accent:'pink' },
+  { key:'members',    Icon:Users,           perm:'members.view', accent:'gold' },
+  { key:'reports',    Icon:BarChart2,       perm:'reports.view', accent:'blue' },
+  { key:'accounting', Icon:BookOpen,        perm:'accounting.view', accent:'teal' },
+  { key:'orders',     Icon:Bell,            perm:'pos.use', accent:'amber' },
+  { key:'settings',   Icon:Settings,        perm:'settings.view', accent:'gold' },
 ]
 
 export default function Sidebar({ view, setView, session, lowStockCount, todayRevenue, todayOrders, onLogout, pendingOrders = 0, openShift = null }) {
@@ -25,8 +27,9 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
-  const timeStr = now.toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' })
-  const dateStr = now.toLocaleDateString('zh-TW', { month:'numeric', day:'numeric', weekday:'short' })
+  const locale = { zh: 'zh-TW', en: 'en-US', id: 'id-ID' }[getCurrentLanguage()] || 'id-ID'
+  const timeStr = now.toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit' })
+  const dateStr = now.toLocaleDateString(locale, { month:'numeric', day:'numeric', weekday:'short' })
   const role    = ROLES[session?.role]
 
   return (
@@ -39,7 +42,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
         </div>
         <div>
           <div style={s.logoName}>POS<span style={{background:'var(--accent-grad)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text'}}>Pro</span></div>
-          <div style={s.logoSub}>智慧雜貨店系統</div>
+          <div style={s.logoSub}>{t('login.tagline')}</div>
         </div>
       </div>
 
@@ -47,17 +50,17 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
       <div style={s.todayCard} className="animate-up">
         <div style={s.todayTop}>
           <div>
-            <div style={s.todayLabel}>今日營業</div>
-            <div style={s.todayAmount} className="mono tabular">${todayRevenue.toLocaleString()}</div>
+            <div style={s.todayLabel}>{t('nav.today_revenue')}</div>
+            <div style={s.todayAmount} className="mono tabular">{fmtMoney(todayRevenue)}</div>
           </div>
           {openShift && (
-            <div style={s.liveDot} title="營業中">
+            <div style={s.liveDot} title={t('nav.shift_open')}>
               <span style={s.liveDotPulse}/>
             </div>
           )}
         </div>
         <div style={s.todayMeta}>
-          <span>{todayOrders.length} 筆</span>
+          <span>{t('nav.orders_count', { n: todayOrders.length })}</span>
           <span style={{opacity:0.4}}>•</span>
           <span>{dateStr}</span>
           <span style={{opacity:0.4}}>•</span>
@@ -67,7 +70,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
 
       {/* 導航 */}
       <nav style={s.nav}>
-        {NAV.filter(n => hasPermission(session, n.perm)).map(({ key, label, Icon, accent }, idx) => {
+        {NAV.filter(n => hasPermission(session, n.perm)).map(({ key, Icon, accent }, idx) => {
           const active = view === key
           const badge = key === 'inventory' && lowStockCount > 0 ? lowStockCount
                       : key === 'orders' && pendingOrders > 0 ? pendingOrders
@@ -89,7 +92,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
               }}>
                 <Icon size={16} strokeWidth={active ? 2.4 : 2}/>
               </span>
-              <span style={s.navLabel}>{label}</span>
+              <span style={s.navLabel}>{t('nav.' + key)}</span>
               {badge != null && (
                 <span style={{
                   ...s.navBadge,
@@ -109,7 +112,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
         {lowStockCount > 0 && (
           <div style={s.alertBox} className="animate-up">
             <AlertTriangle size={14} style={{color:'var(--amber)', flexShrink:0}}/>
-            <span style={{fontSize:12, color:'var(--amber)', fontWeight:600}}>{lowStockCount} 項低庫存</span>
+            <span style={{fontSize:12, color:'var(--amber)', fontWeight:600}}>{t('nav.low_stock_count', { n: lowStockCount })}</span>
           </div>
         )}
         <div style={s.userRow}>
@@ -118,7 +121,7 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
             <div style={{fontSize:13, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:'var(--text-primary)'}}>{session?.username}</div>
             <div style={{fontSize:10, color: role?.color || 'var(--text-tertiary)', fontWeight:600, letterSpacing:'.05em'}}>{role?.label}</div>
           </div>
-          <button className="btn-icon" onClick={onLogout} title="登出"
+          <button className="btn-icon" onClick={onLogout} title={t('nav.logout')}
             style={{color:'var(--text-tertiary)'}}>
             <LogOut size={14}/>
           </button>

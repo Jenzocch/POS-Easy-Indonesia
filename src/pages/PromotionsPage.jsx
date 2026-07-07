@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react'
 import { Plus, X, Check, Tag, Clock, Percent, Gift } from 'lucide-react'
 import { writeAuditLog, sanitizeObject } from '../utils/security'
 import { isElectron, loadPromotions, savePromotions as dbSavePromotions } from '../utils/dataAccess'
+import { t, fmtMoney } from '../i18n'
 
+// 型別鍵值（threshold/percent/...）為儲存值，勿改；label/desc 僅供顯示
 export const PROMO_TYPES = {
-  threshold:  { label:'滿額折扣',    icon:'💰', desc:'消費滿 X 元折 Y 元' },
-  percent:    { label:'全館折扣',    icon:'%',  desc:'所有商品打 X 折' },
-  buyget:     { label:'買X送Y',     icon:'🎁', desc:'買 X 件送 Y 件' },
-  fixed:      { label:'指定品折扣',  icon:'🏷', desc:'特定商品減 X 元' },
+  threshold:  { label:t('promo.type_threshold'), icon:'💰', desc:t('promo.desc_threshold') },
+  percent:    { label:t('promo.type_percent'),   icon:'%',  desc:t('promo.desc_percent') },
+  buyget:     { label:t('promo.type_buyget'),    icon:'🎁', desc:t('promo.desc_buyget') },
+  fixed:      { label:t('promo.type_fixed'),     icon:'🏷', desc:t('promo.desc_fixed') },
 }
 
 // Apply all active promotions to cart, return discount amount + descriptions
@@ -21,12 +23,12 @@ export function applyPromotions(cart, promotions, subtotal) {
     if (promo.type === 'threshold' && subtotal >= promo.condition.threshold) {
       const d = promo.condition.discount
       totalDiscount += d
-      applied.push({ id:promo.id, label:`${promo.name}：折 NT$${d}`, discount:d })
+      applied.push({ id:promo.id, label:t('promo.applied_threshold', {name:promo.name, amt:fmtMoney(d)}), discount:d })
     }
     if (promo.type === 'percent') {
       const d = Math.round(subtotal * (1 - promo.condition.rate) * 100) / 100
       totalDiscount += d
-      applied.push({ id:promo.id, label:`${promo.name}：${Math.round(promo.condition.rate*10)}折 (-NT$${d})`, discount:d })
+      applied.push({ id:promo.id, label:t('promo.applied_percent', {name:promo.name, tenth:Math.round(promo.condition.rate*10), pct:Math.round((1-promo.condition.rate)*100), amt:fmtMoney(d)}), discount:d })
     }
     if (promo.type === 'buyget') {
       const totalQty = cart.reduce((s,i)=>s+i.qty,0)
@@ -37,7 +39,7 @@ export function applyPromotions(cart, promotions, subtotal) {
         const freeQty = Math.min(sets * promo.condition.get, sorted.length)
         const d       = sorted.slice(0, freeQty).reduce((s,v)=>s+v, 0)
         totalDiscount += d
-        applied.push({ id:promo.id, label:`${promo.name}：送 ${freeQty} 件 (-NT$${d})`, discount:d })
+        applied.push({ id:promo.id, label:t('promo.applied_buyget', {name:promo.name, qty:freeQty, amt:fmtMoney(d)}), discount:d })
       }
     }
     if (promo.type === 'fixed') {
@@ -45,7 +47,7 @@ export function applyPromotions(cart, promotions, subtotal) {
       if (match.length > 0) {
         const d = match.reduce((s,i)=>s+Math.min(promo.condition.discount,i.price)*i.qty,0)
         totalDiscount += d
-        applied.push({ id:promo.id, label:`${promo.name}：指定品折 NT$${promo.condition.discount}`, discount:d })
+        applied.push({ id:promo.id, label:t('promo.applied_fixed', {name:promo.name, amt:fmtMoney(promo.condition.discount)}), discount:d })
       }
     }
   }
@@ -131,9 +133,9 @@ export default function PromotionsPage({ store, session }) {
     <div style={pm.root}>
       <div style={pm.header}>
         <div>
-          <h2 style={pm.title}>促銷活動</h2>
+          <h2 style={pm.title}>{t('promo.title')}</h2>
           <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
-            {active.length} 個活動進行中 · 共 {promotions.length} 個
+            {t('promo.summary', {active: active.length, total: promotions.length})}
           </div>
         </div>
       </div>
@@ -150,7 +152,7 @@ export default function PromotionsPage({ store, session }) {
       {/* List */}
       <div style={{flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:10}}>
         {promotions.length===0 && (
-          <div style={{textAlign:'center', padding:'48px', color:'var(--text-tertiary)', fontSize:13}}>尚未建立任何促銷活動</div>
+          <div style={{textAlign:'center', padding:'48px', color:'var(--text-tertiary)', fontSize:13}}>{t('promo.none_yet')}</div>
         )}
         {promotions.map(p => {
           const isActive = p.enabled && p.startAt<=now && p.endAt>=now
@@ -164,7 +166,7 @@ export default function PromotionsPage({ store, session }) {
                   <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:4}}>
                     <span style={{fontWeight:600, fontSize:14}}>{p.name}</span>
                     <span style={{fontSize:10, padding:'1px 8px', borderRadius:20, background:isActive?'var(--gold-dim)':isExpired?'var(--bg-active)':'var(--border-dim)', color:isActive?'var(--gold-bright)':'var(--text-tertiary)'}}>
-                      {isActive?'進行中':isExpired?'已結束':'未啟用'}
+                      {isActive?t('promo.active'):isExpired?t('promo.ended'):t('promo.inactive')}
                     </span>
                     <span style={{fontSize:10, color:'var(--text-tertiary)'}}>{info.label}</span>
                   </div>
@@ -207,16 +209,16 @@ export default function PromotionsPage({ store, session }) {
         <div style={pm.overlay}>
           <div style={pm.modal} className="animate-scale">
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18}}>
-              <span style={{fontWeight:700, fontSize:15}}>{editing==='new'?`新增${PROMO_TYPES[form.type].label}`:'編輯促銷'}</span>
+              <span style={{fontWeight:700, fontSize:15}}>{editing==='new'?t('promo.new_titled', {type: PROMO_TYPES[form.type].label}):t('promo.edit_title')}</span>
               <button className="btn-icon" onClick={()=>{setEditing(null);setForm(null)}}><X size={16}/></button>
             </div>
 
-            <FL>活動名稱 *</FL>
-            <input className="field" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="例：週末特賣" style={{marginBottom:14}}/>
+            <FL>{t('promo.name_label')} *</FL>
+            <input className="field" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder={t('promo.name_ph')} style={{marginBottom:14}}/>
 
             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14}}>
-              <div><FL>開始時間</FL><input type="datetime-local" className="field" value={form.startAt} onChange={e=>setForm(f=>({...f,startAt:e.target.value}))}/></div>
-              <div><FL>結束時間</FL><input type="datetime-local" className="field" value={form.endAt}   onChange={e=>setForm(f=>({...f,endAt:e.target.value}))}/></div>
+              <div><FL>{t('promo.start_at')}</FL><input type="datetime-local" className="field" value={form.startAt} onChange={e=>setForm(f=>({...f,startAt:e.target.value}))}/></div>
+              <div><FL>{t('promo.end_at')}</FL><input type="datetime-local" className="field" value={form.endAt}   onChange={e=>setForm(f=>({...f,endAt:e.target.value}))}/></div>
             </div>
 
             {/* Condition fields by type */}

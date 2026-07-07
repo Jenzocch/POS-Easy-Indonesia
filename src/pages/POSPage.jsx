@@ -5,6 +5,7 @@ import HeldOrdersModal from '../components/HeldOrdersModal'
 import PriceLookupModal from '../components/PriceLookupModal'
 import { CATEGORY_META } from '../utils/categories'
 import useIsMobile from '../hooks/useIsMobile'
+import { t, fmtMoney } from '../i18n'
 // lazy load html5-qrcode (~340KB) — 只在點相機掃描才載入
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
 
@@ -50,13 +51,13 @@ export default function POSPage({ store, session }) {
 
   const handleScan = useCallback(code => {
     const p = findByBarcode(code)
-    if (p) { addToCart(p); showFeedback(true, `已加入：${p.name}`) }
-    else showFeedback(false, `條碼 ${code} 查無商品`)
+    if (p) { addToCart(p); showFeedback(true, t('pos.added_to_cart', { name: p.name })) }
+    else showFeedback(false, t('pos.barcode_not_found', { code }))
   }, [findByBarcode, addToCart])
 
   const handleHold = useCallback(async (label) => {
     await holdCart(label, session?.username || '')
-    showFeedback(true, '已掛單')
+    showFeedback(true, t('pos.held_success'))
   }, [holdCart, session])
 
   const handleKeyDown = useCallback(e => {
@@ -105,12 +106,12 @@ export default function POSPage({ store, session }) {
         }}>
           <Clock size={28} color="var(--amber)"/>
         </div>
-        <div style={{fontSize:18, fontWeight:600, color:'var(--text-primary)'}}>尚未開班</div>
+        <div style={{fontSize:18, fontWeight:600, color:'var(--text-primary)'}}>{t('pos.shift_not_open')}</div>
         <div style={{fontSize:13, color:'var(--text-secondary)', textAlign:'center', maxWidth:300}}>
-          請先到「班別管理」開班並設定零用金，才能開始收銀。
+          {t('pos.shift_open_hint')}
         </div>
         <button className="btn btn-primary" onClick={()=>setView('shifts')} style={{padding:'10px 24px'}}>
-          前往班別管理
+          {t('pos.goto_shift')}
         </button>
       </div>
     )
@@ -124,7 +125,7 @@ export default function POSPage({ store, session }) {
             <Search size={16} color="var(--text-tertiary)"/>
             <input ref={searchRef} style={ps.searchInput} value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder={isMobile ? "搜尋商品..." : "搜尋商品名稱 / 條碼 / 分類    (按 / 快速聚焦)"}/>
+              placeholder={isMobile ? t('pos.search_placeholder_short') : t('pos.search_placeholder')}/>
             {search && (
               <button className="btn-icon btn-sm" onClick={() => setSearch('')}>
                 <X size={13}/>
@@ -134,13 +135,13 @@ export default function POSPage({ store, session }) {
               <kbd style={{...ps.kbd, fontSize:10}}>/</kbd>
             )}
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={()=>setShowLookup(true)} title="查價 (F1)" style={{display:'flex', alignItems:'center', gap:4}}>
-            <Eye size={14}/>{!isMobile && <span>查價</span>}
+          <button className="btn btn-ghost btn-sm" onClick={()=>setShowLookup(true)} title={t('pos.lookup_title')} style={{display:'flex', alignItems:'center', gap:4}}>
+            <Eye size={14}/>{!isMobile && <span>{t('pos.lookup')}</span>}
             {!isMobile && <kbd style={ps.kbd}>F1</kbd>}
           </button>
           {heldOrders.length > 0 && (
             <button className="btn btn-ghost btn-sm" onClick={()=>setShowHeld(true)} style={{display:'flex', alignItems:'center', gap:4, color:'var(--gold)'}}>
-              <Pause size={14}/>{!isMobile && <span>掛單</span>}
+              <Pause size={14}/>{!isMobile && <span>{t('pos.hold')}</span>}
               <span className="badge badge-gold" style={{marginLeft:2}}>{heldOrders.length}</span>
             </button>
           )}
@@ -152,7 +153,7 @@ export default function POSPage({ store, session }) {
                 background: scanMode ? 'var(--accent-dim)' : 'var(--bg-raised)',
               }}>
               <ScanLine size={15}/>
-              {scanMode ? '掃碼中' : '掃碼'}
+              {scanMode ? t('pos.scanning') : t('pos.scan')}
             </button>
           )}
           {/* 手機/PWA 相機掃描 */}
@@ -161,16 +162,16 @@ export default function POSPage({ store, session }) {
               gap:6, border:'1px solid var(--border-subtle)',
               color:'var(--text-secondary)', background:'var(--bg-raised)',
             }}
-            title="用手機相機掃條碼">
+            title={t('pos.camera_scan_hint')}>
             <Camera size={15}/>
-            {!isMobile && <span>相機掃</span>}
+            {!isMobile && <span>{t('pos.camera_scan')}</span>}
           </button>
           {window.electronAPI && !isMobile && (
             <button className="btn btn-ghost btn-sm"
               onClick={() => window.electronAPI.printer.openCashDrawer().catch(() => {})}
               style={{ gap:6, border:'1px solid var(--border-subtle)', color:'var(--text-secondary)', background:'var(--bg-raised)' }}
-              title="開啟錢箱">
-              <DollarSign size={15}/> 開錢箱
+              title={t('pos.open_drawer')}>
+              <DollarSign size={15}/> {t('pos.open_drawer')}
             </button>
           )}
         </div>
@@ -199,7 +200,7 @@ export default function POSPage({ store, session }) {
                 display:'flex', alignItems:'center', gap:5,
               }}>
                 {meta && <span style={{fontSize:13}}>{meta.icon}</span>}
-                <span>{cat}</span>
+                <span>{cat === '全部' ? t('common.all') : cat}</span>
                 <span style={{fontSize:10, opacity:0.7, fontFamily:'var(--font-mono)'}}>{count}</span>
               </button>
             )
@@ -213,7 +214,7 @@ export default function POSPage({ store, session }) {
           {filtered.length === 0 && (
             <div style={ps.empty}>
               <div style={{fontSize:28, opacity:.3, marginBottom:8}}>📦</div>
-              <span style={{color:'var(--text-tertiary)', fontSize:13}}>沒有符合的商品</span>
+              <span style={{color:'var(--text-tertiary)', fontSize:13}}>{t('pos.no_matching_products')}</span>
             </div>
           )}
         </div>
@@ -242,7 +243,7 @@ export default function POSPage({ store, session }) {
           <div style={ps.mobileOverlay} onClick={() => setShowCart(false)}/>
           <div style={ps.mobileCart}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',borderBottom:'1px solid var(--border-dim)'}}>
-              <span style={{fontWeight:600,fontSize:15}}>購物車</span>
+              <span style={{fontWeight:600,fontSize:15}}>{t('pos.cart')}</span>
               <button onClick={() => setShowCart(false)} style={{padding:4}}>
                 <X size={18} color="var(--text-secondary)"/>
               </button>
@@ -271,12 +272,12 @@ export default function POSPage({ store, session }) {
       {showCamera && (
         <Suspense fallback={null}>
           <BarcodeScannerModal
-            title="掃條碼加入購物車"
+            title={t('pos.scan_to_add')}
             mode="continuous"
             onScan={(code) => {
               const p = findByBarcode(code)
-              if (p) { addToCart(p); showFeedback(true, `已加入：${p.name}`) }
-              else showFeedback(false, `條碼 ${code} 查無商品`)
+              if (p) { addToCart(p); showFeedback(true, t('pos.added_to_cart', { name: p.name })) }
+              else showFeedback(false, t('pos.barcode_not_found', { code }))
               return 'keep'
             }}
             onClose={() => setShowCamera(false)}
@@ -309,14 +310,14 @@ function ProductCard({ product, onAdd, idx, isMobile }) {
           <img src={imageUrl} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}} onError={e => e.target.style.display='none'}/>
           {expWarn && (
             <span style={{position:'absolute', top:4, right:4, padding:'2px 7px', borderRadius:'var(--r-pill)', fontSize:9, fontWeight:700, background:expSoon <= 0 ? 'var(--red)' : 'var(--amber)', color:'#fff', boxShadow:'var(--shadow-xs)'}}>
-              {expSoon <= 0 ? '已過期' : `${expSoon}天`}
+              {expSoon <= 0 ? t('pos.expired') : t('pos.days_short', { n: expSoon })}
             </span>
           )}
         </div>
       ) : (
         expWarn && (
           <span style={{position:'absolute', top:8, right:8, padding:'2px 7px', borderRadius:'var(--r-pill)', fontSize:9, fontWeight:700, background:expSoon <= 0 ? 'var(--red)' : 'var(--amber)', color:'#fff'}}>
-            {expSoon <= 0 ? '已過期' : `${expSoon}天`}
+            {expSoon <= 0 ? t('pos.expired') : t('pos.days_short', { n: expSoon })}
           </span>
         )
       )}
@@ -326,14 +327,14 @@ function ProductCard({ product, onAdd, idx, isMobile }) {
       </div>
       <div style={{...ps.cardName, fontSize: isMobile ? 13.5 : 14.5}}>{name}</div>
       <div style={ps.cardFooter}>
-        <span style={ps.cardPrice} className="mono tabular">${price}</span>
+        <span style={ps.cardPrice} className="mono tabular">{fmtMoney(price)}</span>
         <span style={{
           fontSize:10.5, fontWeight:700, fontFamily:'var(--font-mono)',
           padding:'2px 8px', borderRadius:'var(--r-pill)',
           background: zero ? 'var(--red-dim)' : low ? 'var(--amber-dim)' : 'var(--bg-overlay)',
           color: zero ? 'var(--red)' : low ? 'var(--amber)' : 'var(--text-secondary)',
         }}>
-          {zero ? '缺貨' : low ? `${stock}` : `${stock}`}
+          {zero ? t('pos.out_of_stock') : low ? `${stock}` : `${stock}`}
         </span>
       </div>
     </button>

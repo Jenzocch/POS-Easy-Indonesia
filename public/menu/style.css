@@ -31,6 +31,30 @@ body {
 #header h1 { font-size: 1.4rem; font-weight: 700; }
 #header .subtitle { font-size: 0.8rem; opacity: 0.8; margin-top: 4px; }
 
+/* Language toggle */
+.lang-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.lang-btn {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.45);
+  color: #fff;
+  border-radius: 12px;
+  padding: 3px 12px;
+  font-size: 0.72rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+.lang-btn.active {
+  background: #fff;
+  color: var(--accent);
+  border-color: #fff;
+  font-weight: 700;
+}
+
 /* Categories */
 .categories {
   display: flex;

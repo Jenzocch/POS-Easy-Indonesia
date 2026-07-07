@@ -11,17 +11,18 @@ import { getTheme, applyTheme } from '../utils/theme'
 import { getCloudConfig, saveCloudConfig, clearCloudConfig, testConnection, isCloudEnabled } from '../utils/supabaseClient'
 import { pushAll, pullAll, SYNC_TABLES } from '../utils/cloudSync'
 import { getWebhookConfig, saveWebhookConfig, fireWebhook, WEBHOOK_EVENTS } from '../utils/webhook'
+import { t, fmtMoney, formatDateTime, LanguageSwitcher } from '../i18n'
 
 const TABS = [
-  { key:'general',  label:'一般偏好', Icon:Cog      },
-  { key:'business', label:'營運設定', Icon:Gift     },
-  { key:'users',    label:'員工帳號', Icon:Users    },
-  { key:'hardware', label:'硬體設定', Icon:Printer  },
-  { key:'security', label:'資安設定', Icon:Shield   },
-  { key:'backup',   label:'備份還原', Icon:Database },
-  { key:'cloud',    label:'雲端同步', Icon:Cloud    },
-  { key:'webhook',  label:'通知 Webhook', Icon:Wifi },
-  { key:'audit',    label:'稽核日誌', Icon:FileText },
+  { key:'general',  label:t('settings.tab_general'),  Icon:Cog      },
+  { key:'business', label:t('settings.tab_business'), Icon:Gift     },
+  { key:'users',    label:t('settings.tab_users'),    Icon:Users    },
+  { key:'hardware', label:t('settings.tab_hardware'), Icon:Printer  },
+  { key:'security', label:t('settings.tab_security'), Icon:Shield   },
+  { key:'backup',   label:t('settings.tab_backup'),   Icon:Database },
+  { key:'cloud',    label:t('settings.tab_cloud'),    Icon:Cloud    },
+  { key:'webhook',  label:t('settings.tab_webhook'),  Icon:Wifi     },
+  { key:'audit',    label:t('settings.tab_audit'),    Icon:FileText },
 ]
 
 const LEVEL_STYLE = {
@@ -37,13 +38,13 @@ export default function SettingsPage({ session, onLogout, store }) {
     <div style={ss.root}>
       <div style={ss.header}>
         <div>
-          <h2 style={ss.title}>系統設定</h2>
+          <h2 style={ss.title}>{t('settings.title')}</h2>
           <div style={{fontSize:12,color:'var(--text-tertiary)',marginTop:2}}>
-            登入身份：<span style={{color:ROLES[session.role]?.color}}>{session.username}</span>
-            <span style={{color:'var(--text-tertiary)'}}> · {ROLES[session.role]?.label}</span>
+            {t('settings.logged_in_as')}<span style={{color:ROLES[session.role]?.color}}>{session.username}</span>
+            <span style={{color:'var(--text-tertiary)'}}> · {t(`settings.role_${session.role}`)}</span>
           </div>
         </div>
-        <button className="btn btn-ghost btn-sm" style={{color:'var(--red)'}} onClick={onLogout}>登出</button>
+        <button className="btn btn-ghost btn-sm" style={{color:'var(--red)'}} onClick={onLogout}>{t('settings.logout')}</button>
       </div>
 
       <div style={ss.tabBar}>
@@ -92,13 +93,17 @@ function GeneralTab({ session }) {
 
   async function saveGoal() {
     await setSetting('dailySalesGoal', salesGoal || '0')
-    setSavedMsg('已儲存')
+    setSavedMsg(t('settings.saved'))
     setTimeout(() => setSavedMsg(''), 2000)
   }
 
   return (
     <div style={{padding:'0 24px', overflowY:'auto', height:'100%'}}>
-      <Section title="外觀">
+      <Section title={t('settings.language')}>
+        <LanguageSwitcher />
+      </Section>
+
+      <Section title={t('settings.appearance')}>
         <div style={{display:'flex', gap:12}}>
           <button onClick={()=>changeTheme('light')} style={{
             flex:1, padding:'14px 16px', borderRadius:10, display:'flex', alignItems:'center', gap:10,
@@ -108,8 +113,8 @@ function GeneralTab({ session }) {
           }}>
             <Sun size={18} color="var(--amber)"/>
             <div style={{textAlign:'left'}}>
-              <div style={{fontWeight:600, fontSize:14}}>淺色模式</div>
-              <div style={{fontSize:11, color:'var(--text-tertiary)'}}>米白底 + 棕色點綴</div>
+              <div style={{fontWeight:600, fontSize:14}}>{t('settings.theme_light')}</div>
+              <div style={{fontSize:11, color:'var(--text-tertiary)'}}>{t('settings.theme_light_desc')}</div>
             </div>
           </button>
           <button onClick={()=>changeTheme('dark')} style={{
@@ -120,32 +125,32 @@ function GeneralTab({ session }) {
           }}>
             <Moon size={18} color="var(--blue)"/>
             <div style={{textAlign:'left'}}>
-              <div style={{fontWeight:600, fontSize:14}}>深色模式</div>
-              <div style={{fontSize:11, color:'var(--text-tertiary)'}}>暗色背景 + 金色點綴</div>
+              <div style={{fontWeight:600, fontSize:14}}>{t('settings.theme_dark')}</div>
+              <div style={{fontSize:11, color:'var(--text-tertiary)'}}>{t('settings.theme_dark_desc')}</div>
             </div>
           </button>
         </div>
       </Section>
 
-      <Section title="每日銷售目標">
+      <Section title={t('settings.daily_sales_goal')}>
         <div style={{display:'flex', gap:8, alignItems:'center'}}>
-          <span style={{fontSize:13, color:'var(--text-secondary)', minWidth:60}}>目標金額</span>
-          <input className="field" type="number" value={salesGoal} onChange={e=>setSalesGoal(e.target.value)} placeholder="例：30000" style={{flex:1, maxWidth:200}}/>
-          <span style={{fontSize:13, color:'var(--text-tertiary)'}}>NT$</span>
-          <button className="btn btn-primary btn-sm" onClick={saveGoal}>儲存</button>
+          <span style={{fontSize:13, color:'var(--text-secondary)', minWidth:60}}>{t('settings.goal_amount')}</span>
+          <input className="field" type="number" value={salesGoal} onChange={e=>setSalesGoal(e.target.value)} placeholder={t('settings.eg_amount')} style={{flex:1, maxWidth:200}}/>
+          <span style={{fontSize:13, color:'var(--text-tertiary)'}}>Rp</span>
+          <button className="btn btn-primary btn-sm" onClick={saveGoal}>{t('common.save')}</button>
           {savedMsg && <span style={{fontSize:12, color:'var(--green)'}}>{savedMsg}</span>}
         </div>
         <p style={{fontSize:12, color:'var(--text-tertiary)', marginTop:8}}>
-          設定後會在首頁儀表板顯示達成進度
+          {t('settings.goal_hint')}
         </p>
       </Section>
 
-      <Section title="鍵盤快捷鍵">
+      <Section title={t('settings.shortcuts')}>
         <div style={{fontSize:13, color:'var(--text-secondary)', lineHeight:2}}>
-          <div><kbd style={kbdStyle}>F1</kbd> 快速查價</div>
-          <div><kbd style={kbdStyle}>F2</kbd> 掛單</div>
-          <div><kbd style={kbdStyle}>F3</kbd> 取單列表</div>
-          <div><kbd style={kbdStyle}>Esc</kbd> 關閉對話框</div>
+          <div><kbd style={kbdStyle}>F1</kbd> {t('settings.shortcut_price_check')}</div>
+          <div><kbd style={kbdStyle}>F2</kbd> {t('settings.shortcut_hold')}</div>
+          <div><kbd style={kbdStyle}>F3</kbd> {t('settings.shortcut_recall')}</div>
+          <div><kbd style={kbdStyle}>Esc</kbd> {t('settings.shortcut_close_dialog')}</div>
         </div>
       </Section>
     </div>
@@ -177,48 +182,48 @@ function BusinessTab({ session, store }) {
     } else {
       await setSetting('birthdayBonus', String(birthdayBonus))
     }
-    setSavedMsg('已儲存')
+    setSavedMsg(t('settings.saved'))
     setTimeout(() => setSavedMsg(''), 2000)
   }
 
   return (
     <div style={{padding:'0 24px', overflowY:'auto', height:'100%'}}>
-      <Section title="會員點數規則">
+      <Section title={t('settings.points_rule')}>
         <div style={{padding:'16px 18px', background:'var(--gold-glow)', border:'1px solid var(--gold-dim)', borderRadius:8, marginBottom:14}}>
           <div style={{fontSize:13, fontWeight:600, marginBottom:10, color:'var(--gold-bright)'}}>
             <Gift size={14} style={{verticalAlign:'middle', marginRight:6}}/>
-            目前規則
+            {t('settings.current_rule')}
           </div>
           <div style={{fontSize:13, color:'var(--text-secondary)', lineHeight:1.8}}>
-            <div>• 消費每 NT$ <strong style={{color:'var(--gold)'}}>{earn}</strong> 元 → 獲得 1 點</div>
-            <div>• 1 點 → 折抵 NT$ <strong style={{color:'var(--gold)'}}>{redeem}</strong> 元</div>
+            <div>• {t('settings.points_rule_earn_pre')} <strong style={{color:'var(--gold)'}}>{fmtMoney(Number(earn) || 0)}</strong> {t('settings.points_rule_earn_post')}</div>
+            <div>• {t('settings.points_rule_redeem_pre')} <strong style={{color:'var(--gold)'}}>{fmtMoney(Number(redeem) || 0)}</strong></div>
           </div>
         </div>
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
           <div>
-            <FieldLabel>消費 X 元 = 1 點</FieldLabel>
+            <FieldLabel>{t('settings.field_earn_rate')}</FieldLabel>
             <input className="field" type="number" value={earn} onChange={e=>setEarn(e.target.value)}/>
           </div>
           <div>
-            <FieldLabel>1 點折抵金額 (元)</FieldLabel>
+            <FieldLabel>{t('settings.field_redeem_value')}</FieldLabel>
             <input className="field" type="number" step="0.5" value={redeem} onChange={e=>setRedeem(e.target.value)}/>
           </div>
         </div>
       </Section>
 
-      <Section title="會員生日贈點">
+      <Section title={t('settings.birthday_bonus')}>
         <div style={{display:'flex', gap:8, alignItems:'center'}}>
-          <span style={{fontSize:13, color:'var(--text-secondary)', minWidth:140}}>生日當月可獲得</span>
+          <span style={{fontSize:13, color:'var(--text-secondary)', minWidth:140}}>{t('settings.birthday_bonus_label')}</span>
           <input className="field" type="number" value={birthdayBonus} onChange={e=>setBirthdayBonus(e.target.value)} style={{width:120}}/>
-          <span style={{fontSize:13, color:'var(--text-tertiary)'}}>點</span>
+          <span style={{fontSize:13, color:'var(--text-tertiary)'}}>{t('settings.points_unit')}</span>
         </div>
         <p style={{fontSize:12, color:'var(--text-tertiary)', marginTop:8}}>
-          會員在生日當月首次消費時自動加贈
+          {t('settings.birthday_bonus_hint')}
         </p>
       </Section>
 
       <button className="btn btn-primary" onClick={save} style={{padding:'10px 24px'}}>
-        儲存設定
+        {t('settings.save_settings')}
       </button>
       {savedMsg && <span style={{marginLeft:12, fontSize:13, color:'var(--green)'}}>{savedMsg}</span>}
     </div>
@@ -271,8 +276,8 @@ function UsersTab({ session }) {
   // ── 新增帳號 ─────────────────────────────────────────────
   async function handleAdd() {
     if (!addForm.username || !addForm.password) return
-    if (addForm.password.length < 8) { setAddErr('密碼至少 8 字元'); return }
-    if (users.find(u=>u.username===addForm.username)) { setAddErr('帳號名稱已存在'); return }
+    if (addForm.password.length < 8) { setAddErr(t('settings.pw_min8')); return }
+    if (users.find(u=>u.username===addForm.username)) { setAddErr(t('settings.username_exists')); return }
     setAddErr(''); setSaving(true)
     const hashed  = await hashPassword(addForm.password)
     const newUser = { id:'u'+Date.now(), username:addForm.username, password:hashed, role:addForm.role }
@@ -302,12 +307,12 @@ function UsersTab({ session }) {
     // 自己改：需驗舊密碼
     if (isSelf) {
       const ok = await verifyPassword(pwForm.oldPw, target.password)
-      if (!ok) { setPwErr('舊密碼錯誤'); setSaving(false); return }
+      if (!ok) { setPwErr(t('settings.old_pw_wrong')); setSaving(false); return }
     }
 
-    if (pwForm.newPw.length < 8) { setPwErr('新密碼至少 8 字元'); setSaving(false); return }
-    if (pwForm.newPw !== pwForm.confirmPw) { setPwErr('兩次密碼不一致'); setSaving(false); return }
-    if (isSelf && pwForm.newPw === pwForm.oldPw) { setPwErr('新密碼不能與舊密碼相同'); setSaving(false); return }
+    if (pwForm.newPw.length < 8) { setPwErr(t('settings.new_pw_min8')); setSaving(false); return }
+    if (pwForm.newPw !== pwForm.confirmPw) { setPwErr(t('settings.pw_mismatch')); setSaving(false); return }
+    if (isSelf && pwForm.newPw === pwForm.oldPw) { setPwErr(t('settings.pw_same_as_old')); setSaving(false); return }
 
     const hashed = await hashPassword(pwForm.newPw)
     saveUsers(users.map(u => u.id===changePw.id ? {...u, password:hashed} : u))
@@ -315,7 +320,7 @@ function UsersTab({ session }) {
       window.electronAPI.db.updateUser(changePw.id, { password: hashed }).catch(() => {})
     }
     writeAuditLog('USER_UPDATE', session, { action:'change_password', target:changePw.username, by:session.username })
-    setSaving(false); setPwOk('密碼已更新'); setPwForm({oldPw:'',newPw:'',confirmPw:''})
+    setSaving(false); setPwOk(t('settings.pw_updated')); setPwForm({oldPw:'',newPw:'',confirmPw:''})
     setTimeout(()=>{ setChangePw(null); setPwOk('') }, 1200)
   }
 
@@ -325,7 +330,7 @@ function UsersTab({ session }) {
     <div style={{display:'flex',flexDirection:'column',gap:12,height:'100%'}}>
       {isOwner && (
         <div style={{display:'flex',justifyContent:'flex-end',flexShrink:0}}>
-          <button className="btn btn-primary btn-sm" onClick={()=>setAdding(true)}><Plus size={14}/>新增員工</button>
+          <button className="btn btn-primary btn-sm" onClick={()=>setAdding(true)}><Plus size={14}/>{t('settings.add_staff')}</button>
         </div>
       )}
 
@@ -343,9 +348,9 @@ function UsersTab({ session }) {
               <div style={{flex:1}}>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
                   <span style={{fontWeight:600,fontSize:14}}>{u.username}</span>
-                  {isMe && <span style={{fontSize:10,color:'var(--gold)',background:'var(--gold-dim)',padding:'1px 7px',borderRadius:20}}>我</span>}
+                  {isMe && <span style={{fontSize:10,color:'var(--gold)',background:'var(--gold-dim)',padding:'1px 7px',borderRadius:20}}>{t('settings.me')}</span>}
                 </div>
-                <div style={{fontSize:12,color:role?.color,marginTop:2}}>{role?.label} · {role?.permissions.length} 項權限</div>
+                <div style={{fontSize:12,color:role?.color,marginTop:2}}>{t(`settings.role_${u.role}`)} · {t('settings.n_permissions', { n: role?.permissions.length ?? 0 })}</div>
               </div>
               <div style={{display:'flex',gap:6,alignItems:'center'}}>
                 {canChangePw && (
@@ -354,7 +359,7 @@ function UsersTab({ session }) {
                     style={{fontSize:11,gap:4}}
                     onClick={()=>{ setChangePw(u); setPwForm({oldPw:'',newPw:'',confirmPw:''}); setPwErr(''); setPwOk('') }}
                   >
-                    🔑 {isMe ? '改密碼' : '重設密碼'}
+                    🔑 {isMe ? t('settings.change_password') : t('settings.reset_password')}
                   </button>
                 )}
                 {isOwner && !isMe && (
@@ -373,24 +378,24 @@ function UsersTab({ session }) {
         <div style={ss.overlay}>
           <div style={ss.modal} className="animate-scale">
             <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}>
-              <span style={{fontWeight:700}}>新增員工帳號</span>
+              <span style={{fontWeight:700}}>{t('settings.add_staff_account')}</span>
               <button className="btn-icon" onClick={()=>setAdding(false)}><X size={16}/></button>
             </div>
-            <FL>帳號名稱 *</FL>
-            <input className="field" value={addForm.username} onChange={e=>setAddForm(f=>({...f,username:e.target.value}))} placeholder="例：小美" style={{marginBottom:12}}/>
-            <FL>密碼 *（至少8字元）</FL>
-            <input type="password" className="field" value={addForm.password} onChange={e=>setAddForm(f=>({...f,password:e.target.value}))} placeholder="輸入密碼" style={{marginBottom:addErr?4:12}}/>
+            <FL>{t('settings.username_label')}</FL>
+            <input className="field" value={addForm.username} onChange={e=>setAddForm(f=>({...f,username:e.target.value}))} placeholder={t('settings.username_ph')} style={{marginBottom:12}}/>
+            <FL>{t('settings.password_label_req')}</FL>
+            <input type="password" className="field" value={addForm.password} onChange={e=>setAddForm(f=>({...f,password:e.target.value}))} placeholder={t('settings.password_ph')} style={{marginBottom:addErr?4:12}}/>
             {addErr && <div style={{fontSize:11,color:'var(--red)',marginBottom:12}}>{addErr}</div>}
-            <FL>角色</FL>
+            <FL>{t('settings.role')}</FL>
             <select className="field" value={addForm.role} onChange={e=>setAddForm(f=>({...f,role:e.target.value}))} style={{marginBottom:18,cursor:'pointer'}}>
-              {Object.entries(ROLES).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
+              {Object.entries(ROLES).map(([k,v])=><option key={k} value={k}>{t(`settings.role_${k}`)}</option>)}
             </select>
             <div style={{background:'var(--bg-base)',borderRadius:8,padding:'10px 12px',marginBottom:16,fontSize:11,color:'var(--text-secondary)'}}>
-              {ROLES[addForm.role]?.permissions.slice(0,5).join(' · ')}{ROLES[addForm.role]?.permissions.length>5?` ...等 ${ROLES[addForm.role].permissions.length} 項`:''}
+              {ROLES[addForm.role]?.permissions.slice(0,5).join(' · ')}{ROLES[addForm.role]?.permissions.length>5?` ${t('settings.perm_more', { n: ROLES[addForm.role].permissions.length })}`:''}
             </div>
             <div style={{display:'flex',gap:10}}>
-              <button className="btn btn-primary" style={{flex:1}} onClick={handleAdd} disabled={saving}>{saving?'儲存中...':'儲存'}</button>
-              <button className="btn btn-ghost"   style={{flex:1}} onClick={()=>setAdding(false)}>取消</button>
+              <button className="btn btn-primary" style={{flex:1}} onClick={handleAdd} disabled={saving}>{saving?t('settings.saving'):t('common.save')}</button>
+              <button className="btn btn-ghost"   style={{flex:1}} onClick={()=>setAdding(false)}>{t('common.cancel')}</button>
             </div>
           </div>
         </div>
@@ -403,10 +408,10 @@ function UsersTab({ session }) {
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <div>
                 <div style={{fontWeight:700,fontSize:15}}>
-                  {changePw.id===session.userId ? '變更我的密碼' : `重設密碼 — ${changePw.username}`}
+                  {changePw.id===session.userId ? t('settings.change_my_password') : t('settings.reset_password_for', { name: changePw.username })}
                 </div>
                 <div style={{fontSize:11,color:'var(--text-tertiary)',marginTop:3}}>
-                  {changePw.id===session.userId ? '需要輸入舊密碼才能更改' : '老闆權限：直接重設，無需舊密碼'}
+                  {changePw.id===session.userId ? t('settings.need_old_pw') : t('settings.owner_reset_hint')}
                 </div>
               </div>
               <button className="btn-icon" onClick={()=>setChangePw(null)}><X size={16}/></button>
@@ -415,24 +420,24 @@ function UsersTab({ session }) {
             {/* 自己改才需要舊密碼 */}
             {changePw.id === session.userId && (
               <>
-                <FL>舊密碼</FL>
+                <FL>{t('settings.old_password')}</FL>
                 <input
                   type="password" className="field"
                   value={pwForm.oldPw}
                   onChange={e=>setPwForm(f=>({...f,oldPw:e.target.value}))}
-                  placeholder="輸入目前密碼"
+                  placeholder={t('settings.current_pw_ph')}
                   style={{marginBottom:14}}
                   autoComplete="current-password"
                 />
               </>
             )}
 
-            <FL>新密碼（至少 8 字元）</FL>
+            <FL>{t('settings.new_password_min8')}</FL>
             <input
               type="password" className="field"
               value={pwForm.newPw}
               onChange={e=>setPwForm(f=>({...f,newPw:e.target.value}))}
-              placeholder="輸入新密碼"
+              placeholder={t('settings.new_pw_ph')}
               style={{marginBottom:12}}
               autoComplete="new-password"
             />
@@ -447,17 +452,17 @@ function UsersTab({ session }) {
                   })}
                 </div>
                 <div style={{fontSize:11,color:PW_COLORS[getPwScore(pwForm.newPw)-1]||'var(--text-tertiary)'}}>
-                  {PW_LABELS[getPwScore(pwForm.newPw)-1]||'請輸入密碼'}
+                  {PW_LABELS[getPwScore(pwForm.newPw)-1]||t('settings.enter_password')}
                 </div>
               </div>
             )}
 
-            <FL>確認新密碼</FL>
+            <FL>{t('settings.confirm_new_password')}</FL>
             <input
               type="password" className="field"
               value={pwForm.confirmPw}
               onChange={e=>setPwForm(f=>({...f,confirmPw:e.target.value}))}
-              placeholder="再輸入一次新密碼"
+              placeholder={t('settings.confirm_pw_ph')}
               style={{marginBottom: (pwErr||pwOk) ? 8 : 18}}
               autoComplete="new-password"
             />
@@ -471,9 +476,9 @@ function UsersTab({ session }) {
                 onClick={handleChangePw}
                 disabled={saving || !pwForm.newPw || !pwForm.confirmPw || (changePw.id===session.userId && !pwForm.oldPw)}
               >
-                {saving ? '更新中...' : '確認更新'}
+                {saving ? t('settings.updating') : t('settings.confirm_update')}
               </button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setChangePw(null)}>取消</button>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setChangePw(null)}>{t('common.cancel')}</button>
             </div>
           </div>
         </div>
@@ -492,7 +497,7 @@ function getPwScore(pw) {
   return Math.max(1, s)
 }
 const PW_COLORS = ['var(--red)', 'var(--amber)', 'var(--teal)', 'var(--green)']
-const PW_LABELS = ['強度：弱', '強度：普通', '強度：良好', '強度：強']
+const PW_LABELS = [t('settings.pw_weak'), t('settings.pw_fair'), t('settings.pw_good'), t('settings.pw_strong')]
 
 // ── 硬體設定 ────────────────────────────────────────────────
 function HardwareTab({ session }) {
@@ -549,29 +554,29 @@ function HardwareTab({ session }) {
       await window.electronAPI.settings.set(k, v)
     }
     setSaving(false)
-    setTestMsg('設定已儲存')
+    setTestMsg(t('settings.saved_settings'))
     setTimeout(() => setTestMsg(''), 2000)
   }
 
   async function handleTestPrint() {
     if (!isE) return
-    setTestMsg('列印中...')
+    setTestMsg(t('settings.printing'))
     const result = await window.electronAPI.printer.testPrint()
-    setTestMsg(result.success ? '測試列印成功' : '列印失敗: ' + (result.error || '未知錯誤'))
+    setTestMsg(result.success ? t('settings.test_print_ok') : t('settings.print_failed') + ': ' + (result.error || t('settings.unknown_error')))
     setTimeout(() => setTestMsg(''), 4000)
   }
 
   async function handleTestDrawer() {
     if (!isE) return
-    setTestMsg('開啟中...')
+    setTestMsg(t('settings.opening'))
     const result = await window.electronAPI.printer.openCashDrawer()
-    setTestMsg(result.success ? '錢箱已開啟' : '開啟失敗: ' + (result.error || ''))
+    setTestMsg(result.success ? t('settings.drawer_opened') : t('settings.open_failed') + ': ' + (result.error || ''))
     setTimeout(() => setTestMsg(''), 3000)
   }
 
   if (!isE) return (
     <div style={{padding:20, textAlign:'center', color:'var(--text-dim)'}}>
-      硬體設定僅在桌面版本可用
+      {t('settings.hardware_desktop_only')}
     </div>
   )
 
@@ -584,57 +589,57 @@ function HardwareTab({ session }) {
         {/* 印表機設定 */}
         <div className="card" style={{padding:16}}>
           <h3 style={{fontSize:14, fontWeight:600, marginBottom:12, display:'flex', alignItems:'center', gap:6}}>
-            <Printer size={15}/> 印表機設定
+            <Printer size={15}/> {t('settings.printer_settings')}
           </h3>
 
-          <label style={labelStyle}>連線方式</label>
+          <label style={labelStyle}>{t('settings.connection_type')}</label>
           <div style={{display:'flex', gap:8, marginBottom:12}}>
             <button className={`btn btn-sm ${printerType==='network' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setPrinterType('network')}>網路印表機</button>
+              onClick={() => setPrinterType('network')}>{t('settings.network_printer')}</button>
             <button className={`btn btn-sm ${printerType==='windows' ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setPrinterType('windows')}>Windows 共享</button>
+              onClick={() => setPrinterType('windows')}>{t('settings.windows_shared')}</button>
           </div>
 
           {printerType === 'network' ? (
             <>
-              <label style={labelStyle}>印表機 IP</label>
+              <label style={labelStyle}>{t('settings.printer_ip')}</label>
               <input style={{...fieldStyle, marginBottom:8}} value={printerIP} onChange={e=>setPrinterIP(e.target.value)} placeholder="192.168.1.100"/>
               <label style={labelStyle}>Port</label>
               <input style={{...fieldStyle, marginBottom:8}} value={printerPort} onChange={e=>setPrinterPort(e.target.value)} placeholder="9100"/>
             </>
           ) : (
             <>
-              <label style={labelStyle}>印表機共享路徑</label>
+              <label style={labelStyle}>{t('settings.printer_share_path')}</label>
               <input style={{...fieldStyle, marginBottom:8}} value={printerName} onChange={e=>setPrinterName(e.target.value)} placeholder="\\\\server\\printer"/>
             </>
           )}
 
           <div style={{display:'flex', gap:8, marginTop:8}}>
-            <button className="btn btn-ghost btn-sm" onClick={handleTestPrint}>測試列印</button>
-            <button className="btn btn-ghost btn-sm" onClick={handleTestDrawer}>測試錢箱</button>
+            <button className="btn btn-ghost btn-sm" onClick={handleTestPrint}>{t('settings.test_print')}</button>
+            <button className="btn btn-ghost btn-sm" onClick={handleTestDrawer}>{t('settings.test_drawer')}</button>
           </div>
           {printerStatus && (
             <div style={{marginTop:8, fontSize:12, color: printerStatus.connected ? 'var(--green)' : 'var(--red)'}}>
-              {printerStatus.connected ? '印表機已連線' : '印表機未連線'}
+              {printerStatus.connected ? t('settings.printer_connected') : t('settings.printer_disconnected')}
             </div>
           )}
         </div>
 
         {/* 收據設定 */}
         <div className="card" style={{padding:16}}>
-          <h3 style={{fontSize:14, fontWeight:600, marginBottom:12}}>收據設定</h3>
+          <h3 style={{fontSize:14, fontWeight:600, marginBottom:12}}>{t('settings.receipt_settings')}</h3>
 
-          <label style={labelStyle}>店名</label>
-          <input style={{...fieldStyle, marginBottom:8}} value={storeName} onChange={e=>setStoreName(e.target.value)} placeholder="我的雜貨店"/>
+          <label style={labelStyle}>{t('settings.store_name')}</label>
+          <input style={{...fieldStyle, marginBottom:8}} value={storeName} onChange={e=>setStoreName(e.target.value)} placeholder={t('settings.store_name_ph')}/>
 
-          <label style={labelStyle}>地址</label>
-          <input style={{...fieldStyle, marginBottom:8}} value={storeAddress} onChange={e=>setStoreAddress(e.target.value)} placeholder="台北市..."/>
+          <label style={labelStyle}>{t('settings.address')}</label>
+          <input style={{...fieldStyle, marginBottom:8}} value={storeAddress} onChange={e=>setStoreAddress(e.target.value)} placeholder={t('settings.address_ph')}/>
 
-          <label style={labelStyle}>電話</label>
+          <label style={labelStyle}>{t('settings.phone')}</label>
           <input style={{...fieldStyle, marginBottom:8}} value={storePhone} onChange={e=>setStorePhone(e.target.value)} placeholder="02-1234-5678"/>
 
-          <label style={labelStyle}>收據底部文字</label>
-          <input style={{...fieldStyle, marginBottom:8}} value={receiptFooter} onChange={e=>setReceiptFooter(e.target.value)} placeholder="感謝您的光臨！"/>
+          <label style={labelStyle}>{t('settings.receipt_footer')}</label>
+          <input style={{...fieldStyle, marginBottom:8}} value={receiptFooter} onChange={e=>setReceiptFooter(e.target.value)} placeholder={t('settings.receipt_footer_ph')}/>
         </div>
 
         {/* 點餐系統 */}

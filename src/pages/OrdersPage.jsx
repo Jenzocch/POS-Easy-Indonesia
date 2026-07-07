@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Bell, Check, X, Clock, ChefHat, RefreshCw } from 'lucide-react'
 import { isElectron, loadCustomerOrders, updateOrderStatus } from '../utils/dataAccess'
+import { t, fmtMoney, formatTime, formatDate } from '../i18n'
 
+// 狀態值（pending/accepted/...）為儲存值，勿改；label 僅供顯示
 const STATUS_MAP = {
-  pending:   { label: '待處理', color: '#e67e22', icon: Clock },
-  accepted:  { label: '準備中', color: '#3498db', icon: ChefHat },
-  completed: { label: '已完成', color: '#27ae60', icon: Check },
-  rejected:  { label: '已拒絕', color: '#e74c3c', icon: X },
+  pending:   { label: t('orders.status_pending'),   color: '#e67e22', icon: Clock },
+  accepted:  { label: t('orders.status_accepted'),  color: '#3498db', icon: ChefHat },
+  completed: { label: t('orders.status_completed'), color: '#27ae60', icon: Check },
+  rejected:  { label: t('orders.status_rejected'),  color: '#e74c3c', icon: X },
 }
 
 export default function OrdersPage() {
@@ -60,13 +62,13 @@ export default function OrdersPage() {
     <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <Bell size={22} />
-        <h2 style={{ flex: 1, fontSize: '1.3rem' }}>顧客點餐</h2>
+        <h2 style={{ flex: 1, fontSize: '1.3rem' }}>{t('orders.title')}</h2>
         {pendingCount > 0 && (
           <span style={{
             background: '#e74c3c', color: '#fff', padding: '4px 12px',
             borderRadius: 20, fontSize: '0.85rem', fontWeight: 700,
           }}>
-            {pendingCount} 筆待處理
+            {t('orders.pending_badge', { count: pendingCount })}
           </span>
         )}
         <button
@@ -74,18 +76,18 @@ export default function OrdersPage() {
           className="btn btn-ghost btn-sm"
           style={{ display: 'flex', alignItems: 'center', gap: 6 }}
         >
-          <RefreshCw size={14} className={loading ? 'spin' : ''} /> 重新整理
+          <RefreshCw size={14} className={loading ? 'spin' : ''} /> {t('orders.refresh')}
         </button>
       </div>
 
       {/* 篩選 */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         {[
-          { key: 'pending', label: '待處理' },
-          { key: 'accepted', label: '準備中' },
-          { key: 'completed', label: '已完成' },
-          { key: 'rejected', label: '已拒絕' },
-          { key: 'all', label: '全部' },
+          { key: 'pending', label: t('orders.status_pending') },
+          { key: 'accepted', label: t('orders.status_accepted') },
+          { key: 'completed', label: t('orders.status_completed') },
+          { key: 'rejected', label: t('orders.status_rejected') },
+          { key: 'all', label: t('common.all') },
         ].map(f => (
           <button
             key={f.key}
@@ -106,13 +108,13 @@ export default function OrdersPage() {
       {/* 訂單列表 */}
       {!isElectron && (
         <div className="card" style={{ padding: 20, textAlign: 'center', color: 'var(--text-dim)' }}>
-          顧客點餐功能僅在桌面版本可用
+          {t('orders.desktop_only')}
         </div>
       )}
 
       {isElectron && !filtered.length && (
         <div className="card" style={{ padding: 40, textAlign: 'center', color: 'var(--text-dim)' }}>
-          {filter === 'pending' ? '目前沒有待處理的訂單' : '沒有符合條件的訂單'}
+          {filter === 'pending' ? t('orders.no_pending') : t('orders.no_match')}
         </div>
       )}
 
@@ -120,9 +122,8 @@ export default function OrdersPage() {
         {filtered.map(order => {
           const st = STATUS_MAP[order.status] || STATUS_MAP.pending
           const StIcon = st.icon
-          const time = new Date(order.time)
-          const timeStr = time.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
-          const dateStr = time.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })
+          const timeStr = formatTime(order.time)
+          const dateStr = formatDate(order.time)
 
           return (
             <div key={order.id} className="card" style={{ padding: 16 }}>
@@ -149,7 +150,7 @@ export default function OrdersPage() {
                   </span>
                 )}
                 <span style={{ marginLeft: 'auto', fontWeight: 700, fontSize: '1.1rem' }}>
-                  ${order.total}
+                  {fmtMoney(order.total)}
                 </span>
               </div>
 
@@ -161,14 +162,14 @@ export default function OrdersPage() {
                 {(order.items || []).map((item, idx) => (
                   <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
                     <span>{item.name} x{item.qty}</span>
-                    <span style={{ color: 'var(--text-dim)' }}>${item.price * item.qty}</span>
+                    <span style={{ color: 'var(--text-dim)' }}>{fmtMoney(item.price * item.qty)}</span>
                   </div>
                 ))}
               </div>
 
               {order.note && (
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: 10 }}>
-                  備註: {order.note}
+                  {t('common.notes')}: {order.note}
                 </p>
               )}
 
@@ -180,14 +181,14 @@ export default function OrdersPage() {
                     className="btn btn-sm"
                     style={{ flex: 1, background: '#27ae60', color: '#fff', border: 'none' }}
                   >
-                    <Check size={14} /> 接單
+                    <Check size={14} /> {t('orders.accept')}
                   </button>
                   <button
                     onClick={() => handleReject(order.id)}
                     className="btn btn-sm"
                     style={{ flex: 1, background: '#e74c3c', color: '#fff', border: 'none' }}
                   >
-                    <X size={14} /> 拒絕
+                    <X size={14} /> {t('orders.reject')}
                   </button>
                 </div>
               )}
@@ -197,7 +198,7 @@ export default function OrdersPage() {
                   className="btn btn-sm"
                   style={{ width: '100%', background: '#27ae60', color: '#fff', border: 'none' }}
                 >
-                  <Check size={14} /> 標記完成
+                  <Check size={14} /> {t('orders.mark_done')}
                 </button>
               )}
             </div>

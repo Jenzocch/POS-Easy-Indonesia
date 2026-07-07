@@ -5,12 +5,17 @@ import {
   ACCOUNTS,
 } from '../utils/accounting'
 import { Download, Plus, Trash2, X, Check, ChevronDown, ChevronRight, BookOpen, TrendingUp, Scale, FileText } from 'lucide-react'
+import { t, fmtMoney } from '../i18n'
+
+// 科目名稱只在顯示時翻譯：帳本資料存的是科目「代號」（如 '4101'），
+// accounting.js 的 ACCOUNTS 中文名稱為資料來源，不可更動。
+const accName = (code) => (ACCOUNTS[code] ? t('acct.account.' + code) : code)
 
 const TABS = [
-  { key: 'pnl',      label: '損益表',   Icon: TrendingUp },
-  { key: 'journal',  label: '日記帳',   Icon: BookOpen   },
-  { key: 'balance',  label: '資產負債', Icon: Scale      },
-  { key: 'expense',  label: '記錄費用', Icon: Plus       },
+  { key: 'pnl',      label: 'acct.tab_pnl',     Icon: TrendingUp },
+  { key: 'journal',  label: 'acct.tab_journal', Icon: BookOpen   },
+  { key: 'balance',  label: 'acct.tab_balance', Icon: Scale      },
+  { key: 'expense',  label: 'acct.tab_expense', Icon: Plus       },
 ]
 
 const EXPENSE_ACCOUNTS = Object.entries(ACCOUNTS)
@@ -38,8 +43,8 @@ export default function AccountingPage({ store }) {
   ), [allJournal, from, to])
 
   function handleExport() {
-    if (tab === 'journal') downloadCSV(exportJournalCSV(allJournal.filter(j=>j.date>=from&&j.date<=to)), `日記帳_${from}_${to}.csv`)
-    else if (tab === 'pnl') downloadCSV(exportPnLCSV(pnl, from, to), `損益表_${from}_${to}.csv`)
+    if (tab === 'journal') downloadCSV(exportJournalCSV(allJournal.filter(j=>j.date>=from&&j.date<=to)), `${t('acct.tab_journal')}_${from}_${to}.csv`)
+    else if (tab === 'pnl') downloadCSV(exportPnLCSV(pnl, from, to), `${t('acct.tab_pnl')}_${from}_${to}.csv`)
   }
 
   const canExport = tab === 'journal' || tab === 'pnl'
@@ -49,20 +54,20 @@ export default function AccountingPage({ store }) {
       {/* Header */}
       <div style={ac.header}>
         <div>
-          <h2 style={ac.title}>會計帳務</h2>
+          <h2 style={ac.title}>{t('acct.title')}</h2>
           <div style={{fontSize:12,color:'var(--text-tertiary)',marginTop:2}}>
-            自動複式記帳 · {allJournal.length} 筆分錄
+            {t('acct.subtitle', { n: allJournal.length })}
           </div>
         </div>
         <div style={{display:'flex',gap:10,alignItems:'center'}}>
           <div style={ac.dateRange}>
             <input type="date" value={from} onChange={e=>setFrom(e.target.value)} style={ac.dateInput}/>
-            <span style={{color:'var(--text-tertiary)',fontSize:12}}>至</span>
+            <span style={{color:'var(--text-tertiary)',fontSize:12}}>{t('acct.to')}</span>
             <input type="date" value={to}   onChange={e=>setTo(e.target.value)}   style={ac.dateInput}/>
           </div>
           {canExport && (
             <button className="btn btn-ghost btn-sm" onClick={handleExport}>
-              <Download size={14}/>匯出 CSV
+              <Download size={14}/>{t('acct.export_csv')}
             </button>
           )}
         </div>
@@ -77,7 +82,7 @@ export default function AccountingPage({ store }) {
             color: tab===key ? 'var(--text-primary)' : 'var(--text-tertiary)',
             borderBottom: `2px solid ${tab===key?'var(--gold)':'transparent'}`,
           }}>
-            <Icon size={14}/>{label}
+            <Icon size={14}/>{t(label)}
           </button>
         ))}
       </div>
@@ -102,28 +107,28 @@ function PnLView({ pnl, from, to }) {
     <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, height:'100%', overflowY:'auto'}}>
       {/* Main P&L */}
       <div style={{display:'flex',flexDirection:'column',gap:12}}>
-        <div style={ac.cardTitle}>損益彙總 <span style={{fontSize:11,color:'var(--text-tertiary)',fontWeight:400}}>{from} ~ {to}</span></div>
+        <div style={ac.cardTitle}>{t('acct.pnl_summary')} <span style={{fontSize:11,color:'var(--text-tertiary)',fontWeight:400}}>{from} ~ {to}</span></div>
 
         <div style={ac.pnlSection}>
-          <PnLRow label="營業收入" amount={revenue} bold highlight="blue"/>
-          <PnLRow label="銷貨成本" amount={-cogs} sub/>
+          <PnLRow label={t('acct.revenue')} amount={revenue} bold highlight="blue"/>
+          <PnLRow label={t('acct.cogs')} amount={-cogs} sub/>
           <div style={ac.pnlDivider}/>
-          <PnLRow label="毛利" amount={grossProfit} bold highlight={grossProfit>=0?'green':'red'}/>
-          <div style={{fontSize:11,color:'var(--text-tertiary)',textAlign:'right',marginBottom:4}}>毛利率 {grossMargin}%</div>
-          <PnLRow label="營業費用" amount={-opExpenses} sub/>
+          <PnLRow label={t('acct.gross_profit')} amount={grossProfit} bold highlight={grossProfit>=0?'green':'red'}/>
+          <div style={{fontSize:11,color:'var(--text-tertiary)',textAlign:'right',marginBottom:4}}>{t('acct.gross_margin')} {grossMargin}%</div>
+          <PnLRow label={t('acct.op_expenses')} amount={-opExpenses} sub/>
           <div style={ac.pnlDivider}/>
-          <PnLRow label="本期淨利" amount={netIncome} bold lg highlight={loss?'red':'gold'}/>
-          <div style={{fontSize:11,color:loss?'var(--red)':'var(--text-tertiary)',textAlign:'right',marginTop:4}}>淨利率 {netMargin}%</div>
+          <PnLRow label={t('acct.net_income')} amount={netIncome} bold lg highlight={loss?'red':'gold'}/>
+          <div style={{fontSize:11,color:loss?'var(--red)':'var(--text-tertiary)',textAlign:'right',marginTop:4}}>{t('acct.net_margin')} {netMargin}%</div>
         </div>
 
         {/* Expense breakdown */}
         {expenseLines.length > 0 && (
           <div className="card" style={{padding:'14px 16px'}}>
-            <div style={{fontSize:11,color:'var(--text-tertiary)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:12}}>費用明細</div>
+            <div style={{fontSize:11,color:'var(--text-tertiary)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:12}}>{t('acct.expense_detail')}</div>
             {expenseLines.map(l=>(
               <div key={l.code} style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid var(--border-dim)',fontSize:13}}>
-                <span style={{color:'var(--text-secondary)'}}>{l.name}</span>
-                <span style={{fontFamily:'var(--font-mono)',color:'var(--red)'}}>({l.amount.toLocaleString()})</span>
+                <span style={{color:'var(--text-secondary)'}}>{accName(l.code)}</span>
+                <span style={{fontFamily:'var(--font-mono)',color:'var(--red)'}}>({fmtMoney(l.amount)})</span>
               </div>
             ))}
           </div>
@@ -132,13 +137,13 @@ function PnLView({ pnl, from, to }) {
 
       {/* Visual cards */}
       <div style={{display:'flex',flexDirection:'column',gap:12}}>
-        <div style={ac.cardTitle}>關鍵指標</div>
+        <div style={ac.cardTitle}>{t('acct.key_metrics')}</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
           {[
-            {label:'營業收入', val:`NT$ ${revenue.toLocaleString()}`,    color:'var(--blue)'},
-            {label:'毛利',     val:`NT$ ${grossProfit.toLocaleString()}`, color:'var(--teal)'},
-            {label:'毛利率',   val:`${grossMargin}%`,                    color:'var(--gold)'},
-            {label:'本期淨利', val:`NT$ ${netIncome.toLocaleString()}`,   color: loss?'var(--red)':'var(--green)'},
+            {label:t('acct.revenue'),      val:fmtMoney(revenue),     color:'var(--blue)'},
+            {label:t('acct.gross_profit'), val:fmtMoney(grossProfit), color:'var(--teal)'},
+            {label:t('acct.gross_margin'), val:`${grossMargin}%`,     color:'var(--gold)'},
+            {label:t('acct.net_income'),   val:fmtMoney(netIncome),   color: loss?'var(--red)':'var(--green)'},
           ].map(({label,val,color},i)=>(
             <div key={i} className="card" style={{padding:'14px 16px',borderTop:`2px solid ${color}`}}>
               <div style={{fontSize:10,color:'var(--text-tertiary)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:8}}>{label}</div>
@@ -149,18 +154,18 @@ function PnLView({ pnl, from, to }) {
 
         {/* Margin bar */}
         <div className="card" style={{padding:'14px 16px'}}>
-          <div style={{fontSize:11,color:'var(--text-tertiary)',marginBottom:12,letterSpacing:'.06em',textTransform:'uppercase'}}>收支結構</div>
+          <div style={{fontSize:11,color:'var(--text-tertiary)',marginBottom:12,letterSpacing:'.06em',textTransform:'uppercase'}}>{t('acct.structure')}</div>
           {revenue > 0 && (
             <div>
               <div style={{display:'flex',height:24,borderRadius:4,overflow:'hidden',marginBottom:8}}>
-                <div style={{width:`${cogs/revenue*100}%`,background:'var(--red)',opacity:.7}} title={`銷貨成本 ${Math.round(cogs/revenue*100)}%`}/>
-                <div style={{width:`${opExpenses/revenue*100}%`,background:'var(--amber)',opacity:.7}} title={`費用 ${Math.round(opExpenses/revenue*100)}%`}/>
-                <div style={{flex:1,background:'var(--green)',opacity:.7}} title="毛利"/>
+                <div style={{width:`${cogs/revenue*100}%`,background:'var(--red)',opacity:.7}} title={`${t('acct.cogs')} ${Math.round(cogs/revenue*100)}%`}/>
+                <div style={{width:`${opExpenses/revenue*100}%`,background:'var(--amber)',opacity:.7}} title={`${t('acct.expenses')} ${Math.round(opExpenses/revenue*100)}%`}/>
+                <div style={{flex:1,background:'var(--green)',opacity:.7}} title={t('acct.gross_profit')}/>
               </div>
               <div style={{display:'flex',gap:14,fontSize:11}}>
-                <span style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,borderRadius:2,background:'var(--red)',opacity:.7,display:'inline-block'}}/><span style={{color:'var(--text-secondary)'}}>成本 {Math.round(cogs/revenue*100)}%</span></span>
-                <span style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,borderRadius:2,background:'var(--amber)',opacity:.7,display:'inline-block'}}/><span style={{color:'var(--text-secondary)'}}>費用 {Math.round(opExpenses/revenue*100)}%</span></span>
-                <span style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,borderRadius:2,background:'var(--green)',opacity:.7,display:'inline-block'}}/><span style={{color:'var(--text-secondary)'}}>淨利 {netMargin}%</span></span>
+                <span style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,borderRadius:2,background:'var(--red)',opacity:.7,display:'inline-block'}}/><span style={{color:'var(--text-secondary)'}}>{t('acct.cost')} {Math.round(cogs/revenue*100)}%</span></span>
+                <span style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,borderRadius:2,background:'var(--amber)',opacity:.7,display:'inline-block'}}/><span style={{color:'var(--text-secondary)'}}>{t('acct.expenses')} {Math.round(opExpenses/revenue*100)}%</span></span>
+                <span style={{display:'flex',alignItems:'center',gap:4}}><span style={{width:10,height:10,borderRadius:2,background:'var(--green)',opacity:.7,display:'inline-block'}}/><span style={{color:'var(--text-secondary)'}}>{t('acct.net_profit')} {netMargin}%</span></span>
               </div>
             </div>
           )}
@@ -177,8 +182,8 @@ function PnLRow({ label, amount, bold, sub, lg, highlight }) {
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:`${lg?10:6}px 0`,marginLeft:sub?16:0}}>
       <span style={{fontSize:sub?12:13,color:sub?'var(--text-secondary)':'var(--text-primary)',fontWeight:bold?600:400}}>{label}</span>
       <span style={{fontFamily:'var(--font-mono)',fontSize:lg?20:sub?12:14,fontWeight:bold?600:400,color}}>
-        NT$ {Math.abs(amount).toLocaleString()}
-        {amount < 0 && <span style={{fontSize:10,opacity:.7}}> (費)</span>}
+        {fmtMoney(Math.abs(amount))}
+        {amount < 0 && <span style={{fontSize:10,opacity:.7}}> {t('acct.expense_marker')}</span>}
       </span>
     </div>
   )
@@ -192,7 +197,7 @@ function JournalView({ grouped, manualEntries, deleteManualEntry }) {
 
   if (grouped.length === 0) return (
     <div style={{textAlign:'center',padding:'60px',color:'var(--text-tertiary)',fontSize:13}}>
-      此期間無分錄
+      {t('acct.no_entries')}
     </div>
   )
 
@@ -209,8 +214,8 @@ function JournalView({ grouped, manualEntries, deleteManualEntry }) {
             }}>
               {open ? <ChevronDown size={14} style={{color:'var(--text-tertiary)',flexShrink:0}}/> : <ChevronRight size={14} style={{color:'var(--text-tertiary)',flexShrink:0}}/>}
               <span style={{fontFamily:'var(--font-mono)',fontSize:13,color:'var(--text-secondary)',minWidth:90}}>{date}</span>
-              <span style={{fontSize:12,color:'var(--text-tertiary)'}}>{entries.length} 筆分錄</span>
-              {dayTotal > 0 && <span style={{marginLeft:'auto',fontFamily:'var(--font-mono)',fontSize:13,color:'var(--gold-bright)',fontWeight:500}}>NT$ {dayTotal.toLocaleString()}</span>}
+              <span style={{fontSize:12,color:'var(--text-tertiary)'}}>{t('acct.n_entries', { n: entries.length })}</span>
+              {dayTotal > 0 && <span style={{marginLeft:'auto',fontFamily:'var(--font-mono)',fontSize:13,color:'var(--gold-bright)',fontWeight:500}}>{fmtMoney(dayTotal)}</span>}
             </button>
 
             {open && (
@@ -218,7 +223,7 @@ function JournalView({ grouped, manualEntries, deleteManualEntry }) {
                 {entries.map(j=>(
                   <div key={j.id} style={{borderBottom:'1px solid var(--border-dim)',padding:'10px 16px'}}>
                     <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
-                      <span style={{...ac.typeBadge,...TYPE_STYLE[j.type]||TYPE_STYLE.manual}}>{TYPE_LABEL[j.type]||'手動'}</span>
+                      <span style={{...ac.typeBadge,...TYPE_STYLE[j.type]||TYPE_STYLE.manual}}>{t(TYPE_LABEL[j.type]||'acct.type_manual')}</span>
                       <span style={{fontSize:13,fontWeight:500}}>{j.description}</span>
                       {manualIds.has(j.id) && (
                         <button className="btn-icon btn-sm" style={{marginLeft:'auto',color:'var(--red)'}} onClick={()=>deleteManualEntry(j.id)}>
@@ -227,13 +232,13 @@ function JournalView({ grouped, manualEntries, deleteManualEntry }) {
                       )}
                     </div>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 90px 90px',gap:4,fontSize:11}}>
-                      <span style={{color:'var(--text-tertiary)',letterSpacing:'.04em'}}>科目</span>
-                      <span style={{color:'var(--text-tertiary)',textAlign:'right'}}>借方</span>
-                      <span style={{color:'var(--text-tertiary)',textAlign:'right'}}>貸方</span>
+                      <span style={{color:'var(--text-tertiary)',letterSpacing:'.04em'}}>{t('acct.account_col')}</span>
+                      <span style={{color:'var(--text-tertiary)',textAlign:'right'}}>{t('acct.debit')}</span>
+                      <span style={{color:'var(--text-tertiary)',textAlign:'right'}}>{t('acct.credit')}</span>
                       {j.lines.map((l,i)=>(
                         <>
                           <span key={i+'a'} style={{color:'var(--text-secondary)',paddingLeft:l.debit===0?16:0}}>
-                            {ACCOUNTS[l.account]?.name||l.account}
+                            {accName(l.account)}
                             {l.note && <span style={{color:'var(--text-tertiary)',marginLeft:6}}>— {l.note}</span>}
                           </span>
                           <span key={i+'d'} style={{fontFamily:'var(--font-mono)',textAlign:'right',color:l.debit?'var(--blue)':'var(--text-disabled)'}}>
@@ -256,7 +261,7 @@ function JournalView({ grouped, manualEntries, deleteManualEntry }) {
   )
 }
 
-const TYPE_LABEL = { auto_sale:'銷售', auto_cogs:'成本', auto_discount:'折抵', auto_balance:'儲值折抵', auto_topup:'會員儲值', manual:'手動', }
+const TYPE_LABEL = { auto_sale:'acct.type_sale', auto_cogs:'acct.type_cogs', auto_discount:'acct.type_discount', auto_balance:'acct.type_balance', auto_topup:'acct.type_topup', manual:'acct.type_manual' }
 const TYPE_STYLE = {
   auto_sale:     { background:'var(--teal-dim)',   color:'var(--teal)'  },
   auto_cogs:     { background:'var(--amber-dim)',  color:'var(--amber)' },
@@ -274,20 +279,20 @@ function BalanceView({ balance, asOf }) {
   return (
     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,height:'100%',overflowY:'auto'}}>
       <div style={{display:'flex',flexDirection:'column',gap:12}}>
-        <div style={ac.cardTitle}>資產 <span style={{fontFamily:'var(--font-mono)',color:'var(--blue)',fontSize:14,fontWeight:500}}>NT$ {totalAssets.toLocaleString()}</span></div>
+        <div style={ac.cardTitle}>{t('acct.assets')} <span style={{fontFamily:'var(--font-mono)',color:'var(--blue)',fontSize:14,fontWeight:500}}>{fmtMoney(totalAssets)}</span></div>
         <BSSection items={sections.asset.items} color="var(--blue)"/>
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:12}}>
-        <div style={ac.cardTitle}>負債 + 業主權益</div>
-        <div style={{...ac.cardTitle,fontSize:12,color:'var(--text-tertiary)'}}>負債 <span style={{fontFamily:'var(--font-mono)',color:'var(--red)',fontSize:14}}> NT$ {totalLiabilities.toLocaleString()}</span></div>
+        <div style={ac.cardTitle}>{t('acct.liab_equity')}</div>
+        <div style={{...ac.cardTitle,fontSize:12,color:'var(--text-tertiary)'}}>{t('acct.liabilities')} <span style={{fontFamily:'var(--font-mono)',color:'var(--red)',fontSize:14}}> {fmtMoney(totalLiabilities)}</span></div>
         <BSSection items={sections.liability.items} color="var(--red)"/>
-        <div style={{fontSize:12,color:'var(--text-tertiary)'}}>業主權益 <span style={{fontFamily:'var(--font-mono)',color:'var(--green)',fontSize:14}}> NT$ {totalEquity.toLocaleString()}</span></div>
+        <div style={{fontSize:12,color:'var(--text-tertiary)'}}>{t('acct.equity')} <span style={{fontFamily:'var(--font-mono)',color:'var(--green)',fontSize:14}}> {fmtMoney(totalEquity)}</span></div>
         <BSSection items={sections.equity.items} color="var(--green)"/>
         <div className="card" style={{padding:'12px 14px',display:'flex',justifyContent:'space-between',alignItems:'center',borderLeft:`3px solid ${balanced?'var(--green)':'var(--red)'}`}}>
           <span style={{fontSize:12,color:balanced?'var(--green)':'var(--red)'}}>
-            {balanced ? '✓ 借貸平衡' : '⚠ 借貸不平衡'}
+            {balanced ? t('acct.balanced') : t('acct.unbalanced')}
           </span>
-          <span style={{fontSize:11,color:'var(--text-tertiary)'}}>截至 {asOf}</span>
+          <span style={{fontSize:11,color:'var(--text-tertiary)'}}>{t('acct.as_of', { date: asOf })}</span>
         </div>
       </div>
     </div>
@@ -295,13 +300,13 @@ function BalanceView({ balance, asOf }) {
 }
 
 function BSSection({ items, color }) {
-  if (!items.length) return <div style={{fontSize:12,color:'var(--text-tertiary)',padding:'8px 0'}}>無資料</div>
+  if (!items.length) return <div style={{fontSize:12,color:'var(--text-tertiary)',padding:'8px 0'}}>{t('common.no_data')}</div>
   return (
     <div className="card" style={{overflow:'hidden'}}>
       {items.map((item,i)=>(
         <div key={item.code} style={{display:'flex',justifyContent:'space-between',padding:'9px 14px',borderBottom:i<items.length-1?'1px solid var(--border-dim)':'none',fontSize:13,alignItems:'center'}}>
           <div>
-            <span style={{color:'var(--text-primary)'}}>{item.name}</span>
+            <span style={{color:'var(--text-primary)'}}>{accName(item.code)}</span>
             <span style={{fontSize:10,color:'var(--text-tertiary)',marginLeft:6,fontFamily:'var(--font-mono)'}}>{item.code}</span>
           </div>
           <span style={{fontFamily:'var(--font-mono)',fontWeight:500,color}}>{item.amount.toLocaleString()}</span>
@@ -313,12 +318,12 @@ function BSSection({ items, color }) {
 
 // ── 記錄費用 ──────────────────────────────────────────────
 const EXPENSE_PRESETS = [
-  { label:'月租金',  account:'5202', payAccount:'1101' },
-  { label:'水電費',  account:'5203', payAccount:'1101' },
-  { label:'薪資',    account:'5201', payAccount:'1101' },
-  { label:'進貨',    account:'1211', payAccount:'1101' },
-  { label:'廣告費',  account:'5205', payAccount:'1103' },
-  { label:'雜費',    account:'5206', payAccount:'1101' },
+  { labelKey:'acct.preset_rent',      account:'5202', payAccount:'1101' },
+  { labelKey:'acct.preset_utilities', account:'5203', payAccount:'1101' },
+  { labelKey:'acct.preset_salary',    account:'5201', payAccount:'1101' },
+  { labelKey:'acct.preset_purchase',  account:'1211', payAccount:'1101' },
+  { labelKey:'acct.preset_ads',       account:'5205', payAccount:'1103' },
+  { labelKey:'acct.preset_misc',      account:'5206', payAccount:'1101' },
 ]
 
 function ExpenseView({ addManualEntry }) {
@@ -327,7 +332,7 @@ function ExpenseView({ addManualEntry }) {
   const [saved, setSaved] = useState(false)
 
   function applyPreset(preset) {
-    setForm(f=>({...f,expenseAccount:preset.account,payAccount:preset.payAccount,description:preset.label}))
+    setForm(f=>({...f,expenseAccount:preset.account,payAccount:preset.payAccount,description:t(preset.labelKey)}))
   }
 
   function handleSave() {
@@ -342,12 +347,12 @@ function ExpenseView({ addManualEntry }) {
       description: form.description,
       lines: isInventory
         ? [
-            { account:'1211',    debit:amount,  credit:0,      note:form.note||'入庫' },
-            { account:payAcc,    debit:0,        credit:amount, note:'付款' },
+            { account:'1211',    debit:amount,  credit:0,      note:form.note||t('acct.note_stock_in') },
+            { account:payAcc,    debit:0,        credit:amount, note:t('acct.note_payment') },
           ]
         : [
             { account:expAcc,    debit:amount,  credit:0,      note:form.note||form.description },
-            { account:payAcc,    debit:0,        credit:amount, note:'付款' },
+            { account:payAcc,    debit:0,        credit:amount, note:t('acct.note_payment') },
           ],
     })
 
@@ -362,13 +367,13 @@ function ExpenseView({ addManualEntry }) {
 
   return (
     <div style={{maxWidth:560,margin:'0 auto',display:'flex',flexDirection:'column',gap:16}}>
-      <div style={ac.cardTitle}>記錄費用 / 進貨</div>
+      <div style={ac.cardTitle}>{t('acct.expense_title')}</div>
 
       {/* Presets */}
       <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
         {EXPENSE_PRESETS.map(p=>(
-          <button key={p.label} className="btn btn-ghost btn-sm" onClick={()=>applyPreset(p)} style={{fontSize:12}}>
-            {p.label}
+          <button key={p.labelKey} className="btn btn-ghost btn-sm" onClick={()=>applyPreset(p)} style={{fontSize:12}}>
+            {t(p.labelKey)}
           </button>
         ))}
       </div>
@@ -376,55 +381,55 @@ function ExpenseView({ addManualEntry }) {
       <div className="card" style={{padding:'20px 22px',display:'flex',flexDirection:'column',gap:14}}>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
           <div>
-            <FieldLabel>日期</FieldLabel>
+            <FieldLabel>{t('common.date')}</FieldLabel>
             <input type="date" className="field" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/>
           </div>
           <div>
-            <FieldLabel>金額 (NT$) *</FieldLabel>
+            <FieldLabel>{t('acct.amount_label')} *</FieldLabel>
             <input type="number" className="field" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} placeholder="0" style={{fontFamily:'var(--font-mono)'}}/>
           </div>
         </div>
 
         <div>
-          <FieldLabel>摘要 *</FieldLabel>
-          <input className="field" value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} placeholder="例：三月份租金、水電費"/>
+          <FieldLabel>{t('acct.desc_label')} *</FieldLabel>
+          <input className="field" value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))} placeholder={t('acct.desc_placeholder')}/>
         </div>
 
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
           <div>
-            <FieldLabel>費用科目</FieldLabel>
+            <FieldLabel>{t('acct.expense_account')}</FieldLabel>
             <select className="field" value={form.expenseAccount} onChange={e=>setForm(f=>({...f,expenseAccount:e.target.value}))} style={{cursor:'pointer'}}>
               {Object.entries(ACCOUNTS).filter(([,v])=>v.type==='expense'||v.code==='1211').map(([k,v])=>(
-                <option key={k} value={k}>{k} {v.name}</option>
+                <option key={k} value={k}>{k} {accName(k)}</option>
               ))}
-              <option value="1211">1211 存貨（進貨）</option>
+              <option value="1211">1211 {t('acct.inventory_purchase')}</option>
             </select>
           </div>
           <div>
-            <FieldLabel>付款方式</FieldLabel>
+            <FieldLabel>{t('acct.pay_method')}</FieldLabel>
             <select className="field" value={form.payAccount} onChange={e=>setForm(f=>({...f,payAccount:e.target.value}))} style={{cursor:'pointer'}}>
-              <option value="1101">1101 現金</option>
-              <option value="1103">1103 銀行存款</option>
-              <option value="2101">2101 應付帳款（賒帳）</option>
+              <option value="1101">1101 {accName('1101')}</option>
+              <option value="1103">1103 {accName('1103')}</option>
+              <option value="2101">2101 {t('acct.payable_credit')}</option>
             </select>
           </div>
         </div>
 
         <div>
-          <FieldLabel>備註</FieldLabel>
-          <input className="field" value={form.note} onChange={e=>setForm(f=>({...f,note:e.target.value}))} placeholder="（選填）"/>
+          <FieldLabel>{t('common.notes')}</FieldLabel>
+          <input className="field" value={form.note} onChange={e=>setForm(f=>({...f,note:e.target.value}))} placeholder={`(${t('common.optional')})`}/>
         </div>
 
         <button className="btn btn-primary" onClick={handleSave} style={{width:'100%',padding:13}}>
-          {saved ? <><Check size={16}/>已記帳</> : '記帳'}
+          {saved ? <><Check size={16}/>{t('acct.saved')}</> : t('acct.record')}
         </button>
       </div>
 
       <div className="card" style={{padding:'14px 16px'}}>
         <div style={{fontSize:11,color:'var(--text-tertiary)',lineHeight:1.8}}>
-          <div>📒 每筆結帳自動產生 <strong style={{color:'var(--text-secondary)'}}>銷售收入</strong> + <strong style={{color:'var(--text-secondary)'}}>銷貨成本</strong> + <strong style={{color:'var(--text-secondary)'}}>銷項稅額</strong> 三筆分錄</div>
-          <div>💰 此頁面補登 <strong style={{color:'var(--text-secondary)'}}>費用、進貨、薪資</strong> 等非銷售支出</div>
-          <div>📊 所有資料自動彙整至損益表與資產負債表</div>
+          <div>{t('acct.info1_a')} <strong style={{color:'var(--text-secondary)'}}>{accName('4101')}</strong> + <strong style={{color:'var(--text-secondary)'}}>{accName('5101')}</strong> + <strong style={{color:'var(--text-secondary)'}}>{accName('2111')}</strong> {t('acct.info1_b')}</div>
+          <div>{t('acct.info2_a')} <strong style={{color:'var(--text-secondary)'}}>{t('acct.info2_items')}</strong> {t('acct.info2_b')}</div>
+          <div>{t('acct.info3')}</div>
         </div>
       </div>
     </div>

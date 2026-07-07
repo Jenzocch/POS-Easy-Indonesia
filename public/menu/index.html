@@ -1,32 +1,33 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>線上點餐</title>
+  <title>Pesan Online</title>
   <base href="/menu/">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="app">
     <header id="header">
-      <h1 id="store-name">載入中...</h1>
-      <p class="subtitle">線上點餐系統</p>
+      <h1 id="store-name" data-i18n="loading">Memuat...</h1>
+      <p class="subtitle" data-i18n="subtitle">Sistem Pemesanan Online</p>
+      <div id="lang-toggle" class="lang-toggle"></div>
     </header>
 
-    <!-- 搜尋 -->
+    <!-- Search -->
     <div class="search-bar">
-      <input type="text" id="search-input" placeholder="搜尋商品..." oninput="setSearch(this.value)"/>
+      <input type="text" id="search-input" data-i18n-placeholder="searchPlaceholder" placeholder="Cari menu..." oninput="setSearch(this.value)"/>
     </div>
 
-    <!-- 分類選擇 -->
+    <!-- Categories -->
     <nav id="categories" class="categories"></nav>
 
-    <!-- 商品列表 -->
+    <!-- Product list -->
     <main id="product-list" class="product-list"></main>
 
-    <!-- 購物車浮動按鈕 -->
+    <!-- Cart floating button -->
     <button id="cart-fab" class="cart-fab" onclick="toggleCart()">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
@@ -35,59 +36,59 @@
       <span id="cart-badge" class="cart-badge">0</span>
     </button>
 
-    <!-- 購物車面板 -->
+    <!-- Cart panel -->
     <div id="cart-overlay" class="cart-overlay" onclick="toggleCart()"></div>
     <div id="cart-panel" class="cart-panel">
       <div class="cart-header">
-        <h2>購物車</h2>
+        <h2 data-i18n="cartTitle">Keranjang</h2>
         <button onclick="toggleCart()" class="close-btn">&times;</button>
       </div>
       <div id="cart-items" class="cart-items"></div>
       <div id="cart-footer" class="cart-footer">
         <div class="cart-total">
-          <span>合計</span>
-          <span id="cart-total-amount">$0</span>
+          <span data-i18n="total">Total</span>
+          <span id="cart-total-amount">Rp 0</span>
         </div>
-        <button id="checkout-btn" class="checkout-btn" onclick="submitOrder()" disabled>
-          送出訂單
+        <button id="checkout-btn" class="checkout-btn" onclick="submitOrder()" disabled data-i18n="checkout">
+          Pesan Sekarang
         </button>
       </div>
     </div>
 
-    <!-- 訂單提交表單 -->
+    <!-- Order form -->
     <div id="order-form-overlay" class="order-form-overlay" style="display:none">
       <div class="order-form">
-        <h2>確認訂單</h2>
+        <h2 data-i18n="confirmOrderTitle">Konfirmasi Pesanan</h2>
         <div class="form-group">
-          <label>您的姓名（選填）</label>
-          <input type="text" id="customer-name" placeholder="方便取餐時叫號">
+          <label data-i18n="nameLabel">Nama Anda (opsional)</label>
+          <input type="text" id="customer-name" data-i18n-placeholder="namePlaceholder" placeholder="Untuk dipanggil saat pesanan siap">
         </div>
         <div class="form-group">
-          <label>桌號 / 備註（選填）</label>
-          <input type="text" id="table-num" placeholder="例如: 3號桌">
+          <label data-i18n="tableLabel">No. Meja / Catatan (opsional)</label>
+          <input type="text" id="table-num" data-i18n-placeholder="tablePlaceholder" placeholder="Contoh: Meja 3">
         </div>
         <div class="form-group">
-          <label>備註</label>
-          <textarea id="order-note" placeholder="特殊需求..." rows="2"></textarea>
+          <label data-i18n="noteLabel">Catatan</label>
+          <textarea id="order-note" data-i18n-placeholder="notePlaceholder" placeholder="Permintaan khusus..." rows="2"></textarea>
         </div>
         <div class="form-total">
-          合計: <strong id="form-total">$0</strong>
+          <span data-i18n="total">Total</span>: <strong id="form-total">Rp 0</strong>
         </div>
         <div class="form-actions">
-          <button onclick="closeOrderForm()" class="btn-secondary">取消</button>
-          <button onclick="confirmOrder()" class="btn-primary">確認送出</button>
+          <button onclick="closeOrderForm()" class="btn-secondary" data-i18n="cancel">Batal</button>
+          <button onclick="confirmOrder()" class="btn-primary" data-i18n="confirmSubmit">Kirim Pesanan</button>
         </div>
       </div>
     </div>
 
-    <!-- 訂單完成 -->
+    <!-- Order success -->
     <div id="order-success" class="order-success" style="display:none">
       <div class="success-content">
         <div class="success-icon">&#10003;</div>
-        <h2>訂單已送出!</h2>
+        <h2 data-i18n="orderSent">Pesanan Terkirim!</h2>
         <p id="success-order-id"></p>
-        <p id="success-status" class="status-text">等待店家確認中...</p>
-        <button onclick="resetApp()" class="btn-primary">繼續點餐</button>
+        <p id="success-status" class="status-text" data-i18n="statusPending">Menunggu konfirmasi warung...</p>
+        <button onclick="resetApp()" class="btn-primary" data-i18n="continueOrder">Pesan Lagi</button>
       </div>
     </div>
   </div>
