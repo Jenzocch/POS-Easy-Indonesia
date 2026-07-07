@@ -1,158 +1,58 @@
-// POS Pro Indonesia — i18n Translation Dictionary
-// Simple ponytail approach: no i18next, just object lookup + localStorage
+// POS Easy Indonesia — i18n core
+// Ponytail approach: no framework. Plain dictionaries merged from per-feature
+// fragment files in ./keys/ so parallel work never touches the same file.
+// Language changes take effect via full page reload (see LanguageSwitcher).
 
-export const translations = {
-  zh: {
-    // Login
-    'login.title': '登入',
-    'login.username': '帳號',
-    'login.password': '密碼',
-    'login.login_button': '登入',
-    'login.error': '帳號或密碼錯誤',
-    
-    // Common
-    'common.confirm': '確認',
-    'common.cancel': '取消',
-    'common.close': '關閉',
-    'common.save': '儲存',
-    'common.delete': '刪除',
-    'common.edit': '編輯',
-    'common.add': '新增',
-    'common.search': '搜尋',
-    'common.no_data': '無資料',
-    'common.loading': '載入中...',
-    
-    // POS
-    'pos.title': '收銀',
-    'pos.item': '品項',
-    'pos.qty': '數量',
-    'pos.price': '價格',
-    'pos.total': '合計',
-    'pos.cash': '現金',
-    'pos.card': '卡片',
-    'pos.qris': 'QRIS',
-    'pos.complete': '完成',
-    'pos.refund': '退貨',
-    'pos.receipt': '收據',
-    
-    // Reports
-    'reports.title': '報表',
-    'reports.daily_revenue': '每日營收',
-    'reports.profit': '毛利',
-    'reports.transactions': '交易數',
-    
-    // Settings
-    'settings.title': '設定',
-    'settings.language': '語言',
-    'settings.logout': '登出',
-  },
-  
-  en: {
-    // Login
-    'login.title': 'Login',
-    'login.username': 'Username',
-    'login.password': 'Password',
-    'login.login_button': 'Login',
-    'login.error': 'Invalid username or password',
-    
-    // Common
-    'common.confirm': 'Confirm',
-    'common.cancel': 'Cancel',
-    'common.close': 'Close',
-    'common.save': 'Save',
-    'common.delete': 'Delete',
-    'common.edit': 'Edit',
-    'common.add': 'Add',
-    'common.search': 'Search',
-    'common.no_data': 'No data',
-    'common.loading': 'Loading...',
-    
-    // POS
-    'pos.title': 'POS',
-    'pos.item': 'Item',
-    'pos.qty': 'Quantity',
-    'pos.price': 'Price',
-    'pos.total': 'Total',
-    'pos.cash': 'Cash',
-    'pos.card': 'Card',
-    'pos.qris': 'QRIS',
-    'pos.complete': 'Complete',
-    'pos.refund': 'Refund',
-    'pos.receipt': 'Receipt',
-    
-    // Reports
-    'reports.title': 'Reports',
-    'reports.daily_revenue': 'Daily Revenue',
-    'reports.profit': 'Profit',
-    'reports.transactions': 'Transactions',
-    
-    // Settings
-    'settings.title': 'Settings',
-    'settings.language': 'Language',
-    'settings.logout': 'Logout',
-  },
-  
-  id: {
-    // Login
-    'login.title': 'Masuk',
-    'login.username': 'Nama Pengguna',
-    'login.password': 'Kata Sandi',
-    'login.login_button': 'Masuk',
-    'login.error': 'Nama pengguna atau kata sandi salah',
-    
-    // Common
-    'common.confirm': 'Konfirmasi',
-    'common.cancel': 'Batal',
-    'common.close': 'Tutup',
-    'common.save': 'Simpan',
-    'common.delete': 'Hapus',
-    'common.edit': 'Edit',
-    'common.add': 'Tambah',
-    'common.search': 'Cari',
-    'common.no_data': 'Tidak ada data',
-    'common.loading': 'Memuat...',
-    
-    // POS
-    'pos.title': 'Kasir',
-    'pos.item': 'Barang',
-    'pos.qty': 'Jumlah',
-    'pos.price': 'Harga',
-    'pos.total': 'Total',
-    'pos.cash': 'Tunai',
-    'pos.card': 'Kartu',
-    'pos.qris': 'QRIS',
-    'pos.complete': 'Selesai',
-    'pos.refund': 'Retur',
-    'pos.receipt': 'Kwitansi',
-    
-    // Reports
-    'reports.title': 'Laporan',
-    'reports.daily_revenue': 'Omzet Harian',
-    'reports.profit': 'Keuntungan',
-    'reports.transactions': 'Transaksi',
-    
-    // Settings
-    'settings.title': 'Pengaturan',
-    'settings.language': 'Bahasa',
-    'settings.logout': 'Keluar',
+import common from './keys/common.js'
+import login from './keys/login.js'
+import nav from './keys/nav.js'
+import pos from './keys/pos.js'
+import settings from './keys/settings.js'
+import inventory from './keys/inventory.js'
+import purchase from './keys/purchase.js'
+import reports from './keys/reports.js'
+import members from './keys/members.js'
+
+const fragments = [common, login, nav, pos, settings, inventory, purchase, reports, members]
+
+export const LANGUAGES = [
+  { code: 'id', label: 'Bahasa Indonesia' },
+  { code: 'en', label: 'English' },
+  { code: 'zh', label: '中文' },
+]
+
+export const translations = { zh: {}, en: {}, id: {} }
+for (const frag of fragments) {
+  for (const lang of ['zh', 'en', 'id']) {
+    Object.assign(translations[lang], frag[lang] || {})
   }
-};
+}
 
-// Get current language from localStorage, default to 'id' for Indonesia market
+const LANG_KEY = 'pos_language'
+
 export function getCurrentLanguage() {
-  const stored = localStorage.getItem('pos_language');
-  return stored || 'id'; // Default to Indonesian
+  try {
+    const stored = localStorage.getItem(LANG_KEY)
+    if (stored && ['zh', 'en', 'id'].includes(stored)) return stored
+  } catch { /* node / SSR */ }
+  return 'id' // Indonesian market default
 }
 
-// Set language to localStorage
 export function setLanguage(lang) {
-  if (['zh', 'en', 'id'].includes(lang)) {
-    localStorage.setItem('pos_language', lang);
-  }
+  if (!['zh', 'en', 'id'].includes(lang)) return
+  try { localStorage.setItem(LANG_KEY, lang) } catch { /* ignore */ }
 }
 
-// Translation helper function - called throughout the app
-export function t(key, defaultValue = key) {
-  const lang = getCurrentLanguage();
-  return translations[lang]?.[key] || translations['id']?.[key] || defaultValue;
+// t('pos.total') → translated string for current language.
+// t('msg.deleted', { name: 'Kopi' }) → interpolates {name}.
+// Fallback chain: current lang → id → zh → the key itself.
+export function t(key, vars) {
+  const lang = getCurrentLanguage()
+  let s = translations[lang]?.[key] ?? translations.id?.[key] ?? translations.zh?.[key] ?? key
+  if (vars) {
+    for (const [k, v] of Object.entries(vars)) {
+      s = s.replaceAll(`{${k}}`, String(v))
+    }
+  }
+  return s
 }

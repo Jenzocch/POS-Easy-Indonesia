@@ -12,8 +12,19 @@ export function formatRupiah(value) {
   if (!Number.isFinite(value)) return 'Rp 0';
   
   // Remove decimals and format with thousands separator (.)
-  const formatted = Math.floor(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return `Rp ${formatted}`;
+  const negative = value < 0;
+  const formatted = Math.floor(Math.abs(value)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${negative ? '-' : ''}Rp ${formatted}`;
+}
+
+/**
+ * fmtMoney — the ONE money formatter every page should use.
+ * The store's currency is a property of the store (Indonesian market → Rupiah),
+ * NOT of the UI language, so this always formats as "Rp 15.000" regardless
+ * of which language the interface is displayed in.
+ */
+export function fmtMoney(value) {
+  return formatRupiah(value);
 }
 
 /**
