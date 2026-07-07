@@ -130,6 +130,7 @@ export default {
     'promo.desc_cond_percent': '全館 {tenth} 折（{pct}% off）',
     'promo.desc_cond_buyget': '買 {buy} 件送 {get} 件（最低價商品免費）',
     'promo.desc_cond_fixed': '指定商品每件折 {amt}',
+    'promo.note_label': '備註',
   },
   en: {
     // ── PurchasePage ──
@@ -259,6 +260,7 @@ export default {
     'promo.desc_cond_percent': '{pct}% off storewide',
     'promo.desc_cond_buyget': 'Buy {buy} get {get} free (cheapest items free)',
     'promo.desc_cond_fixed': '{amt} off each selected product',
+    'promo.note_label': 'Note',
   },
   id: {
     // ── PurchasePage ──
@@ -388,5 +390,6 @@ export default {
     'promo.desc_cond_percent': 'Diskon {pct}% semua produk',
     'promo.desc_cond_buyget': 'Beli {buy} gratis {get} (produk termurah gratis)',
     'promo.desc_cond_fixed': 'Potongan {amt} per produk terpilih',
+    'promo.note_label': 'Catatan',
   },
 }

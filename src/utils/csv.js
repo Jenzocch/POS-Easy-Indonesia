@@ -89,7 +89,9 @@ export function readFileAsText(file) {
   })
 }
 
-// 商品 CSV 標準欄位（中英對照）— 匯入時兩種都接受
+// 商品 CSV 標準欄位 —— 匯出固定用中文欄名（沿用既有匯出/範本格式，避免破壞現有使用者的檔案格式）。
+// DEAD-10：原註解宣稱「中英對照，匯入時兩種都接受」是假的——實作只讀中文鍵，其他語言欄名匯入會得到全空
+// 商品。現在匯入端改為真的雙欄名支援：中文（原格式）與印尼文（ID_HEADER_ALIASES）兩者皆可匯入辨識。
 export const PRODUCT_CSV_HEADERS = [
   '商品名稱',     // name
   '分類',         // category
@@ -104,6 +106,30 @@ export const PRODUCT_CSV_HEADERS = [
   '圖片網址',     // imageUrl
   'ID',           // id（更新時用，新增可空）
 ]
+
+// 中文欄名 → 印尼文欄名對照，僅供「匯入辨識」使用；匯出仍固定用上面的中文欄名。
+const ID_HEADER_ALIASES = {
+  '商品名稱': 'Nama Produk',
+  '分類': 'Kategori',
+  '售價': 'Harga Jual',
+  '成本': 'Harga Modal',
+  '庫存': 'Stok',
+  '安全庫存': 'Stok Aman',
+  '條碼': 'Barcode',
+  '單位': 'Satuan',
+  '主要供應商': 'Pemasok Utama',
+  '保存期限': 'Tgl Kedaluwarsa',
+  '圖片網址': 'URL Gambar',
+  'ID': 'ID',
+}
+
+// 讀取欄位值：優先中文欄名，找不到/空值時退回對應的印尼文欄名（雙欄名匯入相容）
+function readField(row, zhKey) {
+  const v = row[zhKey]
+  if (v !== undefined && v !== '') return v
+  const idKey = ID_HEADER_ALIASES[zhKey]
+  return idKey ? (row[idKey] ?? '') : ''
+}
 
 // 商品 → CSV row
 export function productToCSVRow(p, supplierMap) {
@@ -131,24 +157,24 @@ const cleanNum = (v) => {
 // 整數欄位用四捨五入而非 parseInt 截斷（"12.9" → 13，不是 12）
 const cleanInt = (v) => Math.round(cleanNum(v))
 
-// CSV row → 商品物件（給 add/update 用）
+// CSV row → 商品物件（給 add/update 用）—— 中文/印尼文欄名皆可辨識
 export function csvRowToProduct(row, supplierByName) {
-  const supplierName = (row['主要供應商'] || '').trim()
+  const supplierName = String(readField(row, '主要供應商') || '').trim()
   const supplierId = supplierName ? (supplierByName.get(supplierName)?.id || '') : ''
   return {
-    id: (row['ID'] || '').trim() || undefined,
-    name: (row['商品名稱'] || '').trim(),
-    category: (row['分類'] || '').trim(),
-    price: cleanNum(row['售價']),
-    cost: cleanNum(row['成本']),
-    stock: cleanInt(row['庫存']),
-    reorderLevel: cleanInt(row['安全庫存']),
-    barcode: (row['條碼'] || '').trim(),
-    unit: (row['單位'] || '個').trim(),
+    id: String(readField(row, 'ID') || '').trim() || undefined,
+    name: String(readField(row, '商品名稱') || '').trim(),
+    category: String(readField(row, '分類') || '').trim(),
+    price: cleanNum(readField(row, '售價')),
+    cost: cleanNum(readField(row, '成本')),
+    stock: cleanInt(readField(row, '庫存')),
+    reorderLevel: cleanInt(readField(row, '安全庫存')),
+    barcode: String(readField(row, '條碼') || '').trim(),
+    unit: String(readField(row, '單位') || '個').trim(),
     supplierId,
     supplierName,
-    expiryDate: (row['保存期限'] || '').trim(),
-    imageUrl: (row['圖片網址'] || '').trim(),
-    noBarcode: !(row['條碼'] || '').trim(),
+    expiryDate: String(readField(row, '保存期限') || '').trim(),
+    imageUrl: String(readField(row, '圖片網址') || '').trim(),
+    noBarcode: !String(readField(row, '條碼') || '').trim(),
   }
 }

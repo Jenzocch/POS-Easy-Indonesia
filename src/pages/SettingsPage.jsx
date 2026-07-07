@@ -715,9 +715,14 @@ function SecurityTab({ session }) {
     { icon:'⏱', title:'閒置自動鎖定', desc:'30 分鐘無操作自動回到登入畫面，防止員工離開後他人存取', status:'30分鐘', ok:true },
     { icon:'🚫', title:'暴力破解防護', desc:'同一帳號連續 5 次輸入錯誤密碼，鎖定 30 分鐘', status:'已啟用', ok:true },
     { icon:'📋', title:'稽核日誌', desc:'所有登入、結帳、刪除、匯出操作均記錄時間戳、操作人，最多保留 2000 筆', status:'已啟用', ok:true },
-    { icon:'🧹', title:'XSS / Injection 防護', desc:'所有輸入資料在儲存前清洗，過濾 script 標籤、SQL 注入等惡意字串', status:'已啟用', ok:true },
-    { icon:'👁', title:'個資遮罩', desc:'顯示顧客資料時自動遮罩（09xx****xxx），防止員工截圖外洩', status:'顯示層', ok:true },
-    { icon:'💾', title:'自動備份', desc:'每次重要操作前自動快照，最多保留 10 份，可匯出 JSON 檔案離線保存', status:'已啟用', ok:true },
+    // DEAD-14：原文案宣稱「所有輸入資料」都清洗，但 sanitizeObject 實際只接在促銷/進貨兩個表單，
+    // 商品/會員/結帳輸入未套用——降級文案為「部分套用」，不再誇大涵蓋範圍。
+    { icon:'🧹', title:'XSS / Injection 防護', desc:'促銷、進貨等表單輸入在儲存前清洗，過濾 script 標籤等惡意字串；尚未涵蓋商品/會員/結帳輸入', status:'部分套用', ok:false },
+    // DEAD-14：maskPhone/maskName 函數已寫好但從未在會員列表等畫面實際呼叫，顧客電話目前是明碼顯示——
+    // 降級為「尚未套用」，避免使用者誤以為已有遮罩保護。
+    { icon:'👁', title:'個資遮罩', desc:'遮罩函數已備妥（09xx****xxx），但目前尚未接到會員列表等顯示畫面，顧客資料仍為明碼顯示', status:'尚未套用', ok:false },
+    // DEAD-14：自動備份實際觸發時機是登出時 + 每日第一次登入時，並非「每次重要操作前」，修正描述避免誇大。
+    { icon:'💾', title:'自動備份', desc:'登出時與每日首次登入時自動快照，最多保留 10 份，可匯出 JSON 檔案離線保存', status:'已啟用', ok:true },
     { icon:'🔒', title:'Session 管理', desc:'登入 Token 存於 sessionStorage（關閉分頁即失效），包含到期時間，不存密碼', status:'8小時', ok:true },
   ]
 

@@ -154,4 +154,20 @@ describe('csvRowToProduct', () => {
     const p = csvRowToProduct({ '商品名稱': 'X', '售價': 'NT$1,200' }, supplierByName)
     expect(p.price).toBe(1200)
   })
+
+  // DEAD-10: 匯入端改為中文/印尼文雙欄名皆可辨識（匯出仍固定用中文欄名，見 PRODUCT_CSV_HEADERS）
+  it('印尼文欄名 CSV 也能正確匯入（雙欄名相容）', () => {
+    const p = csvRowToProduct({
+      'Nama Produk': 'Indomie Goreng', 'Harga Jual': '3500', 'Stok': '20', 'Pemasok Utama': '台北乾貨行',
+    }, supplierByName)
+    expect(p.name).toBe('Indomie Goreng')
+    expect(p.price).toBe(3500)
+    expect(p.stock).toBe(20)
+    expect(p.supplierId).toBe('s001')
+  })
+
+  it('中文欄名優先於印尼文欄名（同一 row 兩者都有時）', () => {
+    const p = csvRowToProduct({ '商品名稱': '中文優先', 'Nama Produk': '印尼備援' }, supplierByName)
+    expect(p.name).toBe('中文優先')
+  })
 })

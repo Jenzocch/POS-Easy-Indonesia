@@ -307,7 +307,9 @@ export default function CartPanel({
             <Receipt size={11} style={{verticalAlign:'middle', marginRight:4}}/>
             {t('pos.tax_id_toggle')} {taxId && <span style={{color:'var(--gold)'}}>· {taxId}</span>}
           </summary>
-          <input className="field" inputMode="numeric" value={taxId} onChange={e=>setTaxId(e.target.value.replace(/\D/g,'').slice(0,8))} placeholder={t('pos.tax_id_placeholder')} style={{marginTop:6, width:'100%'}}/>
+          {/* DEAD-11: 原 slice(0,8) 是台灣統編（8 碼）規格照搬，印尼 NPWP 新制為 16 碼（舊制 15 碼），
+              8 碼上限會讓合法稅號輸入不完。放寬到 16 碼，三語 placeholder 同步更新。 */}
+          <input className="field" inputMode="numeric" value={taxId} onChange={e=>setTaxId(e.target.value.replace(/\D/g,'').slice(0,16))} placeholder={t('pos.tax_id_placeholder')} style={{marginTop:6, width:'100%'}}/>
         </details>
       </div>
       <div style={cs.stageFooter}>

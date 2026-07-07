@@ -19,7 +19,6 @@
     "@supabase/supabase-js": "^2.106.2",
     "better-sqlite3": "^11.7.0",
     "cloudflared": "^0.7.1",
-    "electron-store": "^10.0.0",
     "express": "^4.21.0",
     "html5-qrcode": "^2.3.8",
     "jsbarcode": "^3.11.6",

@@ -570,20 +570,6 @@ export function useStore(){
   // audit #25: m.phone 可能為 null（舊資料），用 (m.phone||'').replace 防呆
   const findMember = useCallback(q=>members.find(m=>(m.phone||'').replace(/-/g,'').includes(q.replace(/-/g,''))||(m.name||'').includes(q)),[members])
 
-  // 從 SQLite 重新載入資料（用於備份還原後）
-  const reloadFromDB = useCallback(async () => {
-    const [p, m, o, j] = await Promise.all([
-      loadProducts([]),
-      loadMembers([]),
-      loadOrders([]),
-      loadManualJournal([]),
-    ])
-    setProducts(p)
-    setMembers(m)
-    setOrders(o)
-    setManualEntries(j)
-  }, [])
-
   // PERF-05 步驟1：衍生值 memo 化——useStore 掛在 App 根部，任何 state 變動都重渲染整個 App 樹，
   // 這四個值先前每 render 裸算（todayProfit 內還有 O(P) 的 products.find），是加購物車掉幀的主因之一。
   const categories    = useMemo(()=>[...new Set(products.map(p=>p.category))],[products])
@@ -607,9 +593,8 @@ export function useStore(){
     addProduct,updateProduct,deleteProduct,findByBarcode,
     addMember,updateMember,deleteMember,findMember,
     categories,todayOrders,todayRevenue,lowStockCount,todayProfit,
-    allJournal,autoJournal,manualEntries,
+    allJournal,manualEntries,
     addManualEntry,deleteManualEntry,
-    reloadFromDB,
     // v2.1
     heldOrders, holdCart, recallHeld, removeHeld,
     wasteLog, recordWaste, removeWaste,

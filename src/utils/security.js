@@ -235,12 +235,6 @@ export function validateStock(val) {
   return n
 }
 
-export function validatePhone(val) {
-  const cleaned = val.replace(/[-\s]/g, '')
-  if (!/^09\d{8}$/.test(cleaned)) throw new Error('手機格式錯誤（應為 09xxxxxxxx）')
-  return cleaned
-}
-
 // ── 7. 個資遮罩 ──────────────────────────────────────────────────────
 export function maskPhone(phone) {
   if (!phone || phone.length < 8) return '****'
