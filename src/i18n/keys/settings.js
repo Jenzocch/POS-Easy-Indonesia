@@ -199,7 +199,7 @@ export default {
     'settings.test_send': '測試送出',
     'settings.fill_url_first': '請先填 URL',
     'settings.test_message': '測試訊息',
-    'settings.test_message_desc': '這是 POS Pro 的 webhook 測試',
+    'settings.test_message_desc': '這是 POS Easy 的 webhook 測試',
     'settings.test_sent': '測試訊息已送出，請檢查目的端',
     'settings.test_send_failed': '送出失敗（可能是 URL 錯誤或 CORS）',
 
@@ -436,7 +436,7 @@ export default {
     'settings.test_send': 'Send Test',
     'settings.fill_url_first': 'Enter a URL first',
     'settings.test_message': 'Test message',
-    'settings.test_message_desc': 'This is a POS Pro webhook test',
+    'settings.test_message_desc': 'This is a POS Easy webhook test',
     'settings.test_sent': 'Test message sent, check the destination',
     'settings.test_send_failed': 'Send failed (possibly a wrong URL or CORS)',
 
@@ -673,7 +673,7 @@ export default {
     'settings.test_send': 'Kirim Tes',
     'settings.fill_url_first': 'Isi URL terlebih dahulu',
     'settings.test_message': 'Pesan tes',
-    'settings.test_message_desc': 'Ini adalah tes webhook POS Pro',
+    'settings.test_message_desc': 'Ini adalah tes webhook POS Easy',
     'settings.test_sent': 'Pesan tes terkirim, periksa tujuannya',
     'settings.test_send_failed': 'Gagal mengirim (mungkin URL salah atau CORS)',
 

@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/cover.png" alt="POS Pro" width="760">
+  <img src="docs/cover.png" alt="POS Easy" width="760">
 </p>
 
-<h1 align="center">POS Pro</h1>
+<h1 align="center">POS Easy</h1>
 
 <p align="center">
   離線優先的零售 POS 收銀系統 — 收銀 · 庫存 · 會員儲值 · 進貨訂貨 · 複式記帳 · 報表<br>
@@ -20,7 +20,7 @@
 
 ## 這是什麼
 
-POS Pro 是為**雜貨店 / 小型零售**打造的 POS 系統。資料預設存在本機（桌面版走 SQLite、瀏覽器版走 localStorage），**離線就能跑**、不綁月租；雲端同步是選用。
+POS Easy 是為**印尼 warung（雜貨小吃店）/ 小型零售**打造的 POS 系統。資料預設存在本機（桌面版走 SQLite、瀏覽器版走 localStorage），**離線就能跑**、不綁月租；雲端同步是選用。
 
 ## ✨ 功能
 
@@ -39,7 +39,7 @@ POS Pro 是為**雜貨店 / 小型零售**打造的 POS 系統。資料預設存
 ## 🚀 安裝
 
 ### 一般使用者
-到 [Releases](../../releases) 下載 `POS Pro Setup x.x.x.exe`，安裝即可（Windows 10 / 11）。
+到 [Releases](../../releases) 下載 `POS Easy Setup x.x.x.exe`，安裝即可（Windows 10 / 11）。
 
 > 若出現「Windows 已保護您的電腦／發行者不明」→ 點 **「其他資訊」→「仍要執行」**（安裝檔未經數位簽章，非病毒）。
 

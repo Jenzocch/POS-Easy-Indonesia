@@ -2,7 +2,7 @@
   "name": "pos-system",
   "version": "2.5.0",
   "private": true,
-  "description": "POS Pro — 零售收銀、庫存、會員、訂貨與複式記帳一體化系統",
+  "description": "POS Easy — 零售收銀、庫存、會員、訂貨與複式記帳一體化系統",
   "author": "Chroma Street Studio <chromastreetstudio@gmail.com>",
   "main": "electron/main.js",
   "scripts": {
@@ -37,8 +37,8 @@
     "vitest": "^2.1.9"
   },
   "build": {
-    "appId": "com.posPro.desktop",
-    "productName": "POS Pro",
+    "appId": "com.posEasy.desktop",
+    "productName": "POS Easy",
     "copyright": "Copyright © 2026 Chroma Street Studio",
     "directories": {
       "output": "release"

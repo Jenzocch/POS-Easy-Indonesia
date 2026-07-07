@@ -1,5 +1,5 @@
 /**
- * POS Pro Icon Generator v4
+ * POS Easy Icon Generator v4
  * 金棕底 + 白色購物袋 + 置中金色 P
  */
 const { Jimp } = require('jimp')

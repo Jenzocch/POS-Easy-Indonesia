@@ -39,7 +39,7 @@ build 完的 `dist/` 資料夾就是可部署的靜態檔案。PWA 需要 **HTTP
 
 1. 用 iPhone Safari 開網址
 2. 開「分享」→ 看到「加到主畫面」就代表 PWA 設定成功
-3. 加完後桌面會有 POS Pro icon，點開全螢幕跑（沒瀏覽器列）
+3. 加完後桌面會有 POS Easy icon，點開全螢幕跑（沒瀏覽器列）
 4. 第一次使用：登入 → 設定 → 雲端同步 → 貼 Supabase URL+key → ⬇ 從雲端拉下來
 
 ## 注意

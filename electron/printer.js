@@ -193,7 +193,7 @@ async function testPrint(settings) {
   data.push(CMD.INIT)
   data.push(CMD.ALIGN_CENTER)
   data.push(CMD.DOUBLE_ON)
-  data.push(line('POS Pro'))
+  data.push(line('POS Easy'))
   data.push(CMD.DOUBLE_OFF)
   data.push(line('印表機測試'))
   data.push(separator(32))

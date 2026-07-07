@@ -37,7 +37,7 @@ function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 700,
-    title: 'POS Pro 雜貨店管理系統',
+    title: 'POS Easy 雜貨店管理系統',
     icon: path.join(__dirname, '../build/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

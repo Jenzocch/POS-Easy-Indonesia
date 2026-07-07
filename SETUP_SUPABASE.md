@@ -1,6 +1,6 @@
 # 雲端同步設定教學 (Supabase)
 
-POS Pro v2.3.0 起支援用 Supabase 做跨裝置同步。本指南帶你 10 分鐘設定完成。
+POS Easy v2.3.0 起支援用 Supabase 做跨裝置同步。本指南帶你 10 分鐘設定完成。
 
 ## 為什麼用 Supabase？
 
@@ -45,7 +45,7 @@ POS Pro v2.3.0 起支援用 Supabase 做跨裝置同步。本指南帶你 10 分
 
 ### 5. 在 POS 系統設定
 
-1. 打開 POS Pro（桌機 Electron 或 iPad PWA 都可以）
+1. 打開 POS Easy（桌機 Electron 或 iPad PWA 都可以）
 2. 老闆登入 → 設定 → **雲端同步**
 3. 填入剛剛複製的 URL 和 anon key
 4. 點 **儲存設定**

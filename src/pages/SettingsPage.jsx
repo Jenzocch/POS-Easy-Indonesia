@@ -924,7 +924,7 @@ function WebhookTab({ session }) {
     saveWebhookConfig({ url: url.trim(), events: ['checkout'] })
     const ok = await fireWebhook('checkout', {
       _title: '🧪 測試訊息',
-      _description: '這是 POS Pro 的 webhook 測試',
+      _description: '這是 POS Easy 的 webhook 測試',
       _fields: [{ name: '時間', value: new Date().toLocaleString('zh-TW') }],
     })
     // 還原設定

@@ -72,7 +72,7 @@ function formatDiscord(event, payload) {
       description: payload._description || '',
       fields: payload._fields || [],
       timestamp: new Date().toISOString(),
-      footer: { text: 'POS Pro' },
+      footer: { text: 'POS Easy' },
     }],
   }
 }
@@ -113,7 +113,7 @@ export async function fireWebhook(event, payload = {}) {
   let body
   if (isDiscordUrl(url)) body = formatDiscord(event, payload)
   else if (isSlackUrl(url)) body = formatSlack(event, payload)
-  else body = { event, timestamp: new Date().toISOString(), store: 'POS Pro', ...payload }
+  else body = { event, timestamp: new Date().toISOString(), store: 'POS Easy', ...payload }
 
   try {
     await fetch(url, {

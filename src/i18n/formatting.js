@@ -1,4 +1,4 @@
-// POS Pro Indonesia — Currency & Date Formatting Utilities
+// POS Easy Indonesia — Currency & Date Formatting Utilities
 // Support Indonesian Rupiah (Rp), Chinese (CNY/NT), English (USD)
 
 import { getCurrentLanguage } from './translations.js';

@@ -1,4 +1,4 @@
-# POS Pro 專案接手文件
+# POS Easy 專案接手文件
 
 ## 目前進度
 - 版本：v2.5.0
@@ -160,7 +160,7 @@ pos-system/
 
 **雙模式設計**：
 - 開發中跑 `npm run dev` → 瀏覽器 + localStorage
-- 打包後跑 .exe → Electron + SQLite (`%APPDATA%/POS Pro/pos-data.db`)
+- 打包後跑 .exe → Electron + SQLite (`%APPDATA%/POS Easy/pos-data.db`)
 
 **所有資料存取必須走 `src/utils/dataAccess.js`**，不要直接 `localStorage` 或直接呼叫 `window.electronAPI`。dataAccess 內部會判斷 `isElectron` 並分流。
 

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════
-// 資安核心模組 — POS Pro Security Layer
+// 資安核心模組 — POS Easy Security Layer
 // ═══════════════════════════════════════════════════════════════════
 
 import { isElectron } from './dataAccess'
@@ -318,7 +318,7 @@ export function exportBackupFile(session) {
       try { data[k] = JSON.parse(localStorage.getItem(k) || '[]') } catch { data[k] = [] }
     })
     const content   = JSON.stringify({ exportedAt: new Date().toISOString(), version: '3.0', data }, null, 2)
-    const filename  = `POSPro_backup_${new Date().toISOString().slice(0,10)}.json`
+    const filename  = `POSEasy_backup_${new Date().toISOString().slice(0,10)}.json`
     downloadBlob(filename, content, 'application/json')
     writeAuditLog('DATA_EXPORT', session, { filename })
     return true

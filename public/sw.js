@@ -1,5 +1,5 @@
-// POS Pro Service Worker — offline-first cache
-const VERSION = 'pos-pro-v2.3.0'
+// POS Easy Service Worker — offline-first cache
+const VERSION = 'pos-easy-v2.5.0'
 const CORE = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon.png']
 
 self.addEventListener('install', (e) => {
