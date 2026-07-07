@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Trash2, Plus, AlertTriangle, Calendar, Package } from 'lucide-react'
 import { exportXLS } from '../utils/exportXLS'
+import { getExpiringProducts } from '../utils/analytics'
 import { t, fmtMoney } from '../i18n'
 
 // REASONS 是「儲存值」（wasteLog.reason 存進資料層）— 不可翻譯，維持中文原值。
@@ -37,18 +38,10 @@ export default function WastePage({ store, session }) {
   const totalLoss = filtered.reduce((s,w) => s + (w.cost || 0) * Math.abs(w.qty), 0)
   const totalQty = filtered.reduce((s,w) => s + Math.abs(w.qty), 0)
 
-  // 即期商品
+  // 即期商品（已過期 + 7 天內到期）— 統一走 analytics 的安全日期解析，daysLeft 由 util 算好（<=0 代表已過期/今天）
   const expiringSoon = useMemo(() => {
-    const today0 = new Date(); today0.setHours(0,0,0,0)
-    return products.filter(p => {
-      if (!p.expiryDate) return false
-      const exp = new Date(p.expiryDate)
-      const days = Math.floor((exp - today0) / 86400000)
-      return days <= 7
-    }).map(p => ({
-      ...p,
-      daysLeft: Math.floor((new Date(p.expiryDate) - today0) / 86400000),
-    })).sort((a,b) => a.daysLeft - b.daysLeft)
+    const { expired, soon } = getExpiringProducts(products, 7)
+    return [...expired, ...soon].sort((a, b) => a.daysLeft - b.daysLeft)
   }, [products])
 
   async function handleAdd() {

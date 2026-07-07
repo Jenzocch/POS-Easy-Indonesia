@@ -4,6 +4,8 @@ import CartPanel from '../components/CartPanel'
 import HeldOrdersModal from '../components/HeldOrdersModal'
 import PriceLookupModal from '../components/PriceLookupModal'
 import { CATEGORY_META } from '../utils/categories'
+import { isLowStock, isOutOfStock } from '../utils/stock'
+import { daysUntilExpiry } from '../utils/analytics'
 import useIsMobile from '../hooks/useIsMobile'
 import { t, fmtMoney } from '../i18n'
 // lazy load html5-qrcode (~340KB) — 只在點相機掃描才載入
@@ -290,9 +292,10 @@ export default function POSPage({ store, session }) {
 
 function ProductCard({ product, onAdd, idx, isMobile }) {
   const { name, category, price, stock, noBarcode, imageUrl, expiryDate } = product
-  const low  = stock > 0 && stock <= 5
-  const zero = stock === 0
-  const expSoon = expiryDate ? Math.floor((new Date(expiryDate) - new Date()) / 86400000) : null
+  const low  = isLowStock(product)   // 1..5：顯示低庫存
+  const zero = isOutOfStock(product) // <=0：顯示缺貨、禁點
+  // 統一走 analytics 的安全日期解析（本地午夜起算），與 Dashboard/Inventory/Waste 的 daysLeft 一致
+  const expSoon = daysUntilExpiry(expiryDate)
   const expWarn = expSoon != null && expSoon <= 7
 
   return (

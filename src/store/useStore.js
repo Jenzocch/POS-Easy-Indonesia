@@ -14,6 +14,7 @@ import {
 } from '../utils/dataAccess'
 import { fireWebhook, payloadFromOrder, payloadFromLowStock, payloadFromShift, payloadFromExpiring, getWebhookConfig } from '../utils/webhook'
 import { getReorderList, getExpiringProducts } from '../utils/analytics'
+import { needsRestock } from '../utils/stock'
 
 const SEED_PRODUCTS = [
   { id:'p001', name:'花生糖',    category:'自包裝糖果', price:30,  cost:15,  stock:50, barcode:'',             unit:'包',  noBarcode:true  },
@@ -573,7 +574,7 @@ export function useStore(){
   // 排除完整退貨原訂單（status='refunded'）；部分退貨負數訂單保留，與原單抵銷正確
   const todayOrders   = orders.filter(o=>new Date(o.time).toDateString()===new Date().toDateString() && o.status!=='refunded' && !(o.refundOf && o.fullRefund))
   const todayRevenue  = todayOrders.reduce((s,o)=>s+o.total,0)
-  const lowStockCount = products.filter(p=>p.stock<=5).length
+  const lowStockCount = products.filter(needsRestock).length // 需補貨 = 低庫存 + 缺貨（Sidebar 徽章與庫存頁 header 同源）
   const todayProfit   = todayOrders.reduce((s,o)=>s+o.items.reduce((a,i)=>{const prod=products.find(p=>p.id===i.id);return a+(prod?(i.price-(prod.cost||0))*i.qty:0)},0),0)
 
   return {

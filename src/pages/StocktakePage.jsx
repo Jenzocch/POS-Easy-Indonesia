@@ -1,7 +1,8 @@
 import { useState, useRef, lazy, Suspense } from 'react'
 import { Check, X, AlertTriangle, Search, ChevronDown, ChevronUp, Download, Camera } from 'lucide-react'
 import { writeAuditLog } from '../utils/security'
-import { stringifyCSV } from '../utils/csv'
+import { stringifyCSV, downloadCSV } from '../utils/csv'
+import { needsRestock } from '../utils/stock'
 import { t } from '../i18n'
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
 
@@ -96,12 +97,8 @@ export default function StocktakePage({ store, session }) {
       [hDiff]: counts[p.id] !== undefined ? counts[p.id] - p.stock : '—',
     }))
     const content = `${t('stocktake.csv_date')},${new Date().toLocaleDateString('zh-TW')}\n` + stringifyCSV(records, header)
-    const BOM  = '﻿'
-    const blob = new Blob([BOM+content],{type:'text/csv;charset=utf-8;'})
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href=url; a.download=`${t('stocktake.file_report')}_${new Date().toISOString().slice(0,10)}.csv`; a.click()
-    URL.revokeObjectURL(url)
+    // downloadCSV 內建 BOM + 100ms 延遲 revoke，不再手刻 Blob 儀式
+    downloadCSV(`${t('stocktake.file_report')}_${new Date().toISOString().slice(0,10)}.csv`, content)
     writeAuditLog('DATA_EXPORT', session, { type: '盤點報告' })
   }
 
@@ -267,7 +264,7 @@ export default function StocktakePage({ store, session }) {
                   <span style={{fontSize:13, fontWeight:500}}>{p.name}</span>
                   <span style={{fontSize:11, color:'var(--text-tertiary)', marginLeft:8}}>{p.category}</span>
                 </div>
-                <span style={{textAlign:'right', fontFamily:'var(--font-mono)', fontSize:13, color:p.stock<=5?'var(--amber)':'var(--text-secondary)'}}>{p.stock}</span>
+                <span style={{textAlign:'right', fontFamily:'var(--font-mono)', fontSize:13, color:needsRestock(p)?'var(--amber)':'var(--text-secondary)'}}>{p.stock}</span>
                 <div style={{display:'flex', justifyContent:'flex-end'}}>
                   <input
                     ref={el=>{ if (el) inputRefs.current[p.id]=el; else delete inputRefs.current[p.id] }}

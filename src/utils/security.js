@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════════════
 
 import { isElectron } from './dataAccess'
+import { downloadBlob } from './csv'
 
 // ── 1. 角色權限定義 (RBAC) ──────────────────────────────────────────
 // 簡化為：老闆 (全部權限) 和 員工 (基本操作)
@@ -317,12 +318,8 @@ export function exportBackupFile(session) {
       try { data[k] = JSON.parse(localStorage.getItem(k) || '[]') } catch { data[k] = [] }
     })
     const content   = JSON.stringify({ exportedAt: new Date().toISOString(), version: '3.0', data }, null, 2)
-    const blob      = new Blob([content], { type: 'application/json' })
-    const url       = URL.createObjectURL(blob)
-    const a         = document.createElement('a')
     const filename  = `POSPro_backup_${new Date().toISOString().slice(0,10)}.json`
-    a.href = url; a.download = filename; a.click()
-    URL.revokeObjectURL(url)
+    downloadBlob(filename, content, 'application/json')
     writeAuditLog('DATA_EXPORT', session, { filename })
     return true
   } catch { return false }

@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
 import {
   buildPnL, buildBalanceSheet, groupJournalByDate,
-  exportJournalCSV, exportPnLCSV, downloadCSV,
+  exportJournalCSV, exportPnLCSV,
   ACCOUNTS,
 } from '../utils/accounting'
+import { downloadCSV } from '../utils/csv'
 import { Download, Plus, Trash2, X, Check, ChevronDown, ChevronRight, BookOpen, TrendingUp, Scale, FileText } from 'lucide-react'
 import { t, fmtMoney } from '../i18n'
 
@@ -43,8 +44,9 @@ export default function AccountingPage({ store }) {
   ), [allJournal, from, to])
 
   function handleExport() {
-    if (tab === 'journal') downloadCSV(exportJournalCSV(allJournal.filter(j=>j.date>=from&&j.date<=to)), `${t('acct.tab_journal')}_${from}_${to}.csv`)
-    else if (tab === 'pnl') downloadCSV(exportPnLCSV(pnl, from, to), `${t('acct.tab_pnl')}_${from}_${to}.csv`)
+    // 注意：utils/csv 的 downloadCSV 參數順序是 (filename, content)，與舊 accounting.js 版本相反
+    if (tab === 'journal') downloadCSV(`${t('acct.tab_journal')}_${from}_${to}.csv`, exportJournalCSV(allJournal.filter(j=>j.date>=from&&j.date<=to)))
+    else if (tab === 'pnl') downloadCSV(`${t('acct.tab_pnl')}_${from}_${to}.csv`, exportPnLCSV(pnl, from, to))
   }
 
   const canExport = tab === 'journal' || tab === 'pnl'

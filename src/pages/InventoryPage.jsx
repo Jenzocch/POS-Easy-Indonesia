@@ -5,6 +5,7 @@ import { loadSuppliers, loadPurchases } from '../utils/dataAccess'
 import { DEFAULT_CATEGORIES, CATEGORY_META, mergeCategories } from '../utils/categories'
 import { getExpiringProducts, getProductHistory } from '../utils/analytics'
 import { parseCSV, stringifyCSV, downloadCSV, readFileAsText, PRODUCT_CSV_HEADERS, productToCSVRow, csvRowToProduct } from '../utils/csv'
+import { isLowStock, isOutOfStock } from '../utils/stock'
 import { t, fmtMoney } from '../i18n'
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
 
@@ -230,8 +231,8 @@ export default function InventoryPage({ store }) {
   const filtered = useMemo(() => products
     .filter(p => {
       const okSearch = !search || (p.name||'').includes(search) || (p.category||'').includes(search)
-      if (filter === 'low')      return okSearch && p.stock <= 5 && p.stock > 0
-      if (filter === 'zero')     return okSearch && p.stock === 0
+      if (filter === 'low')      return okSearch && isLowStock(p)
+      if (filter === 'zero')     return okSearch && isOutOfStock(p)
       if (filter === 'nobc')     return okSearch && p.noBarcode
       if (filter === 'expiring') return okSearch && expiringIds.has(p.id)
       if (filter === 'expired')  return okSearch && expiredIds.has(p.id)
@@ -266,8 +267,9 @@ export default function InventoryPage({ store }) {
     deleteProduct(id); setConfirmDel(null)
   }
 
-  const lowCount  = products.filter(p => p.stock <= 5 && p.stock > 0).length
-  const zeroCount = products.filter(p => p.stock === 0).length
+  // lowCount + zeroCount 恰等於 useStore 的 lowStockCount（needsRestock）：Sidebar 徽章與這裡的「需補貨」數字必須一致
+  const lowCount  = products.filter(isLowStock).length
+  const zeroCount = products.filter(isOutOfStock).length
 
   const FILTERS = [
     ['all',      t('common.all'),          products.length],
@@ -363,8 +365,8 @@ export default function InventoryPage({ store }) {
           {filtered.length === 0 ? (
             <div style={iv.empty}>{t('inv.empty')}</div>
           ) : filtered.map(p => {
-            const low  = p.stock <= 5 && p.stock > 0
-            const zero = p.stock === 0
+            const low  = isLowStock(p)
+            const zero = isOutOfStock(p)
             return (
               <div key={p.id} className="cv-row" style={{...iv.row, gridTemplateColumns: gridTpl, background: selectedIds.has(p.id) ? 'var(--gold-dim)' : expiredIds.has(p.id) ? 'rgba(229,90,90,0.06)' : zero?'rgba(229,90,90,0.03)': low?'rgba(229,160,48,0.03)' : expiringIds.has(p.id) ? 'rgba(229,160,48,0.04)' : 'transparent'}}>
                 <input

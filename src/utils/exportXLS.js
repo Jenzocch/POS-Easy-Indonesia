@@ -1,5 +1,9 @@
 // 簡易 Excel 匯出（HTML→XLS，無需第三方套件）
 // rows: [['標題1','標題2',...], ['資料1','資料2',...], ...]
+import { downloadBlob } from './csv'
+
+const XLS_MIME = 'application/vnd.ms-excel;charset=utf-8'
+
 export function exportXLS(rows, filename = 'export.xls') {
   const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   const html = [
@@ -13,13 +17,7 @@ export function exportXLS(rows, filename = 'export.xls') {
     '</table></body></html>',
   ].join('')
 
-  const blob = new Blob(['﻿' + html], { type: 'application/vnd.ms-excel;charset=utf-8' })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a')
-  a.href = url
-  a.download = filename.endsWith('.xls') ? filename : filename + '.xls'
-  a.click()
-  URL.revokeObjectURL(url)
+  downloadBlob(filename.endsWith('.xls') ? filename : filename + '.xls', '﻿' + html, XLS_MIME)
 }
 
 // 多工作表（Excel 不支援單一 .xls 檔多工作表 with this method，
@@ -43,11 +41,5 @@ export function exportMultiSheetXLS(sheets, filename = 'export.xls') {
  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
  xmlns:html="http://www.w3.org/TR/REC-html40">${sheetXmls}</Workbook>`
 
-  const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a')
-  a.href = url
-  a.download = filename.endsWith('.xls') ? filename : filename + '.xls'
-  a.click()
-  URL.revokeObjectURL(url)
+  downloadBlob(filename.endsWith('.xls') ? filename : filename + '.xls', xml, XLS_MIME)
 }

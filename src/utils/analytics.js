@@ -137,6 +137,29 @@ export function computeAllRFM(members = [], orders = []) {
   return members.map(m => ({ ...m, rfm: computeMemberRFM(m, orders) }))
 }
 
+// ===== 安全日期解析 =====
+// 純日期字串 (YYYY-MM-DD) 用「本地午夜」解析；否則 JS 當 UTC 午夜，
+// 在 UTC+8 會把「今天到期」誤判成昨天已過期。其他格式交給 new Date()。
+// 無效日期回傳 null。所有到期日判定都應走這個 helper，不要手刻 new Date(str)。
+export function parseLocalDate(dateStr) {
+  if (!dateStr) return null
+  const raw = String(dateStr)
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? new Date(raw + 'T00:00:00') : new Date(raw)
+  return isNaN(d.getTime()) ? null : d
+}
+
+// 距「今天本地午夜」還有幾天到期；無效/空日期回 null。
+// 與 getExpiringProducts 的 daysLeft 同一套語意：<0 已過期、0 今天到期、1 明天。
+// UI 若要顯示單一商品的到期倒數（如 POS 商品卡徽章），走這個 helper，不要手刻 new Date(str)。
+export function daysUntilExpiry(dateStr) {
+  const exp = parseLocalDate(dateStr)
+  if (!exp) return null
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const diff = (exp.getTime() - today.getTime()) / DAY_MS
+  // 與 getExpiringProducts 同款取整：過期取 floor、未過期取 ceil（純日期字串本來就是整數，不受影響）
+  return diff < 0 ? Math.floor(diff) : Math.ceil(diff)
+}
+
 // ===== 過期商品警示 =====
 // 回傳：{ expired: [], soon: [] } — 已過期 / 7 天內到期
 export function getExpiringProducts(products = [], soonDays = 7) {
@@ -145,11 +168,8 @@ export function getExpiringProducts(products = [], soonDays = 7) {
   const expired = []
   const soon = []
   for (const p of products) {
-    if (!p.expiryDate) continue
-    // 純日期字串 (YYYY-MM-DD) 用「本地午夜」解析；否則 JS 當 UTC 午夜，在 UTC+8 會把「今天到期」誤判成昨天已過期
-    const raw = String(p.expiryDate)
-    const exp = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? new Date(raw + 'T00:00:00') : new Date(raw)
-    if (isNaN(exp.getTime())) continue
+    const exp = parseLocalDate(p.expiryDate)
+    if (!exp) continue
     const expTs = exp.getTime()
     if (expTs < today.getTime()) {
       expired.push({ ...p, daysLeft: Math.floor((expTs - today.getTime()) / DAY_MS) })

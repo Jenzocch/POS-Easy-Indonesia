@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { parseCSV, stringifyCSV, csvRowToProduct } from './csv'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { parseCSV, stringifyCSV, csvRowToProduct, downloadCSV, downloadBlob } from './csv'
 
 describe('parseCSV', () => {
   it('解析基本 CSV', () => {
@@ -55,6 +55,60 @@ describe('stringifyCSV', () => {
     const csv = stringifyCSV(original, ['name', 'price', 'note'])
     const { records } = parseCSV(csv)
     expect(records[0]).toEqual(original[0])
+  })
+})
+
+// node 環境無 DOM：以 stub 攔截 createObjectURL / createElement，只驗證內容組裝
+// （BOM 前綴、mime、revoke 時機），不真的觸發下載
+describe('downloadBlob / downloadCSV', () => {
+  let anchor, captured, urlStub
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    captured = {}
+    anchor = { href: '', download: '', click: vi.fn() }
+    urlStub = {
+      createObjectURL: vi.fn((blob) => { captured.blob = blob; return 'blob:mock' }),
+      revokeObjectURL: vi.fn(),
+    }
+    vi.stubGlobal('URL', urlStub)
+    vi.stubGlobal('document', { createElement: vi.fn(() => anchor) })
+  })
+
+  afterEach(() => {
+    vi.runAllTimers()        // 先讓 100ms revoke timer 在 stub 還在時跑完
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  it('downloadCSV 內容前綴 UTF-8 BOM、mime 為 text/csv', async () => {
+    downloadCSV('報表.csv', 'a,b\n1,2')
+    expect(anchor.download).toBe('報表.csv')
+    expect(anchor.click).toHaveBeenCalledTimes(1)
+    expect(captured.blob.type).toBe('text/csv;charset=utf-8;')
+    // blob.text() 會在 UTF-8 解碼時吃掉 BOM，須驗原始 bytes
+    const bytes = new Uint8Array(await captured.blob.arrayBuffer())
+    expect([...bytes.slice(0, 3)]).toEqual([0xEF, 0xBB, 0xBF])            // BOM 在最前
+    expect(new TextDecoder().decode(bytes.slice(3))).toBe('a,b\n1,2')     // 內容不變
+  })
+
+  it('downloadBlob 字串內容以指定 mime 包成 Blob', async () => {
+    downloadBlob('backup.json', '{"a":1}', 'application/json')
+    expect(captured.blob.type).toBe('application/json')
+    expect(await captured.blob.text()).toBe('{"a":1}')  // 無 BOM
+  })
+
+  it('downloadBlob 接受現成 Blob，不重新包裝', () => {
+    const b = new Blob(['x'], { type: 'application/octet-stream' })
+    downloadBlob('x.bin', b)
+    expect(captured.blob).toBe(b)
+  })
+
+  it('100ms 後才 revokeObjectURL（避免下載開始前 URL 失效）', () => {
+    downloadBlob('x.csv', 'abc', 'text/csv')
+    expect(urlStub.revokeObjectURL).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(100)
+    expect(urlStub.revokeObjectURL).toHaveBeenCalledWith('blob:mock')
   })
 })
 

@@ -3,7 +3,7 @@ import {
   effectiveOrders, computeSalesVelocity, suggestReorderQty,
   productPerformance, computeMemberRFM, getExpiringProducts,
   getReorderList, averageTicket, profitAnalysis, customerSegmentation,
-  getProductHistory,
+  getProductHistory, parseLocalDate, daysUntilExpiry,
 } from './analytics'
 
 const DAY = 86400000
@@ -250,6 +250,75 @@ describe('回歸：邊界與防呆', () => {
     const hit = soon.find(p => p.id === 'x')
     expect(hit).toBeTruthy()
     expect(hit.daysLeft).toBe(3)
+  })
+
+  it('parseLocalDate：YYYY-MM-DD 解析為本地午夜（非 UTC 午夜）', () => {
+    const d = parseLocalDate('2026-07-07')
+    expect(d).not.toBeNull()
+    expect(d.getFullYear()).toBe(2026)
+    expect(d.getMonth()).toBe(6)   // 0-based
+    expect(d.getDate()).toBe(7)    // 本地日期不因時區位移
+    expect(d.getHours()).toBe(0)   // 本地午夜
+  })
+
+  it('parseLocalDate：無效/空值回傳 null', () => {
+    expect(parseLocalDate('not-a-date')).toBeNull()
+    expect(parseLocalDate('')).toBeNull()
+    expect(parseLocalDate(null)).toBeNull()
+    expect(parseLocalDate(undefined)).toBeNull()
+  })
+
+  it('parseLocalDate：非純日期字串交給 new Date() 解析', () => {
+    const d = parseLocalDate('2026-07-07T12:30:00')
+    expect(d).not.toBeNull()
+    expect(d.getHours()).toBe(12)
+  })
+
+  it('getExpiringProducts 邊界：今天到期算 soon(daysLeft=0)、剛好 7 天算 soon、8 天不算、昨天算 expired', () => {
+    const base = new Date(); base.setHours(0, 0, 0, 0)
+    const localYmd = (offsetDays) => {
+      const d = new Date(base.getTime() + offsetDays * DAY)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    }
+    const products = [
+      { id: 'today',     expiryDate: localYmd(0) },
+      { id: 'exact7',    expiryDate: localYmd(7) },
+      { id: 'day8',      expiryDate: localYmd(8) },
+      { id: 'yesterday', expiryDate: localYmd(-1) },
+      { id: 'invalid',   expiryDate: 'not-a-date' },
+    ]
+    const { expired, soon } = getExpiringProducts(products, 7)
+    expect(soon.find(p => p.id === 'today')?.daysLeft).toBe(0)
+    expect(soon.find(p => p.id === 'exact7')?.daysLeft).toBe(7)
+    expect([...expired, ...soon].map(p => p.id)).not.toContain('day8')
+    expect(expired.find(p => p.id === 'yesterday')?.daysLeft).toBe(-1)
+    expect([...expired, ...soon].map(p => p.id)).not.toContain('invalid')
+  })
+
+  it('daysUntilExpiry 與 getExpiringProducts.daysLeft 同語意：明天=1、今天=0、昨天=-1（本地午夜起算，午後也不 off-by-one）', () => {
+    const base = new Date(); base.setHours(0, 0, 0, 0)
+    const localYmd = (offsetDays) => {
+      const d = new Date(base.getTime() + offsetDays * DAY)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    }
+    expect(daysUntilExpiry(localYmd(1))).toBe(1)   // 明天：不能被判成已過期
+    expect(daysUntilExpiry(localYmd(0))).toBe(0)   // 今天到期
+    expect(daysUntilExpiry(localYmd(-1))).toBe(-1) // 昨天：已過期
+    expect(daysUntilExpiry(localYmd(2))).toBe(2)   // 後天：與其他頁的 daysLeft=2 一致
+    // 與 getExpiringProducts 的 daysLeft 逐一對齊
+    const { expired, soon } = getExpiringProducts([
+      { id: 'a', expiryDate: localYmd(1) },
+      { id: 'b', expiryDate: localYmd(-1) },
+    ], 7)
+    expect(soon.find(p => p.id === 'a')?.daysLeft).toBe(daysUntilExpiry(localYmd(1)))
+    expect(expired.find(p => p.id === 'b')?.daysLeft).toBe(daysUntilExpiry(localYmd(-1)))
+  })
+
+  it('daysUntilExpiry 無效/空值回傳 null（徽章隱藏、不 throw）', () => {
+    expect(daysUntilExpiry('not-a-date')).toBeNull()
+    expect(daysUntilExpiry('')).toBeNull()
+    expect(daysUntilExpiry(null)).toBeNull()
+    expect(daysUntilExpiry(undefined)).toBeNull()
   })
 
   it('productPerformance 無銷量商品 daysOfStock 為 null（JSON 安全）', () => {

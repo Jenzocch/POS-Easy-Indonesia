@@ -61,16 +61,22 @@ export function stringifyCSV(records, headers = null) {
   return lines.join('\n')
 }
 
-// 觸發瀏覽器下載（CSV with BOM 給 Excel 中文）
-export function downloadCSV(filename, content) {
-  const BOM = '﻿'
-  const blob = new Blob([BOM + content], { type: 'text/csv;charset=utf-8;' })
+// 觸發瀏覽器下載 — 全案唯一的 Blob 下載儀式，其他地方一律呼叫這裡，不要手刻。
+// content 可為 string 或現成 Blob；100ms 後才 revokeObjectURL，避免部分瀏覽器在下載開始前 URL 已失效。
+export function downloadBlob(filename, content, mime = 'application/octet-stream') {
+  const blob = content instanceof Blob ? content : new Blob([content], { type: mime })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
   a.download = filename
   a.click()
   setTimeout(() => URL.revokeObjectURL(url), 100)
+}
+
+// 觸發瀏覽器下載（CSV with BOM 給 Excel 中文）
+export function downloadCSV(filename, content) {
+  const BOM = '﻿'
+  downloadBlob(filename, BOM + content, 'text/csv;charset=utf-8;')
 }
 
 // 從 File 物件讀文字

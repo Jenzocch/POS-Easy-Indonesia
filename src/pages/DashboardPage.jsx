@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { getSetting, setSetting } from '../utils/dataAccess'
 import { averageTicket, profitAnalysis, getExpiringProducts, getReorderList, customerSegmentation, computeAllRFM } from '../utils/analytics'
+import { isLowStock, isOutOfStock } from '../utils/stock'
 import { t, fmtMoney, formatTime, getCurrentLanguage } from '../i18n'
 
 const DATE_LOCALES = { zh: 'zh-TW', en: 'en-US', id: 'id-ID' }
@@ -63,18 +64,12 @@ export default function DashboardPage({ store, session }) {
     })
     const topItems = Object.values(itemMap).sort((a,b)=>b.qty-a.qty).slice(0,5)
 
-    // 低庫存
-    const lowStock = products.filter(p => p.stock > 0 && p.stock <= 5).slice(0, 5)
-    const outOfStock = products.filter(p => p.stock === 0).length
+    // 低庫存 / 缺貨（統一走 utils/stock 判定）
+    const lowStock = products.filter(isLowStock).slice(0, 5)
+    const outOfStock = products.filter(isOutOfStock).length
 
-    // 即期商品
-    const today0 = new Date(); today0.setHours(0,0,0,0)
-    const expiringSoon = products.filter(p => {
-      if (!p.expiryDate) return false
-      const exp = new Date(p.expiryDate)
-      const days = Math.floor((exp - today0) / 86400000)
-      return days >= 0 && days <= 7
-    }).slice(0, 5)
+    // 即期商品（7 天內到期、未過期）— 統一走 analytics 的安全日期解析，避免手刻 new Date(p.expiryDate) 的時區 off-by-one
+    const expiringSoon = getExpiringProducts(products, 7).soon.slice(0, 5)
 
     return { ordersToday, revDelta, last7, max7, topItems, lowStock, outOfStock, expiringSoon }
   }, [orders, products, todayRevenue])
@@ -318,7 +313,7 @@ export default function DashboardPage({ store, session }) {
           {stats.expiringSoon.length === 0 ? (
             <div style={ds.empty}>{t('dash.no_expiring')}</div>
           ) : stats.expiringSoon.map(p => {
-            const days = Math.floor((new Date(p.expiryDate) - new Date()) / 86400000)
+            const days = p.daysLeft // getExpiringProducts 已算好（安全解析、距今天午夜的天數）
             return (
               <div key={p.id} style={ds.topRow}>
                 <div style={{flex:1, minWidth:0}}>
