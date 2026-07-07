@@ -1006,9 +1006,10 @@ module.exports = function initDatabase(dbPath) {
     }
 
     // Settings（subscriptionTier / 店家設定 / 印表機設定）。備份寫的是物件 {key: value}，
-    // 也容忍列陣列 [{key, value}]。舊備份沒有 settings 鍵 → 不動作，
-    // 本機現有設定原樣保留（向下相容；replaceAllTx 也只在有 settings 鍵時才清空該表）。
-    if (data.settings && typeof data.settings === 'object') {
+    // 也容忍列陣列 [{key, value}]。舊備份沒有 settings 鍵、或鍵存在但是空物件/空陣列
+    // （例如店家第一次自動備份時 Settings 頁面還沒被碰過）→ 都不動作，
+    // 本機現有設定原樣保留（向下相容；replaceAllTx 也只在有「非空」settings 鍵時才清空該表）。
+    if (data.settings && typeof data.settings === 'object' && Object.keys(data.settings).length > 0) {
       const entries = Array.isArray(data.settings)
         ? data.settings.map(r => [r?.key, r?.value])
         : Object.entries(data.settings)
@@ -1064,9 +1065,10 @@ module.exports = function initDatabase(dbPath) {
     if (hasKasbonKeys) {
       db.exec('DELETE FROM kasbon_payments; DELETE FROM kasbon_records;')
     }
-    // Settings 向下相容：備份有 settings 鍵才整批替換（這正是還原的意義）；
-    // 舊備份沒有此鍵 → 保留本機現有 settings（subscriptionTier、印表機、店名等不得被清空）。
-    if (data.settings && typeof data.settings === 'object') {
+    // Settings 向下相容：備份有「非空」settings 鍵才整批替換（這正是還原的意義）；
+    // 舊備份沒有此鍵、或鍵是空物件/空陣列（店家第一次自動備份時尚未有任何設定）
+    // → 保留本機現有 settings（subscriptionTier、印表機、店名等不得被清空）。
+    if (data.settings && typeof data.settings === 'object' && Object.keys(data.settings).length > 0) {
       db.exec('DELETE FROM settings')
     }
 

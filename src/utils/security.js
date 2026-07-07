@@ -256,16 +256,22 @@ export function createBackup(session, label = '') {
   try {
     if (isElectron) {
       // Electron: SQLite 備份（promise 一併回傳，讓備份頁能 await 後刷新清單）
-      const promise = window.electronAPI.db.createBackup(label || '自動備份', session?.username || '系統').catch(() => {})
-      // 同步在 localStorage 留一筆「輕量 metadata 戳記」（不含資料本體）：
-      // App.jsx 的「今天是否已備份」檢查讀的是 pos_backups —— 以前 Electron 分支
-      // 從不寫入，導致每次登入/登出都觸發備份，加速輪替把舊備份擠掉。
+      // 「今天是否已備份」戳記只能在 IPC 真的成功後才寫入 —— 若 SQLite insert
+      // 失敗（硬碟滿、DB 鎖住等），戳記若照寫會讓 App.jsx 誤判「今天已備份」，
+      // 導致無人值守的遠端機器整天都不會再重試備份。
       const id = 'BK' + Date.now()
-      try {
-        const stamps = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]')
-        stamps.unshift({ id, createdAt: new Date().toISOString(), label: label || '自動備份' })
-        localStorage.setItem(BACKUP_KEY, JSON.stringify(stamps.slice(0, 30)))
-      } catch { /* 戳記寫失敗不影響備份本體 */ }
+      const promise = window.electronAPI.db.createBackup(label || '自動備份', session?.username || '系統')
+        .then(() => {
+          try {
+            const stamps = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]')
+            stamps.unshift({ id, createdAt: new Date().toISOString(), label: label || '自動備份' })
+            localStorage.setItem(BACKUP_KEY, JSON.stringify(stamps.slice(0, 30)))
+          } catch { /* 戳記寫失敗不影響備份本體 */ }
+        })
+        .catch((err) => {
+          // 不寫入戳記：讓下一次登入/登出的「今天是否已備份」檢查再次觸發重試
+          console.error('[createBackup] Electron SQLite 備份失敗，戳記未寫入，下次登入/登出將重試', err)
+        })
       return { id, promise }
     }
 
