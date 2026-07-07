@@ -101,6 +101,22 @@ module.exports = function startOrderServer(port, db, getMainWindow) {
     res.json({ storeName: db.getSetting('storeName') || '雜貨店', version: '2.0.0' })
   })
 
+  // ===== Kasbon Routes (Credit Ledger) =====
+  const registerKastonRoutes = require('./kasbon-routes')
+  const getSubscription = () => {
+    // Read subscription tier from db settings
+    // Format: stored as JSON string in db.getSetting('subscriptionTier')
+    const tier = db.getSetting('subscriptionTier') || 'free'
+    try {
+      const parsed = JSON.parse(tier)
+      return parsed
+    } catch {
+      // Fallback: tier is stored as plain string
+      return { tier: tier }
+    }
+  }
+  registerKastonRoutes(app, db, getSubscription)
+
   // ===== Server 啟動 =====
   const clients = new Set()
   let server = null
