@@ -204,6 +204,20 @@ function registerIpcHandlers() {
   ipcMain.handle('db:getTopups', (_e, memberId) => db.getTopups(memberId))
   ipcMain.handle('db:addTopup', (_e, data) => db.addTopup(data))
 
+  // ----- Kasbon 賒帳 (Credit Ledger) -----
+  // 商業規則（tier 閘門、額度、驗證）在 electron/kasbon-shared.js，與 Express 路由共用同一套邏輯。
+  // kasbon.* 一律回傳 { success, ... } 結構化結果、內部 try/catch，不會跨 IPC throw。
+  const kasbon = require('./kasbon-shared')
+  // 桌面 UI 自行做分頁/篩選，這裡放寬 limit 避免超過 50 筆時清單被截斷
+  ipcMain.handle('db:getKastonRecords', (_e, memberId) => kasbon.listKasbonRecords(db, { memberId, limit: 10000 }))
+  ipcMain.handle('db:getKastonRecord', (_e, id) => kasbon.getKasbonRecordDetail(db, id))
+  ipcMain.handle('db:addKastonRecord', (_e, data) => kasbon.createKasbon(db, kasbon.getSubscription(db), data))
+  ipcMain.handle('db:recordKastonPayment', (_e, data) => kasbon.recordPayment(db, data))
+  ipcMain.handle('db:getMemberKastonBalance', (_e, memberId) => kasbon.getMemberKasbonSummary(db, memberId))
+  ipcMain.handle('db:getKastonPayments', (_e, recordId) => kasbon.listPayments(db, recordId))
+  ipcMain.handle('db:getKastonStoreTotal', () => kasbon.getStoreTotal(db))
+  ipcMain.handle('db:getKastonAgingReport', () => kasbon.getAgingReport(db))
+
   // ----- Printer -----
   ipcMain.handle('printer:printReceipt', async (_e, orderData) => {
     const printer = require('./printer')

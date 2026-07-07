@@ -319,53 +319,44 @@ export async function addTopup(data) {
   arr.unshift(data); saveLS('pos2_topups', arr)
 }
 
-// ===== Helper: API Call (for Kasbon & other HTTP endpoints) =====
-async function apiCall(endpoint, options = {}) {
-  const { method = 'GET', body } = options
-  try {
-    const config = {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-    }
-    if (body) config.body = JSON.stringify(body)
-    const response = await fetch(endpoint, config)
-    if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    return await response.json()
-  } catch (err) {
-    throw new Error(err.message)
-  }
-}
-
-// ===== Kasbon (Credit Ledger) =====
+// ===== Kasbon 賒帳 (Credit Ledger) =====
+// 與其他功能一樣走 IPC（window.electronAPI.db.*）——production 用 loadFile 載入（file:// origin），
+// 相對路徑的 HTTP 呼叫根本打不到動態 port 的 Express server，故不可用 fetch。
+// 商業規則（tier 閘門、額度、驗證）在 main process 的 electron/kasbon-shared.js 統一執行。
 export async function loadKastonRecords(memberId) {
   if (!isElectron) return { success: false, data: [] }
-  const url = '/api/kasbon' + (memberId ? '?memberId=' + encodeURIComponent(memberId) : '')
-  return apiCall(url, { method: 'GET' })
+  return window.electronAPI.db.getKastonRecords(memberId || null)
 }
 
 export async function getKastonRecord(recordId) {
   if (!isElectron) return null
-  const data = await apiCall(`/api/kasbon/${recordId}`, { method: 'GET' })
-  return data.success ? data.data : null
+  const res = await window.electronAPI.db.getKastonRecord(recordId)
+  return res?.success ? res.data : null
 }
 
 export async function createKasbon(formData) {
-  if (!isElectron) return { success: false }
-  return apiCall('/api/kasbon', { method: 'POST', body: formData })
+  if (!isElectron) return { success: false, error: 'Desktop only' }
+  return window.electronAPI.db.addKastonRecord(formData)
 }
 
 export async function recordKastonPayment(recordId, formData) {
-  if (!isElectron) return { success: false }
-  return apiCall(`/api/kasbon/${recordId}/pay`, { method: 'POST', body: formData })
+  if (!isElectron) return { success: false, error: 'Desktop only' }
+  return window.electronAPI.db.recordKastonPayment({ ...formData, kastonRecordId: recordId })
 }
 
 export async function getMemberKastonBalance(memberId) {
   if (!isElectron) return null
-  const data = await apiCall(`/api/members/${memberId}/kasbon`, { method: 'GET' })
-  return data.success ? data.data : null
+  const res = await window.electronAPI.db.getMemberKastonBalance(memberId)
+  return res?.success ? res.data : null
+}
+
+export async function loadKastonPayments(recordId) {
+  if (!isElectron) return []
+  const res = await window.electronAPI.db.getKastonPayments(recordId)
+  return res?.success ? res.data : []
 }
 
 export async function getKastonAgingReport() {
   if (!isElectron) return { success: false, data: null }
-  return apiCall('/api/kasbon/reports/aging', { method: 'GET' })
+  return window.electronAPI.db.getKastonAgingReport()
 }

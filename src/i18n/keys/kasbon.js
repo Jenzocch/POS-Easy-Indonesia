@@ -54,6 +54,7 @@ export default {
     'kasbon.credit_limit': '賒帳額度',
     'kasbon.used': '已用',
     'kasbon.available': '可用',
+    'kasbon.desktop_only': '賒帳功能僅在桌面版本可用',
   },
   en: {
     'kasbon.title': 'Credit Ledger',
@@ -109,6 +110,7 @@ export default {
     'kasbon.credit_limit': 'Credit Limit',
     'kasbon.used': 'Used',
     'kasbon.available': 'Available',
+    'kasbon.desktop_only': 'Kasbon is only available in the desktop app',
   },
   id: {
     'kasbon.title': 'Buku Piutang',
@@ -164,5 +166,6 @@ export default {
     'kasbon.credit_limit': 'Batas Kredit',
     'kasbon.used': 'Terpakai',
     'kasbon.available': 'Tersedia',
+    'kasbon.desktop_only': 'Fitur kasbon hanya tersedia di aplikasi desktop',
   },
 }

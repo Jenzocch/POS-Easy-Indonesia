@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Plus, Search, X, AlertCircle } from 'lucide-react'
 import { t, fmtMoney } from '../i18n'
-import { loadKastonRecords, createKasbon, recordKastonPayment, getKastonAgingReport } from '../utils/dataAccess'
+import { isElectron, loadKastonRecords, createKasbon, recordKastonPayment, getKastonAgingReport } from '../utils/dataAccess'
 
 const TABS = [
   { id: 'active', label: 'kasbon.active' },
@@ -21,9 +21,9 @@ export default function KastonPage({ store, session }) {
   const [error, setError] = useState(null)
   const [agingReport, setAgingReport] = useState(null)
 
-  // Load kasbon records
+  // Load kasbon records（瀏覽器模式無 SQLite，直接跳過）
   useEffect(() => {
-    loadRecords()
+    if (isElectron) loadRecords()
   }, [])
 
   const loadRecords = async () => {
@@ -81,10 +81,28 @@ export default function KastonPage({ store, session }) {
 
   // Load aging report when reports tab is opened
   useEffect(() => {
-    if (activeTab === 'reports' && !agingReport) {
+    if (isElectron && activeTab === 'reports' && !agingReport) {
       loadAgingReport()
     }
   }, [activeTab])
+
+  // 瀏覽器模式：Kasbon 需要本機 SQLite，顯示桌面版提示（同 OrdersPage 的 orders.desktop_only 模式）
+  if (!isElectron) {
+    return (
+      <div style={s.root}>
+        <div style={s.header}>
+          <div style={s.titleSection}>
+            <h1 style={s.title}>{t('kasbon.title')}</h1>
+          </div>
+        </div>
+        <div style={s.content}>
+          <div style={{ ...s.noRecords, background: 'var(--bg-raised)', border: '1px solid var(--border-dim)', borderRadius: 'var(--r3)' }}>
+            {t('kasbon.desktop_only')}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const handleNewKasbon = async (formData) => {
     try {

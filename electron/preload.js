@@ -84,6 +84,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // ----- Topups -----
     getTopups: (memberId) => ipcRenderer.invoke('db:getTopups', memberId),
     addTopup: (data) => ipcRenderer.invoke('db:addTopup', data),
+
+    // ----- Kasbon 賒帳 (Credit Ledger) -----
+    getKastonRecords: (memberId) => ipcRenderer.invoke('db:getKastonRecords', memberId),
+    getKastonRecord: (id) => ipcRenderer.invoke('db:getKastonRecord', id),
+    addKastonRecord: (data) => ipcRenderer.invoke('db:addKastonRecord', data),
+    recordKastonPayment: (data) => ipcRenderer.invoke('db:recordKastonPayment', data),
+    getMemberKastonBalance: (memberId) => ipcRenderer.invoke('db:getMemberKastonBalance', memberId),
+    getKastonPayments: (recordId) => ipcRenderer.invoke('db:getKastonPayments', recordId),
+    getKastonStoreTotal: () => ipcRenderer.invoke('db:getKastonStoreTotal'),
+    getKastonAgingReport: () => ipcRenderer.invoke('db:getKastonAgingReport'),
   },
 
   // ----- Printer -----

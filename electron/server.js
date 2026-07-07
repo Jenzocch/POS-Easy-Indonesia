@@ -102,20 +102,10 @@ module.exports = function startOrderServer(port, db, getMainWindow) {
   })
 
   // ===== Kasbon Routes (Credit Ledger) =====
+  // 訂閱層級解析與商業邏輯統一放在 kasbon-shared.js，與 main.js 的 IPC 路徑共用
   const registerKastonRoutes = require('./kasbon-routes')
-  const getSubscription = () => {
-    // Read subscription tier from db settings
-    // Format: stored as JSON string in db.getSetting('subscriptionTier')
-    const tier = db.getSetting('subscriptionTier') || 'free'
-    try {
-      const parsed = JSON.parse(tier)
-      return parsed
-    } catch {
-      // Fallback: tier is stored as plain string
-      return { tier: tier }
-    }
-  }
-  registerKastonRoutes(app, db, getSubscription)
+  const { getSubscription } = require('./kasbon-shared')
+  registerKastonRoutes(app, db, () => getSubscription(db))
 
   // ===== Server 啟動 =====
   const clients = new Set()

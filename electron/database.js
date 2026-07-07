@@ -839,6 +839,71 @@ module.exports = function initDatabase(dbPath) {
     migrateTx(data)
   })
 
+  // ===== Kasbon 賒帳 Transactions =====
+  // 多筆寫入（主檔 + 還款檔 + 會員餘額彙總檔）比照 checkoutTx 包成單一 transaction，
+  // 中途失敗整批 rollback，避免遠端店家斷電/當機時留下對不上帳的半套資料。
+  // 金額一律 Math.round：IDR 沒有小數。
+  const addKastonTx = db.transaction((data) => {
+    const id = data.id || 'KR' + Date.now()
+    const principal = Math.round(data.principalAmount || 0)
+    const paid = Math.round(data.paidAmount || 0)
+    const balanceDue = Math.max(0, principal - paid)
+    db.prepare(`
+      INSERT INTO kasbon_records (id, memberId, transactionType, status, principalAmount, paidAmount, balanceDue, transactionDate, dueDate, notes, createdBy)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id, data.memberId, data.transactionType || 'credit_sale', 'open',
+      principal, paid, balanceDue,
+      data.transactionDate || new Date().toISOString(), data.dueDate || null,
+      data.notes || '', data.createdBy || ''
+    )
+    // Initialize balance record if needed
+    const existing = db.prepare('SELECT * FROM member_kasbon_balance WHERE memberId = ?').get(data.memberId)
+    if (!existing) {
+      db.prepare(`
+        INSERT INTO member_kasbon_balance (id, memberId, totalCredit, totalPaid, balanceDue, activeRecordCount)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run('MCB' + Date.now(), data.memberId, principal, paid, balanceDue, 1)
+    } else {
+      db.prepare(`
+        UPDATE member_kasbon_balance SET totalCredit = totalCredit + ?, balanceDue = balanceDue + ?, activeRecordCount = activeRecordCount + 1, updatedAt = datetime('now','localtime') WHERE memberId = ?
+      `).run(principal, balanceDue, data.memberId)
+    }
+    return { success: true, id }
+  })
+
+  const recordKastonPaymentTx = db.transaction((record, data) => {
+    const paymentId = data.id || 'KP' + Date.now()
+    const amount = Math.round(data.amount || 0)
+    db.prepare(`
+      INSERT INTO kasbon_payments (id, kasbon_record_id, amount, paymentDate, paymentMethod, referenceNumber, notes, createdBy)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      paymentId, record.id, amount,
+      data.paymentDate || new Date().toISOString(),
+      data.paymentMethod || 'cash', data.referenceNumber || '',
+      data.notes || '', data.createdBy || ''
+    )
+
+    // Update kasbon record — 結清判斷容忍微小浮點殘值：<= 0 一律存 0 並關帳
+    const newPaidAmount = Math.round((record.paidAmount || 0) + amount)
+    let newBalanceDue = Math.round((record.principalAmount || 0) - newPaidAmount)
+    const newStatus = newBalanceDue <= 0 ? 'closed' : 'partial'
+    if (newBalanceDue <= 0) newBalanceDue = 0
+
+    db.prepare(`
+      UPDATE kasbon_records SET paidAmount = ?, balanceDue = ?, status = ?, lastPaymentDate = ?, updatedAt = datetime('now','localtime')
+      WHERE id = ?
+    `).run(newPaidAmount, newBalanceDue, newStatus, data.paymentDate || new Date().toISOString(), record.id)
+
+    // Update member balance
+    db.prepare(`
+      UPDATE member_kasbon_balance SET totalPaid = totalPaid + ?, balanceDue = MAX(0, balanceDue - ?), updatedAt = datetime('now','localtime') WHERE memberId = ?
+    `).run(amount, amount, record.memberId)
+
+    return { success: true, paymentId, newStatus }
+  })
+
   // ===== Public API =====
   return {
     // Products
@@ -930,6 +995,9 @@ module.exports = function initDatabase(dbPath) {
     deleteMember(id) {
       stmts.deleteMember.run(id)
       return { success: true }
+    },
+    getMemberById(id) {
+      return stmts.getMemberById.get(id)
     },
 
     // Orders
@@ -1411,69 +1479,29 @@ module.exports = function initDatabase(dbPath) {
       return db.prepare('SELECT * FROM kasbon_records WHERE id = ?').get(id)
     },
     addKastonRecord(data) {
-      const id = data.id || 'KR' + Date.now()
-      db.prepare(`
-        INSERT INTO kasbon_records (id, memberId, transactionType, status, principalAmount, paidAmount, balanceDue, transactionDate, dueDate, notes, createdBy)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        id, data.memberId, data.transactionType || 'credit_sale', 'open',
-        data.principalAmount || 0, data.paidAmount || 0, data.principalAmount || 0,
-        data.transactionDate || new Date().toISOString(), data.dueDate || null,
-        data.notes || '', data.createdBy || ''
-      )
-      // Initialize balance record if needed
-      const existing = db.prepare('SELECT * FROM member_kasbon_balance WHERE memberId = ?').get(data.memberId)
-      if (!existing) {
-        db.prepare(`
-          INSERT INTO member_kasbon_balance (id, memberId, totalCredit, totalPaid, balanceDue, activeRecordCount)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run('MCB' + Date.now(), data.memberId, data.principalAmount || 0, 0, data.principalAmount || 0, 1)
-      } else {
-        db.prepare(`
-          UPDATE member_kasbon_balance SET totalCredit = totalCredit + ?, balanceDue = balanceDue + ?, activeRecordCount = activeRecordCount + 1, updatedAt = datetime('now','localtime') WHERE memberId = ?
-        `).run(data.principalAmount || 0, data.principalAmount || 0, data.memberId)
-      }
-      return { success: true, id }
+      // 多筆寫入包成 transaction（見上方 addKastonTx）
+      return addKastonTx(data)
     },
     recordKastonPayment(data) {
       const record = this.getKastonRecord(data.kastonRecordId)
       if (!record) return { success: false, error: 'Kasbon record not found' }
       if (record.status === 'closed') return { success: false, error: 'Kasbon already closed' }
-      if (data.amount > record.balanceDue) return { success: false, error: 'Payment exceeds balance due' }
-
-      const paymentId = data.id || 'KP' + Date.now()
-      db.prepare(`
-        INSERT INTO kasbon_payments (id, kasbon_record_id, amount, paymentDate, paymentMethod, referenceNumber, notes, createdBy)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        paymentId, data.kastonRecordId, data.amount || 0,
-        data.paymentDate || new Date().toISOString(),
-        data.paymentMethod || 'cash', data.referenceNumber || '',
-        data.notes || '', data.createdBy || ''
-      )
-
-      // Update kasbon record
-      const newPaidAmount = (record.paidAmount || 0) + (data.amount || 0)
-      const newBalanceDue = record.principalAmount - newPaidAmount
-      const newStatus = newBalanceDue <= 0 ? 'closed' : 'partial'
-
-      db.prepare(`
-        UPDATE kasbon_records SET paidAmount = ?, balanceDue = ?, status = ?, lastPaymentDate = ?, updatedAt = datetime('now','localtime')
-        WHERE id = ?
-      `).run(newPaidAmount, newBalanceDue, newStatus, new Date().toISOString(), data.kastonRecordId)
-
-      // Update member balance
-      db.prepare(`
-        UPDATE member_kasbon_balance SET totalPaid = totalPaid + ?, balanceDue = balanceDue - ?, updatedAt = datetime('now','localtime') WHERE memberId = ?
-      `).run(data.amount || 0, data.amount || 0, record.memberId)
-
-      return { success: true, paymentId, newStatus }
+      const amount = Math.round(data.amount || 0)
+      if (!(amount > 0)) return { success: false, error: 'Payment amount must be positive' }
+      // 與 Math.round 後的餘額比較：舊資料若殘留小數（如 100.6），仍可一次付清取整後的餘額
+      if (amount > Math.round(record.balanceDue)) return { success: false, error: 'Payment exceeds balance due' }
+      // 多筆寫入包成 transaction（見上方 recordKastonPaymentTx）
+      return recordKastonPaymentTx(record, { ...data, amount })
     },
     getMemberKastonBalance(memberId) {
       return db.prepare('SELECT * FROM member_kasbon_balance WHERE memberId = ?').get(memberId)
     },
     getKastonPayments(kastonRecordId) {
       return db.prepare('SELECT * FROM kasbon_payments WHERE kasbon_record_id = ? ORDER BY paymentDate DESC').all(kastonRecordId)
+    },
+    getKastonStoreTotal() {
+      // 全店未清賒帳總額（給共用額度檢查用，路由/IPC 不得直接 db.prepare）
+      return db.prepare("SELECT COALESCE(SUM(balanceDue), 0) AS total FROM kasbon_records WHERE status != 'closed'").get().total
     },
 
     close() {
