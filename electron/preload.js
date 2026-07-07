@@ -15,8 +15,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     deleteMember: (id) => ipcRenderer.invoke('db:deleteMember', id),
 
     getOrders: () => ipcRenderer.invoke('db:getOrders'),
-    addOrder: (data) => ipcRenderer.invoke('db:addOrder', data),
-    getOrderItems: (orderId) => ipcRenderer.invoke('db:getOrderItems', orderId),
+    // DEAD-13: db:addOrder / db:getOrderItems IPC 通道渲染端零呼叫已移除（見報告精確清單）。
+    // 顧客點餐用的 db.addOrder 是 electron/server.js 主行程內直接呼叫的 JS 方法，非透過此 IPC，不受影響。
     checkout: (orderData, stockUpdates, memberUpdate) =>
       ipcRenderer.invoke('db:checkout', orderData, stockUpdates, memberUpdate),
 
@@ -110,7 +110,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // ----- Server -----
   server: {
-    getLocalIP: () => ipcRenderer.invoke('server:getLocalIP'),
+    // DEAD-13: server:getLocalIP IPC 通道渲染端零呼叫已移除；getLocalIP() 這個 plain function
+    // 仍保留在 main.js，getStatus handler 內部照樣呼叫它組出 ip 欄位，不受影響。
     getStatus: () => ipcRenderer.invoke('server:getStatus'),
   },
 

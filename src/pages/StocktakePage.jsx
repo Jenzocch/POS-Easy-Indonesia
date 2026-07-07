@@ -3,7 +3,10 @@ import { Check, X, AlertTriangle, Search, ChevronDown, ChevronUp, Download, Came
 import { writeAuditLog } from '../utils/security'
 import { stringifyCSV, downloadCSV } from '../utils/csv'
 import { needsRestock } from '../utils/stock'
-import { t } from '../i18n'
+import { t, getCurrentLanguage } from '../i18n'
+
+// DEAD-15: 台灣格式殘留 —— 原本寫死 'zh-TW'，換成依當前介面語言選 locale（預設印尼語）
+const DATE_LOCALE = { zh: 'zh-TW', en: 'en-US', id: 'id-ID' }
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
 
 // '全部' 是內部 sentinel 值（category state 比較用），顯示時用 t('common.all') 翻譯
@@ -112,10 +115,12 @@ export default function StocktakePage({ store, session }) {
       [hCnt]: counts[p.id] ?? t('stocktake.filter_missing'),
       [hDiff]: counts[p.id] !== undefined ? counts[p.id] - p.stock : '—',
     }))
-    const content = `${t('stocktake.csv_date')},${new Date().toLocaleDateString('zh-TW')}\n` + stringifyCSV(records, header)
+    const locale = DATE_LOCALE[getCurrentLanguage()] || 'id-ID'
+    const content = `${t('stocktake.csv_date')},${new Date().toLocaleDateString(locale)}\n` + stringifyCSV(records, header)
     // downloadCSV 內建 BOM + 100ms 延遲 revoke，不再手刻 Blob 儀式
     downloadCSV(`${t('stocktake.file_report')}_${new Date().toISOString().slice(0,10)}.csv`, content)
-    writeAuditLog('DATA_EXPORT', session, { type: '盤點報告' })
+    // DEAD-15: 原本寫死中文 type:'盤點報告'，改用 i18n key（三語）
+    writeAuditLog('DATA_EXPORT', session, { type: t('stocktake.audit_type') })
   }
 
   if (stage === 'done') return (

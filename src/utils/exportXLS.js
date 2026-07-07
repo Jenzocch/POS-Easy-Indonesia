@@ -19,27 +19,3 @@ export function exportXLS(rows, filename = 'export.xls') {
 
   downloadBlob(filename.endsWith('.xls') ? filename : filename + '.xls', '﻿' + html, XLS_MIME)
 }
-
-// 多工作表（Excel 不支援單一 .xls 檔多工作表 with this method，
-// 但透過多個 worksheet 可以達成。為簡化，每張表獨立檔）
-export function exportMultiSheetXLS(sheets, filename = 'export.xls') {
-  // sheets: { sheetName: [[row...], ...] }
-  const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  const sheetXmls = Object.entries(sheets).map(([name, rows]) => `
-    <Worksheet ss:Name="${esc(name)}">
-      <Table>
-        ${rows.map(r => '<Row>' + r.map(c => `<Cell><Data ss:Type="${typeof c === 'number' ? 'Number' : 'String'}">${esc(c)}</Data></Cell>`).join('') + '</Row>').join('')}
-      </Table>
-    </Worksheet>
-  `).join('')
-
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:o="urn:schemas-microsoft-com:office:office"
- xmlns:x="urn:schemas-microsoft-com:office:excel"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:html="http://www.w3.org/TR/REC-html40">${sheetXmls}</Workbook>`
-
-  downloadBlob(filename.endsWith('.xls') ? filename : filename + '.xls', xml, XLS_MIME)
-}

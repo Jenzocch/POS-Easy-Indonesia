@@ -26,11 +26,6 @@ export function saveWebhookConfig(cfg) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg))
 }
 
-export function isWebhookEnabled() {
-  const cfg = getWebhookConfig()
-  return !!(cfg && cfg.url && cfg.events?.length)
-}
-
 function isDiscordUrl(url) { return /discord(app)?\.com\/api\/webhooks/.test(url) }
 function isSlackUrl(url)   { return /hooks\.slack\.com/.test(url) }
 

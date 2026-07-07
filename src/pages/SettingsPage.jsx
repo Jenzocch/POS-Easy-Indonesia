@@ -2,11 +2,11 @@ import { useState, useEffect, useRef } from 'react'
 import { Shield, Users, Database, FileText, Download, Upload, Trash2, Plus, X, Check, RefreshCw, Printer, Wifi, Sun, Moon, Settings as Cog, Gift, Cloud, ArrowUp, ArrowDown, AlertTriangle } from 'lucide-react'
 import QRCode from 'qrcode'
 import {
-  ROLES, hashPassword, verifyPassword, writeAuditLog, readAuditLogs,
+  ROLES, hashPassword, verifyPassword, writeAuditLog,
   createBackup, getBackupList, restoreBackup, exportBackupFile, importBackupFile,
   maskPhone, maskName,
 } from '../utils/security'
-import { isElectron, loadUsers, saveUsers as dbSaveUsers, getSetting, setSetting } from '../utils/dataAccess'
+import { isElectron, loadUsers, saveUsers as dbSaveUsers, getSetting, setSetting, loadAuditLogs } from '../utils/dataAccess'
 import { getTheme, applyTheme } from '../utils/theme'
 import { getCloudConfig, saveCloudConfig, clearCloudConfig, testConnection, isCloudEnabled } from '../utils/supabaseClient'
 import { pushAll, pullAll, SYNC_TABLES } from '../utils/cloudSync'
@@ -294,6 +294,12 @@ function UsersTab({ session }) {
   function handleDelete(u) {
     if (u.id === session.userId) return
     saveUsers(users.filter(x=>x.id!==u.id))
+    // DEAD-06: 原本只更新 React state（saveUsers 在 Electron 模式下的 else 分支是 no-op，
+    // 只有瀏覽器模式才寫 localStorage），從未呼叫 SQLite 端的 deleteUser，導致「刪帳號重啟復活」——
+    // 補上與 handleAdd/handleChangePw 一致的 Electron 同步呼叫。
+    if (isElectron) {
+      window.electronAPI.db.deleteUser(u.id).catch(() => {})
+    }
     writeAuditLog('USER_DELETE', session, { username:u.username })
   }
 
@@ -636,7 +642,8 @@ function HardwareTab({ session }) {
           <input style={{...fieldStyle, marginBottom:8}} value={storeAddress} onChange={e=>setStoreAddress(e.target.value)} placeholder={t('settings.address_ph')}/>
 
           <label style={labelStyle}>{t('settings.phone')}</label>
-          <input style={{...fieldStyle, marginBottom:8}} value={storePhone} onChange={e=>setStorePhone(e.target.value)} placeholder="02-1234-5678"/>
+          {/* DEAD-15: 原本是台灣市話格式（02-1234-5678），改印尼格式（021 市話 / 08xx 手機） */}
+          <input style={{...fieldStyle, marginBottom:8}} value={storePhone} onChange={e=>setStorePhone(e.target.value)} placeholder="021-1234-5678"/>
 
           <label style={labelStyle}>{t('settings.receipt_footer')}</label>
           <input style={{...fieldStyle, marginBottom:8}} value={receiptFooter} onChange={e=>setReceiptFooter(e.target.value)} placeholder={t('settings.receipt_footer_ph')}/>
@@ -759,7 +766,7 @@ function BackupTab({ session }) {
   const [msg,      setMsg]      = useState('')
 
   function doBackup() {
-    createBackup(session, `手動備份 ${new Date().toLocaleString('zh-TW')}`)
+    createBackup(session, `手動備份 ${new Date().toLocaleString('id-ID')}`)
     setBackups(getBackupList())
     setMsg('備份建立成功')
     setTimeout(()=>setMsg(''),2500)
@@ -806,7 +813,7 @@ function BackupTab({ session }) {
             <div style={{flex:1}}>
               <div style={{fontWeight:500,fontSize:13}}>{b.label}</div>
               <div style={{fontSize:11,color:'var(--text-tertiary)',marginTop:3,fontFamily:'var(--font-mono)'}}>
-                {new Date(b.createdAt).toLocaleString('zh-TW')} · {b.createdBy}
+                {new Date(b.createdAt).toLocaleString('id-ID')} · {b.createdBy}
                 · {Math.round(b.size/1024)}KB
               </div>
             </div>
@@ -838,9 +845,15 @@ function BackupTab({ session }) {
 
 // ── 稽核日誌 ──────────────────────────────────────────────────
 function AuditTab({ session }) {
-  const [logs,    setLogs]    = useState(readAuditLogs)
+  const [logs,    setLogs]    = useState([])
   const [filter,  setFilter]  = useState('all')
   const [search,  setSearch]  = useState('')
+
+  // DEAD-06: 原本用 security.js 的 readAuditLogs()（同步函式，Electron 模式下 isElectron 為真時
+  // 直接 return []，因為 SQLite 只能非同步 IPC 讀取）——導致 Electron 稽核分頁恆空白，即使 SQLite
+  // 裡確實有資料（writeAuditLog 寫入端一直是正常運作的）。改用 dataAccess.js 的 loadAuditLogs()，
+  // 該函式本來就正確處理兩種模式（Electron 走 IPC、瀏覽器走 localStorage），只是這裡沒接上。
+  useEffect(() => { loadAuditLogs().then(setLogs) }, [])
 
   const filtered = logs.filter(l=>{
     const okFilter = filter==='all' || l.level===filter
@@ -861,7 +874,7 @@ function AuditTab({ session }) {
             </button>
           ))}
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={()=>setLogs(readAuditLogs())}><RefreshCw size={13}/></button>
+        <button className="btn btn-ghost btn-sm" onClick={()=>loadAuditLogs().then(setLogs)}><RefreshCw size={13}/></button>
       </div>
 
       <div style={{flex:1,overflowY:'auto',background:'var(--bg-raised)',border:'1px solid var(--border-dim)',borderRadius:'var(--r3)',overflow:'hidden',display:'flex',flexDirection:'column'}}>
@@ -930,7 +943,7 @@ function WebhookTab({ session }) {
     const ok = await fireWebhook('checkout', {
       _title: '🧪 測試訊息',
       _description: '這是 POS Easy 的 webhook 測試',
-      _fields: [{ name: '時間', value: new Date().toLocaleString('zh-TW') }],
+      _fields: [{ name: '時間', value: new Date().toLocaleString('id-ID') }],
     })
     // 還原設定
     saveWebhookConfig({ url: url.trim(), events: Array.from(events) })
@@ -1112,7 +1125,7 @@ function CloudSyncTab({ session }) {
             </div>
             <div style={{fontSize:12, color:'var(--text-secondary)', marginTop:2}}>
               {enabled
-                ? `上次同步：${lastSync ? new Date(lastSync).toLocaleString('zh-TW') : '尚未同步'}`
+                ? `上次同步：${lastSync ? new Date(lastSync).toLocaleString('id-ID') : '尚未同步'}`
                 : '在下方輸入 Supabase URL 和 anon key，啟用跨裝置同步'}
             </div>
           </div>

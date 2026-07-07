@@ -11,13 +11,6 @@ export function applyTheme(theme) {
   localStorage.setItem(KEY, t)
 }
 
-export function toggleTheme() {
-  const cur = getTheme()
-  const next = cur === 'dark' ? 'light' : 'dark'
-  applyTheme(next)
-  return next
-}
-
 // 在 App 啟動時呼叫
 export function initTheme() {
   applyTheme(getTheme())

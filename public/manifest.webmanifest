@@ -1,14 +1,14 @@
 {
-  "name": "POS Pro 雜貨店管理系統",
-  "short_name": "POS Pro",
-  "description": "離線可用的雜貨店收銀、庫存、訂貨、會員管理系統",
+  "name": "POS Easy — Kasir Warung & Rumah Makan",
+  "short_name": "POS Easy",
+  "description": "Sistem kasir, stok, pemesanan, dan member untuk warung yang bisa dipakai offline",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#f5f2ed",
   "theme_color": "#8b7355",
-  "lang": "zh-TW",
+  "lang": "id",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }

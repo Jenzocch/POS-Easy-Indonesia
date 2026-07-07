@@ -910,9 +910,8 @@ module.exports = function initDatabase(dbPath) {
       }
       return { success: true }
     },
-    getOrderItems(orderId) {
-      return stmts.getOrderItems.all(orderId)
-    },
+    // DEAD-13: getOrderItems(orderId) 方法包裝移除（IPC 通道 db:getOrderItems 已無 handler，
+    // 渲染端零呼叫）。stmts.getOrderItems 本身保留 —— checkout/refund 等內部組單邏輯仍用它。
     checkout(orderData, stockUpdates, memberUpdate) {
       return checkoutTx(orderData, stockUpdates, memberUpdate)
     },

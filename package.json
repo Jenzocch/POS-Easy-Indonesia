@@ -62,6 +62,7 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "installerLanguages": [
+        "id_ID",
         "zh_TW",
         "en_US"
       ]

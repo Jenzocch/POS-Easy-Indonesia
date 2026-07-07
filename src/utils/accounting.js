@@ -32,14 +32,6 @@ export const ACCOUNTS = {
   '5301': { name: '折舊費用',     type: 'expense',  normal: 'debit',  group: '非現金項目' },
 }
 
-export const ACCOUNT_GROUPS = {
-  asset:     ['流動資產', '非流動資產'],
-  liability: ['流動負債'],
-  equity:    ['業主權益'],
-  revenue:   ['營業收入', '其他收入'],
-  expense:   ['營業成本', '營業費用', '非現金項目'],
-}
-
 // ── 從訂單自動產生分錄 ────────────────────────────────────
 export function orderToJournalEntries(order, products) {
   const entries = []

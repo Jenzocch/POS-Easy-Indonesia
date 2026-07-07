@@ -268,7 +268,7 @@ export function createBackup(session, label = '') {
 
     const backup = {
       id:        'BK' + Date.now(),
-      label:     label || `備份 ${new Date().toLocaleString('zh-TW')}`,
+      label:     label || `備份 ${new Date().toLocaleString('id-ID')}`,
       createdAt: new Date().toISOString(),
       createdBy: session?.username || '系統',
       size:      JSON.stringify(data).length,

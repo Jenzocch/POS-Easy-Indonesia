@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, X, Check, Tag, Clock, Percent, Gift } from 'lucide-react'
 import { writeAuditLog, sanitizeObject } from '../utils/security'
-import { isElectron, loadPromotions, savePromotions as dbSavePromotions } from '../utils/dataAccess'
+import { isElectron, loadPromotions, dbAddPromotion, dbUpdatePromotion, dbDeletePromotion } from '../utils/dataAccess'
 import { t, fmtMoney } from '../i18n'
 
 // 型別鍵值（threshold/percent/...）為儲存值，勿改；label/desc 僅供顯示
@@ -88,8 +88,23 @@ export default function PromotionsPage({ store, session }) {
     if (!isElectron) localStorage.setItem('pos_promotions', JSON.stringify(ps))
   }
 
+  // DEAD-06: dbAddPromotion/dbUpdatePromotion/dbDeletePromotion 已在 dataAccess.js 寫好卻從未被呼叫——
+  // Electron 模式下促銷編輯只改到 React state（save() 的 else 分支只在瀏覽器模式寫 localStorage），
+  // 從未寫回 SQLite，導致「促銷編輯不落地」：重啟後 loadPromotions() 讀回的是舊 DB 資料，改動消失。
+  // 這裡補上單筆同步到 SQLite，瀏覽器模式沿用原本的 save() 行為不受影響。
+  async function persistPromotion(promo, isNew=false) {
+    if (!isElectron) return
+    try {
+      if (isNew) await dbAddPromotion(promo)
+      else await dbUpdatePromotion(promo.id, promo)
+    } catch (e) { console.error('persistPromotion failed:', e) }
+  }
+
   function toggle(id) {
-    save(promotions.map(p => p.id===id ? {...p, enabled:!p.enabled} : p))
+    const updated = promotions.map(p => p.id===id ? {...p, enabled:!p.enabled} : p)
+    save(updated)
+    const target = updated.find(p => p.id === id)
+    if (target) persistPromotion(target)
   }
 
   function startNew(type) {
@@ -120,8 +135,11 @@ export default function PromotionsPage({ store, session }) {
       const n = { ...clean, id:'pr'+Date.now() }
       save([...promotions, n])
       writeAuditLog('PROMO_CREATE', session, { promoName:n.name, type:n.type })
+      persistPromotion(n, true)
     } else {
-      save(promotions.map(p=>p.id===editing?clean:p))
+      const updated = { ...clean, id: editing }
+      save(promotions.map(p=>p.id===editing?updated:p))
+      persistPromotion(updated)
     }
     setEditing(null); setForm(null)
   }
@@ -194,7 +212,10 @@ export default function PromotionsPage({ store, session }) {
                     }}/>
                   </button>
                   <button className="btn-icon btn-sm" onClick={()=>startEdit(p)}>✏️</button>
-                  <button className="btn-icon btn-sm" style={{color:'var(--red)'}} onClick={()=>save(promotions.filter(x=>x.id!==p.id))}>
+                  <button className="btn-icon btn-sm" style={{color:'var(--red)'}} onClick={()=>{
+                    save(promotions.filter(x=>x.id!==p.id))
+                    if (isElectron) dbDeletePromotion(p.id).catch(e => console.error('persistPromotion delete failed:', e))
+                  }}>
                     <X size={14}/>
                   </button>
                 </div>

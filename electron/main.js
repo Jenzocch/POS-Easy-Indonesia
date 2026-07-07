@@ -110,8 +110,8 @@ function registerIpcHandlers() {
 
   // ----- Orders -----
   ipcMain.handle('db:getOrders', () => db.getOrders())
-  ipcMain.handle('db:addOrder', (_e, data) => db.addOrder(data))
-  ipcMain.handle('db:getOrderItems', (_e, orderId) => db.getOrderItems(orderId))
+  // DEAD-13: db:addOrder / db:getOrderItems handlers 移除（渲染端零呼叫，見 preload.js 同批註解）。
+  // db.addOrder() 這個 DB 方法本身保留 —— electron/server.js:75 顧客點餐流程直接呼叫它。
 
   // ----- Checkout (atomic) -----
   ipcMain.handle('db:checkout', (_e, orderData, stockUpdates, memberUpdate) => {
@@ -237,7 +237,8 @@ function registerIpcHandlers() {
   })
 
   // ----- Server Info -----
-  ipcMain.handle('server:getLocalIP', () => getLocalIP())
+  // DEAD-13: server:getLocalIP handler 移除（渲染端零呼叫）；getLocalIP() 函式本身保留，
+  // 下面的 server:getStatus handler 仍在內部呼叫它組出 ip 欄位。
   ipcMain.handle('server:getStatus', () => ({
     running: !!orderServer,
     ip: getLocalIP(),

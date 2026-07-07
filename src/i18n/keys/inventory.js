@@ -134,6 +134,7 @@ export default {
     'stocktake.restart': '重新盤點',
     'stocktake.csv_date': '盤點日期',
     'stocktake.file_report': '盤點報告',
+    'stocktake.audit_type': '盤點報告',
 
     // ── WastePage ─────────────────────────────────
     'waste.title': '損耗管理',
@@ -299,6 +300,7 @@ export default {
     'stocktake.restart': 'New stocktake',
     'stocktake.csv_date': 'Stocktake date',
     'stocktake.file_report': 'stocktake_report',
+    'stocktake.audit_type': 'Stocktake Report',
 
     // ── WastePage ─────────────────────────────────
     'waste.title': 'Waste Management',
@@ -464,6 +466,7 @@ export default {
     'stocktake.restart': 'Stock opname ulang',
     'stocktake.csv_date': 'Tanggal stock opname',
     'stocktake.file_report': 'laporan_stock_opname',
+    'stocktake.audit_type': 'Laporan Stock Opname',
 
     // ── WastePage ─────────────────────────────────
     'waste.title': 'Manajemen Barang Rusak',

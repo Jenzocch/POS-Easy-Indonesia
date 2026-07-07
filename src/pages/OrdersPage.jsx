@@ -34,8 +34,9 @@ export default function OrdersPage() {
     if (!isElectron) return
     const unsub = window.electronAPI.onNewOrder((order) => {
       setOrders(prev => [order, ...prev.filter(o => o.id !== order.id)])
-      // 播放通知音效
-      try { new Audio('/notification.mp3').play().catch(() => {}) } catch {}
+      // DEAD-12: 原本嘗試播放 /public/notification.mp3，但檔案從未存在，播放永遠靜默失敗
+      // （雙層 try/catch 吞掉錯誤，使用者完全無感知）。移除死引用，新訂單提示改為純視覺
+      // （上面的 setOrders 更新列表即為提示），不生成假音效檔頂替。
     })
     return unsub
   }, [])
