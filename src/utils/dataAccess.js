@@ -318,3 +318,54 @@ export async function addTopup(data) {
   const arr = loadLS('pos2_topups', [])
   arr.unshift(data); saveLS('pos2_topups', arr)
 }
+
+// ===== Helper: API Call (for Kasbon & other HTTP endpoints) =====
+async function apiCall(endpoint, options = {}) {
+  const { method = 'GET', body } = options
+  try {
+    const config = {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+    }
+    if (body) config.body = JSON.stringify(body)
+    const response = await fetch(endpoint, config)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    return await response.json()
+  } catch (err) {
+    throw new Error(err.message)
+  }
+}
+
+// ===== Kasbon (Credit Ledger) =====
+export async function loadKastonRecords(memberId) {
+  if (!isElectron) return { success: false, data: [] }
+  const url = '/api/kasbon' + (memberId ? '?memberId=' + encodeURIComponent(memberId) : '')
+  return apiCall(url, { method: 'GET' })
+}
+
+export async function getKastonRecord(recordId) {
+  if (!isElectron) return null
+  const data = await apiCall(`/api/kasbon/${recordId}`, { method: 'GET' })
+  return data.success ? data.data : null
+}
+
+export async function createKasbon(formData) {
+  if (!isElectron) return { success: false }
+  return apiCall('/api/kasbon', { method: 'POST', body: formData })
+}
+
+export async function recordKastonPayment(recordId, formData) {
+  if (!isElectron) return { success: false }
+  return apiCall(`/api/kasbon/${recordId}/pay`, { method: 'POST', body: formData })
+}
+
+export async function getMemberKastonBalance(memberId) {
+  if (!isElectron) return null
+  const data = await apiCall(`/api/members/${memberId}/kasbon`, { method: 'GET' })
+  return data.success ? data.data : null
+}
+
+export async function getKastonAgingReport() {
+  if (!isElectron) return { success: false, data: null }
+  return apiCall('/api/kasbon/reports/aging', { method: 'GET' })
+}

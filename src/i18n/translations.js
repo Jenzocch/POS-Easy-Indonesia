@@ -12,8 +12,9 @@ import inventory from './keys/inventory.js'
 import purchase from './keys/purchase.js'
 import reports from './keys/reports.js'
 import members from './keys/members.js'
+import kasbon from './keys/kasbon.js'
 
-const fragments = [common, login, nav, pos, settings, inventory, purchase, reports, members]
+const fragments = [common, login, nav, pos, settings, inventory, purchase, reports, members, kasbon]
 
 export const LANGUAGES = [
   { code: 'id', label: 'Bahasa Indonesia' },

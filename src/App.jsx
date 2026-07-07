@@ -19,6 +19,7 @@ import OrdersPage from './pages/OrdersPage'
 import DashboardPage from './pages/DashboardPage'
 import ShiftPage from './pages/ShiftPage'
 import WastePage from './pages/WastePage'
+import KastonPage from './pages/KastonPage'
 import { isElectron } from './utils/dataAccess'
 import useIsMobile from './hooks/useIsMobile'
 import { t } from './i18n'
@@ -112,7 +113,7 @@ export default function App() {
     dashboard:t('nav.dashboard'), pos:t('nav.pos'), shifts:t('nav.shifts'),
     inventory:t('nav.inventory'), purchase:t('nav.purchase'), waste:t('nav.waste'),
     stocktake:t('nav.stocktake'), promotions:t('nav.promotions'), members:t('nav.members'),
-    reports:t('nav.reports'), accounting:t('nav.accounting'), orders:t('nav.orders'), settings:t('nav.settings'),
+    reports:t('nav.reports'), accounting:t('nav.accounting'), kasbon:t('nav.kasbon'), orders:t('nav.orders'), settings:t('nav.settings'),
   }
 
   return (
@@ -170,6 +171,7 @@ export default function App() {
           {view === 'purchase'   && can('purchase.view')   && <PurchasePage   store={store} session={session}/>}
           {view === 'stocktake'  && can('stocktake.view')  && <StocktakePage  store={store} session={session}/>}
           {view === 'promotions' && can('promotions.view') && <PromotionsPage store={store} session={session}/>}
+          {view === 'kasbon'     && can('accounting.view') && <KastonPage     store={store} session={session}/>}
           {view === 'orders'     && can('pos.use')         && <OrdersPage />}
           {view === 'settings'   && can('settings.view')   && <SettingsPage   session={session} onLogout={handleLogout} store={store}/>}
         </main>

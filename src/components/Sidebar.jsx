@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ShoppingCart, Package, BarChart2, Users, BookOpen, Truck, ClipboardList, Tag, Settings, AlertTriangle, LogOut, Bell, LayoutDashboard, Clock, Trash2, Sparkles } from 'lucide-react'
+import { ShoppingCart, Package, BarChart2, Users, BookOpen, Truck, ClipboardList, Tag, Settings, AlertTriangle, LogOut, Bell, LayoutDashboard, Clock, Trash2, Sparkles, DollarSign } from 'lucide-react'
 import { ROLES, hasPermission } from '../utils/security'
 import SyncStatusBadge from './SyncStatusBadge'
 import { t, fmtMoney, getCurrentLanguage } from '../i18n'
@@ -17,6 +17,7 @@ const NAV = [
   { key:'members',    Icon:Users,           perm:'members.view', accent:'gold' },
   { key:'reports',    Icon:BarChart2,       perm:'reports.view', accent:'blue' },
   { key:'accounting', Icon:BookOpen,        perm:'accounting.view', accent:'teal' },
+  { key:'kasbon',     Icon:DollarSign,      perm:'accounting.view', accent:'emerald' },
   { key:'orders',     Icon:Bell,            perm:'pos.use', accent:'amber' },
   { key:'settings',   Icon:Settings,        perm:'settings.view', accent:'gold' },
 ]
