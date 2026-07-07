@@ -200,6 +200,25 @@ function recordPayment(db, body) {
     const amount = Math.round(Number(input.amount) || 0)
     const paymentDate = input.paymentDate || new Date().toISOString()
 
+    // Idempotency：UI 每次開付款視窗產生一次性 id。同 id 重送（連點）在「驗證之前」
+    // 就回報成功 — 若先跑驗證，第一筆已入帳會讓餘額變小，重送反而撞
+    // 'amount exceeds balance due'，收銀員誤以為沒收到款而再收一次。
+    if (input.id && typeof db.getKastonPaymentById === 'function') {
+      const existingPayment = db.getKastonPaymentById(input.id)
+      if (existingPayment) {
+        const replayRecord = enrichRecord(db, db.getKastonRecord(existingPayment.kasbon_record_id))
+        return {
+          success: true,
+          duplicate: true,
+          data: {
+            payment: { success: true, paymentId: existingPayment.id, newStatus: replayRecord && replayRecord.status },
+            record: replayRecord,
+          },
+          message: 'Payment already recorded (duplicate submit ignored)',
+        }
+      }
+    }
+
     const record = kastonRecordId ? db.getKastonRecord(kastonRecordId) : null
     if (!record) {
       return { success: false, error: 'Kasbon record not found', httpStatus: 404 }
@@ -218,6 +237,7 @@ function recordPayment(db, body) {
     }
 
     const result = db.recordKastonPayment({
+      id: input.id || undefined,
       kastonRecordId,
       amount,
       paymentDate,

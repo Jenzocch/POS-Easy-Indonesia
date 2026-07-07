@@ -2,10 +2,54 @@ const Database = require('better-sqlite3')
 const path = require('path')
 const fs = require('fs')
 
+// 開檔 + 完整性檢查。斷電造成的 DB 損毀會讓 new Database() throw 或 integrity_check 不為 ok；
+// 此時把壞檔改名保留（pos-data.corrupt-<timestamp>.db）、建全新 DB，讓 App 至少能開起來，
+// 店家再從 backups/ 資料夾的 JSON 備份還原。全程同步、無新依賴。
+function openDatabaseWithRecovery(dbPath) {
+  const tryOpen = () => {
+    const d = new Database(dbPath)
+    try {
+      const row = d.prepare('PRAGMA integrity_check').get()
+      const result = row ? String(Object.values(row)[0]) : 'no result'
+      if (result.toLowerCase() !== 'ok') {
+        throw new Error('integrity_check failed: ' + result)
+      }
+    } catch (err) {
+      try { d.close() } catch { /* 已損毀，close 失敗可忽略 */ }
+      throw err
+    }
+    return d
+  }
+
+  try {
+    return tryOpen()
+  } catch (err) {
+    console.error('[DB] 資料庫開啟/完整性檢查失敗:', err.message)
+    const ts = new Date().toISOString().replace(/[:.]/g, '-')
+    const corruptPath = dbPath.replace(/\.db$/i, '') + `.corrupt-${ts}.db`
+    // 把壞檔（含 WAL/SHM 附屬檔）改名保留，不刪除 — 之後仍可嘗試人工救援
+    for (const [src, dest] of [
+      [dbPath, corruptPath],
+      [dbPath + '-wal', corruptPath + '-wal'],
+      [dbPath + '-shm', corruptPath + '-shm'],
+    ]) {
+      try { if (fs.existsSync(src)) fs.renameSync(src, dest) } catch (e) {
+        console.error('[DB] 損毀檔改名失敗:', src, e.message)
+      }
+    }
+    console.error(`[DB] 損毀資料庫已移至 ${corruptPath}，將建立全新資料庫。` +
+      '請由 backups/ 資料夾中的 JSON 備份檔還原資料。')
+    return tryOpen() // 第二次仍失敗（如目錄不可寫）就往上 throw，由 main.js 顯示錯誤視窗
+  }
+}
+
 module.exports = function initDatabase(dbPath) {
-  const db = new Database(dbPath)
+  const db = openDatabaseWithRecovery(dbPath)
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
+
+  // 檔案備份資料夾（backups table 與 DB 同檔共生死 — 斷電損毀時檔案備份是唯一生路）
+  const backupDir = path.join(path.dirname(dbPath), 'backups')
 
   // ===== Schema =====
   db.exec(`
@@ -695,6 +739,9 @@ module.exports = function initDatabase(dbPath) {
           status: p.status || 'draft',
           date: p.date || '',
           receivedDate: p.receivedDate || '',
+          // paidDate 缺漏會讓 better-sqlite3 直接 throw『Missing named parameter』，
+          // 任何含訂貨單的備份還原都會失敗（先前被 FK 排序 bug 蓋住沒浮現）
+          paidDate: p.paidDate || '',
           note: p.note || '',
           total: p.total || 0,
           items: JSON.stringify(p.items || []),
@@ -819,16 +866,118 @@ module.exports = function initDatabase(dbPath) {
       }
     }
 
+    // Kasbon 賒帳主檔（先於 kasbon_payments — payments 有 FK 指向 records）
+    if (data.kasbonRecords && data.kasbonRecords.length) {
+      const insertKasbonRecord = db.prepare(`
+        INSERT INTO kasbon_records (id, memberId, transactionType, status, principalAmount, paidAmount,
+          balanceDue, transactionDate, dueDate, lastPaymentDate, notes, createdBy, createdAt, updatedAt, deletedAt)
+        VALUES (@id, @memberId, @transactionType, @status, @principalAmount, @paidAmount,
+          @balanceDue, @transactionDate, @dueDate, @lastPaymentDate, @notes, @createdBy, @createdAt, @updatedAt, @deletedAt)
+      `)
+      const validTypes = ['credit_sale', 'payment', 'adjustment']
+      const validStatuses = ['open', 'partial', 'closed', 'overdue']
+      for (const r of data.kasbonRecords) {
+        insertKasbonRecord.run({
+          id: r.id,
+          memberId: r.memberId || '',
+          transactionType: validTypes.includes(r.transactionType) ? r.transactionType : 'credit_sale',
+          status: validStatuses.includes(r.status) ? r.status : 'open',
+          principalAmount: r.principalAmount || 0,
+          paidAmount: r.paidAmount || 0,
+          balanceDue: r.balanceDue || 0,
+          transactionDate: r.transactionDate || new Date().toISOString(),
+          dueDate: r.dueDate || null,
+          lastPaymentDate: r.lastPaymentDate || null,
+          notes: r.notes || '',
+          createdBy: r.createdBy || '',
+          createdAt: r.createdAt || new Date().toISOString(),
+          updatedAt: r.updatedAt || new Date().toISOString(),
+          deletedAt: r.deletedAt || null,
+        })
+      }
+    }
+
+    // Kasbon 還款檔（FK → kasbon_records，需在主檔之後）
+    if (data.kasbonPayments && data.kasbonPayments.length) {
+      const insertKasbonPayment = db.prepare(`
+        INSERT INTO kasbon_payments (id, kasbon_record_id, amount, paymentDate, paymentMethod,
+          referenceNumber, notes, createdBy, createdAt, deletedAt)
+        VALUES (@id, @kasbon_record_id, @amount, @paymentDate, @paymentMethod,
+          @referenceNumber, @notes, @createdBy, @createdAt, @deletedAt)
+      `)
+      const validMethods = ['cash', 'transfer', 'check', 'other']
+      for (const p of data.kasbonPayments) {
+        insertKasbonPayment.run({
+          id: p.id,
+          kasbon_record_id: p.kasbon_record_id || p.kastonRecordId || '',
+          amount: p.amount || 0,
+          paymentDate: p.paymentDate || new Date().toISOString(),
+          paymentMethod: validMethods.includes(p.paymentMethod) ? p.paymentMethod : 'cash',
+          referenceNumber: p.referenceNumber || '',
+          notes: p.notes || '',
+          createdBy: p.createdBy || '',
+          createdAt: p.createdAt || new Date().toISOString(),
+          deletedAt: p.deletedAt || null,
+        })
+      }
+    }
+
+    // Kasbon 會員餘額彙總（FK → members ON DELETE CASCADE；member 不存在則跳過避免 FK 失敗）
+    if (data.memberKasbonBalance && data.memberKasbonBalance.length) {
+      const insertKasbonBalance = db.prepare(`
+        INSERT OR REPLACE INTO member_kasbon_balance (id, memberId, totalCredit, totalPaid, balanceDue, activeRecordCount, isBlacklisted)
+        VALUES (@id, @memberId, @totalCredit, @totalPaid, @balanceDue, @activeRecordCount, @isBlacklisted)
+      `)
+      for (const b of data.memberKasbonBalance) {
+        if (!stmts.getMemberById.get(b.memberId)) continue
+        insertKasbonBalance.run({
+          id: b.id || 'MCB' + b.memberId,
+          memberId: b.memberId,
+          totalCredit: b.totalCredit || 0,
+          totalPaid: b.totalPaid || 0,
+          balanceDue: b.balanceDue || 0,
+          activeRecordCount: b.activeRecordCount || 0,
+          isBlacklisted: b.isBlacklisted ? 1 : 0,
+        })
+      }
+    }
+
     return { success: true }
   })
 
   // 「清空全部表 + 重新匯入」包成單一 transaction：
   // importData / restoreBackup 共用。若 migrateTx 中途 throw（例如缺欄位、髒資料），
   // 連同前面的 DELETE 一起 rollback，保證不會把舊資料清掉卻沒匯入新資料造成整庫遺失。
+  //
+  // DELETE 順序必須「子表先於父表」：foreign_keys = ON 時，先刪 orders 會因
+  // order_items.orderId 的 FK 直接 throw『FOREIGN KEY constraint failed』，
+  // 導致任何有實際銷售紀錄的店家還原永遠失敗。
+  // FK 清單：order_items→orders、kasbon_payments→kasbon_records(CASCADE)、
+  //          member_kasbon_balance→members(CASCADE)。
+  //
+  // Kasbon 向下相容：舊備份/匯出檔沒有 kasbon 鍵 — 此時「保留」本機現有的
+  // kasbon_records / kasbon_payments 不動（賒帳是店家的錢，還原舊備份不得清帳），
+  // 並在同一 transaction 內由存活的 kasbon_records 重算 member_kasbon_balance
+  // （members 被替換時彙總表已被 CASCADE 清掉）。有 kasbon 鍵時則正常整批替換。
+  // 不論哪條路，最後一步一律由 kasbon_records 重算彙總 — 保證 balanceDue 摘要
+  // 與明細帳永遠一致。
   const replaceAllTx = db.transaction((data) => {
+    const hasKasbonKeys = !!(data.kasbonRecords || data.kasbonPayments || data.memberKasbonBalance)
+
+    // 黑名單旗標只存在彙總表上，重算前先決定來源：
+    // - 新備份（含 kasbon 鍵）：以備份內的 memberKasbonBalance 為準
+    // - 舊備份（無 kasbon 鍵）：沿用本機現況（members 刪除後 CASCADE 會清掉，需先快照）
+    const blacklisted = new Set(
+      hasKasbonKeys
+        ? (data.memberKasbonBalance || []).filter(b => b.isBlacklisted).map(b => b.memberId)
+        : db.prepare('SELECT memberId FROM member_kasbon_balance WHERE isBlacklisted = 1').all().map(r => r.memberId)
+    )
+
+    // 子表 → 父表
     db.exec(`
-      DELETE FROM products; DELETE FROM members;
-      DELETE FROM orders; DELETE FROM order_items;
+      DELETE FROM order_items; DELETE FROM orders;
+      DELETE FROM member_kasbon_balance;
+      DELETE FROM members; DELETE FROM products;
       DELETE FROM suppliers; DELETE FROM purchases;
       DELETE FROM promotions; DELETE FROM users;
       DELETE FROM manual_journal;
@@ -836,7 +985,41 @@ module.exports = function initDatabase(dbPath) {
       DELETE FROM cash_log; DELETE FROM waste_log;
       DELETE FROM member_topups; DELETE FROM audit_log;
     `)
+    if (hasKasbonKeys) {
+      db.exec('DELETE FROM kasbon_payments; DELETE FROM kasbon_records;')
+    }
+
     migrateTx(data)
+
+    // 最後一步：由 kasbon_records 重算 member_kasbon_balance（唯一不變式）。
+    // 只為「存在於 members 的會員」建彙總列（FK 保護）；孤兒 kasbon_records 保留明細不建彙總。
+    db.exec('DELETE FROM member_kasbon_balance')
+    const sums = db.prepare(`
+      SELECT memberId,
+        COALESCE(SUM(principalAmount), 0) AS totalCredit,
+        COALESCE(SUM(paidAmount), 0) AS totalPaid,
+        COALESCE(SUM(balanceDue), 0) AS balanceDue,
+        COALESCE(SUM(CASE WHEN status != 'closed' THEN 1 ELSE 0 END), 0) AS activeRecordCount
+      FROM kasbon_records
+      WHERE deletedAt IS NULL AND memberId IN (SELECT id FROM members)
+      GROUP BY memberId
+    `).all()
+    const insertBalance = db.prepare(`
+      INSERT INTO member_kasbon_balance (id, memberId, totalCredit, totalPaid, balanceDue, activeRecordCount, isBlacklisted)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `)
+    const covered = new Set()
+    for (const s0 of sums) {
+      covered.add(s0.memberId)
+      insertBalance.run('MCB' + s0.memberId, s0.memberId, s0.totalCredit, s0.totalPaid, s0.balanceDue,
+        s0.activeRecordCount, blacklisted.has(s0.memberId) ? 1 : 0)
+    }
+    // 沒有任何 kasbon 明細但被列入黑名單的會員：補一列全零彙總以保留黑名單旗標
+    for (const memberId of blacklisted) {
+      if (covered.has(memberId)) continue
+      if (!stmts.getMemberById.get(memberId)) continue
+      insertBalance.run('MCB' + memberId, memberId, 0, 0, 0, 0, 1)
+    }
   })
 
   // ===== Kasbon 賒帳 Transactions =====
@@ -873,7 +1056,14 @@ module.exports = function initDatabase(dbPath) {
   })
 
   const recordKastonPaymentTx = db.transaction((record, data) => {
-    const paymentId = data.id || 'KP' + Date.now()
+    // Idempotency：UI 開啟付款視窗時即產生一次性 id；同 id 重送（收銀員連點）直接
+    // 回報成功、不重複入帳。fallback id 附隨機尾碼避免同毫秒碰撞。
+    const paymentId = data.id || ('KP' + Date.now() + Math.random().toString(36).slice(2, 8))
+    const existingPayment = db.prepare('SELECT * FROM kasbon_payments WHERE id = ?').get(paymentId)
+    if (existingPayment) {
+      const rec = db.prepare('SELECT * FROM kasbon_records WHERE id = ?').get(existingPayment.kasbon_record_id)
+      return { success: true, paymentId, newStatus: rec ? rec.status : 'closed', duplicate: true }
+    }
     const amount = Math.round(data.amount || 0)
     db.prepare(`
       INSERT INTO kasbon_payments (id, kasbon_record_id, amount, paymentDate, paymentMethod, referenceNumber, notes, createdBy)
@@ -1239,14 +1429,19 @@ module.exports = function initDatabase(dbPath) {
         cashLog: stmts.getAllCashLog.all(),
         wasteLog: stmts.getAllWaste.all(),
         memberTopups: stmts.getAllTopups.all(),
+        kasbonRecords: db.prepare('SELECT * FROM kasbon_records').all(),
+        kasbonPayments: db.prepare('SELECT * FROM kasbon_payments').all(),
+        memberKasbonBalance: db.prepare('SELECT * FROM member_kasbon_balance').all(),
       }
       const id = 'bk' + Date.now()
+      const createdAt = new Date().toISOString()
+      const json = JSON.stringify(allData)
       stmts.insertBackup.run({
         id,
         label: label || '自動備份',
-        createdAt: new Date().toISOString(),
+        createdAt,
         createdBy: createdBy || '',
-        data: JSON.stringify(allData),
+        data: json,
       })
       // 保留最新 10 個備份
       const all = stmts.getAllBackups.all()
@@ -1256,7 +1451,28 @@ module.exports = function initDatabase(dbPath) {
           db.prepare('DELETE FROM backups WHERE id = ?').run(b.id)
         }
       }
-      return { success: true, id }
+      // 同步落一份 JSON 到 DB 檔旁的 backups/ 資料夾：backups table 與 DB 同檔共生死，
+      // 斷電損毀 pos-data.db 時這些檔案是唯一救援來源。寫檔失敗不影響備份成功（僅記 log）。
+      let file = null
+      try {
+        fs.mkdirSync(backupDir, { recursive: true })
+        file = path.join(backupDir, `${id}.json`)
+        const tmp = file + '.tmp'
+        fs.writeFileSync(tmp, json)
+        fs.renameSync(tmp, file) // 原子替換，避免寫到一半斷電留下殘缺備份檔
+        // 只保留最新 10 個檔案（檔名 bk<timestamp>.json，字典序 = 時間序）
+        const files = fs.readdirSync(backupDir)
+          .filter(f => /^bk\d+\.json$/.test(f))
+          .sort()
+          .reverse()
+        for (const old of files.slice(10)) {
+          try { fs.unlinkSync(path.join(backupDir, old)) } catch { /* 清舊檔失敗不致命 */ }
+        }
+      } catch (e) {
+        console.error('[DB] 備份 JSON 寫檔失敗（DB 內備份仍成功）:', e.message)
+        file = null
+      }
+      return { success: true, id, file }
     },
     restoreBackup(id) {
       const backup = stmts.getBackupById.get(id)
@@ -1290,6 +1506,9 @@ module.exports = function initDatabase(dbPath) {
         wasteLog: stmts.getAllWaste.all(),
         memberTopups: stmts.getAllTopups.all(),
         auditLog: stmts.getAuditLogs.all(),
+        kasbonRecords: db.prepare('SELECT * FROM kasbon_records').all(),
+        kasbonPayments: db.prepare('SELECT * FROM kasbon_payments').all(),
+        memberKasbonBalance: db.prepare('SELECT * FROM member_kasbon_balance').all(),
       }
     },
     importData(data) {
@@ -1483,6 +1702,15 @@ module.exports = function initDatabase(dbPath) {
       return addKastonTx(data)
     },
     recordKastonPayment(data) {
+      // Idempotency 檢查必須在 closed/金額檢查「之前」：第一筆付清會把單關帳，
+      // 重送若先撞到 'already closed' 會回失敗，UI 就看不出其實已入帳成功。
+      if (data.id) {
+        const existingPayment = db.prepare('SELECT * FROM kasbon_payments WHERE id = ?').get(data.id)
+        if (existingPayment) {
+          const rec = this.getKastonRecord(existingPayment.kasbon_record_id)
+          return { success: true, paymentId: existingPayment.id, newStatus: rec ? rec.status : 'closed', duplicate: true }
+        }
+      }
       const record = this.getKastonRecord(data.kastonRecordId)
       if (!record) return { success: false, error: 'Kasbon record not found' }
       if (record.status === 'closed') return { success: false, error: 'Kasbon already closed' }
@@ -1498,6 +1726,9 @@ module.exports = function initDatabase(dbPath) {
     },
     getKastonPayments(kastonRecordId) {
       return db.prepare('SELECT * FROM kasbon_payments WHERE kasbon_record_id = ? ORDER BY paymentDate DESC').all(kastonRecordId)
+    },
+    getKastonPaymentById(paymentId) {
+      return db.prepare('SELECT * FROM kasbon_payments WHERE id = ?').get(paymentId)
     },
     getKastonStoreTotal() {
       // 全店未清賒帳總額（給共用額度檢查用，路由/IPC 不得直接 db.prepare）

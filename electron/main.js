@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron')
 const path = require('path')
 const os = require('os')
 
@@ -64,9 +64,22 @@ function createWindow() {
 // ===== 初始化 =====
 app.whenReady().then(async () => {
   // 初始化 SQLite 資料庫
+  // database.js 內建損毀復原（壞檔改名 + 建新庫）；若連復原都失敗（磁碟壞軌、
+  // 目錄不可寫等），以前會靜默不開視窗 — 遠端店家完全無從得知發生什麼事。
   const initDatabase = require('./database')
   const dbPath = path.join(app.getPath('userData'), 'pos-data.db')
-  db = initDatabase(dbPath)
+  try {
+    db = initDatabase(dbPath)
+  } catch (err) {
+    console.error('[POS] 資料庫初始化失敗:', err)
+    dialog.showErrorBox(
+      'POS Easy — Database Error / 資料庫錯誤',
+      'Database gagal dibuka. Hubungi dukungan teknis.\n' +
+      `資料庫無法開啟，請聯絡技術支援。\n\nPath: ${dbPath}\nError: ${err.message}`
+    )
+    app.quit()
+    return
+  }
 
   // 啟動顧客點餐伺服器
   try {

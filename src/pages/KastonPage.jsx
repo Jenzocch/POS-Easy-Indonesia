@@ -490,6 +490,8 @@ function NewKastonModal({ members, onClose, onSubmit }) {
 
 // Payment modal
 function PaymentModal({ record, onClose, onSubmit }) {
+  // 幂等 id：開啟視窗時產生一次，連點「儲存」重送同一 id，DB 層只會入帳一次
+  const [paymentId] = useState(() => 'KP' + Date.now() + Math.random().toString(36).slice(2, 8))
   const [amount, setAmount] = useState(String(record.balanceDue))
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0])
   const [paymentMethod, setPaymentMethod] = useState('cash')
@@ -507,7 +509,7 @@ function PaymentModal({ record, onClose, onSubmit }) {
 
     setLoading(true)
     try {
-      await onSubmit({ amount: amt, paymentDate, paymentMethod, referenceNumber, notes })
+      await onSubmit({ id: paymentId, amount: amt, paymentDate, paymentMethod, referenceNumber, notes })
       setError(null)
     } catch (err) {
       setError(err.message)
