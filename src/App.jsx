@@ -61,6 +61,8 @@ export default function App() {
 
   const handleLogin = useCallback(async (newSession) => {
     setSession(newSession)
+    // 每日一備份：pos_backups 在瀏覽器模式存完整備份、在 Electron 模式存輕量戳記
+    // （security.js createBackup 兩種模式都會寫入，createdAt 欄位皆有）
     const backups = JSON.parse(localStorage.getItem('pos_backups') || '[]')
     const today = new Date().toDateString()
     const hasToday = backups.some(b => new Date(b.createdAt).toDateString() === today)

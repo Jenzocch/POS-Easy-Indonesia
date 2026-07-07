@@ -5,6 +5,11 @@ const fs = require('fs')
 // 開檔 + 完整性檢查。斷電造成的 DB 損毀會讓 new Database() throw 或 integrity_check 不為 ok；
 // 此時把壞檔改名保留（pos-data.corrupt-<timestamp>.db）、建全新 DB，讓 App 至少能開起來，
 // 店家再從 backups/ 資料夾的 JSON 備份還原。全程同步、無新依賴。
+//
+// 回傳 { db, recoveryInfo }：recoveryInfo.recovered = true 表示發生過復原，
+// main.js 依此彈出「阻斷式」對話框 — console.error 在打包後沒人看得到，
+// 店家會在全空的資料庫上交易一整天而不自知。本檔刻意不 import electron，
+// 保持可在純 node 環境測試。
 function openDatabaseWithRecovery(dbPath) {
   const tryOpen = () => {
     const d = new Database(dbPath)
@@ -22,7 +27,7 @@ function openDatabaseWithRecovery(dbPath) {
   }
 
   try {
-    return tryOpen()
+    return { db: tryOpen(), recoveryInfo: { recovered: false } }
   } catch (err) {
     console.error('[DB] 資料庫開啟/完整性檢查失敗:', err.message)
     const ts = new Date().toISOString().replace(/[:.]/g, '-')
@@ -39,12 +44,70 @@ function openDatabaseWithRecovery(dbPath) {
     }
     console.error(`[DB] 損毀資料庫已移至 ${corruptPath}，將建立全新資料庫。` +
       '請由 backups/ 資料夾中的 JSON 備份檔還原資料。')
-    return tryOpen() // 第二次仍失敗（如目錄不可寫）就往上 throw，由 main.js 顯示錯誤視窗
+    // 在 DB 旁留下 marker 檔：即使對話框被手滑關掉，事後仍有硬證據可查
+    try {
+      fs.writeFileSync(
+        path.join(path.dirname(dbPath), `recovery-${ts}.marker`),
+        'POS Easy database corruption recovery\n' +
+        `time: ${new Date().toISOString()}\n` +
+        `corrupt file saved as: ${corruptPath}\n` +
+        `error: ${err.message}\n` +
+        'A fresh empty database was created. Restore data from Settings > Backup ' +
+        'or import a JSON file from the backups/ folder.\n'
+      )
+    } catch (e) { console.error('[DB] recovery marker 寫入失敗:', e.message) }
+    // 第二次仍失敗（如目錄不可寫）就往上 throw，由 main.js 顯示錯誤視窗
+    return { db: tryOpen(), recoveryInfo: { recovered: true, corruptFile: corruptPath, timestamp: ts } }
   }
 }
 
+// backups/ 檔案輪替。檔名 bk<ts>-r<totalRows>.json，r = orders+products+members+kasbon_records
+// 粗略筆數；legacy 檔 bk<ts>.json（無 -r 尾碼）一律視為「非空」（安全假設）。
+//
+// 不變式：空快照永遠不得造成非空快照被刪。損毀復原後 App 會在空資料庫上持續自動備份，
+// 若無此保護，幾天內空快照就會把災前唯一有資料的備份全部輪替掉。
+// 最新檔為空（r==0）時：非空檔一律保留，只在空快照彼此之間留最新 10 個；
+// 最新檔非空時：照常保留最新 10 個。順帶清掉孤兒 *.json.tmp（寫一半斷電的殘檔）。
+function rotateBackupFiles(backupDir) {
+  const KEEP = 10
+  let entries
+  try { entries = fs.readdirSync(backupDir) } catch { return }
+
+  // 孤兒 tmp 檔：writeFileSync 後斷電、rename 沒完成留下的殘檔，永遠不會再被用到
+  for (const f of entries) {
+    if (f.endsWith('.json.tmp')) {
+      try { fs.unlinkSync(path.join(backupDir, f)) } catch { /* 清殘檔失敗不致命 */ }
+    }
+  }
+
+  const files = entries
+    .map(f => {
+      const m = /^bk(\d+)(?:-r(\d+))?\.json$/.exec(f)
+      if (!m) return null
+      // rows === null → legacy 檔（無 -r 尾碼）→ 視為非空
+      return { name: f, ts: Number(m[1]), rows: m[2] === undefined ? null : Number(m[2]) }
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.ts - a.ts) // 新 → 舊
+
+  if (files.length <= KEEP) return
+
+  const isEmpty = f => f.rows === 0
+  const unlink = f => { try { fs.unlinkSync(path.join(backupDir, f.name)) } catch { /* 清舊檔失敗不致命 */ } }
+
+  if (!isEmpty(files[0])) {
+    // 最新快照有資料：正常輪替，保留最新 10 個
+    for (const old of files.slice(KEEP)) unlink(old)
+    return
+  }
+  // 最新快照是空的（多半是損毀復原後的空庫在自動備份）：
+  // 非空檔一律不刪，只在空快照之間輪替
+  const empties = files.filter(isEmpty)
+  for (const old of empties.slice(KEEP)) unlink(old)
+}
+
 module.exports = function initDatabase(dbPath) {
-  const db = openDatabaseWithRecovery(dbPath)
+  const { db, recoveryInfo } = openDatabaseWithRecovery(dbPath)
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
 
@@ -942,6 +1005,19 @@ module.exports = function initDatabase(dbPath) {
       }
     }
 
+    // Settings（subscriptionTier / 店家設定 / 印表機設定）。備份寫的是物件 {key: value}，
+    // 也容忍列陣列 [{key, value}]。舊備份沒有 settings 鍵 → 不動作，
+    // 本機現有設定原樣保留（向下相容；replaceAllTx 也只在有 settings 鍵時才清空該表）。
+    if (data.settings && typeof data.settings === 'object') {
+      const entries = Array.isArray(data.settings)
+        ? data.settings.map(r => [r?.key, r?.value])
+        : Object.entries(data.settings)
+      for (const [k, v] of entries) {
+        if (k === undefined || k === null || k === '') continue
+        stmts.setSetting.run(String(k), v === null || v === undefined ? null : String(v))
+      }
+    }
+
     return { success: true }
   })
 
@@ -987,6 +1063,11 @@ module.exports = function initDatabase(dbPath) {
     `)
     if (hasKasbonKeys) {
       db.exec('DELETE FROM kasbon_payments; DELETE FROM kasbon_records;')
+    }
+    // Settings 向下相容：備份有 settings 鍵才整批替換（這正是還原的意義）；
+    // 舊備份沒有此鍵 → 保留本機現有 settings（subscriptionTier、印表機、店名等不得被清空）。
+    if (data.settings && typeof data.settings === 'object') {
+      db.exec('DELETE FROM settings')
     }
 
     migrateTx(data)
@@ -1043,10 +1124,12 @@ module.exports = function initDatabase(dbPath) {
     // Initialize balance record if needed
     const existing = db.prepare('SELECT * FROM member_kasbon_balance WHERE memberId = ?').get(data.memberId)
     if (!existing) {
+      // id 用確定性的 'MCB' + memberId（與 replaceAllTx 重算路徑一致）：
+      // 'MCB' + Date.now() 在兩個不同會員同毫秒各記第一筆賒帳時會撞 UNIQUE（已重現）
       db.prepare(`
         INSERT INTO member_kasbon_balance (id, memberId, totalCredit, totalPaid, balanceDue, activeRecordCount)
         VALUES (?, ?, ?, ?, ?, ?)
-      `).run('MCB' + Date.now(), data.memberId, principal, paid, balanceDue, 1)
+      `).run('MCB' + data.memberId, data.memberId, principal, paid, balanceDue, 1)
     } else {
       db.prepare(`
         UPDATE member_kasbon_balance SET totalCredit = totalCredit + ?, balanceDue = balanceDue + ?, activeRecordCount = activeRecordCount + 1, updatedAt = datetime('now','localtime') WHERE memberId = ?
@@ -1096,6 +1179,9 @@ module.exports = function initDatabase(dbPath) {
 
   // ===== Public API =====
   return {
+    // 損毀復原資訊（main.js 據此彈出阻斷式警告；正常開啟時 recovered = false）
+    recoveryInfo,
+
     // Products
     getProducts() {
       return stmts.getAllProducts.all().map(p => ({ ...p, noBarcode: !!p.noBarcode }))
@@ -1432,6 +1518,7 @@ module.exports = function initDatabase(dbPath) {
         kasbonRecords: db.prepare('SELECT * FROM kasbon_records').all(),
         kasbonPayments: db.prepare('SELECT * FROM kasbon_payments').all(),
         memberKasbonBalance: db.prepare('SELECT * FROM member_kasbon_balance').all(),
+        settings: Object.fromEntries(stmts.getAllSettings.all().map(r => [r.key, r.value])), // subscriptionTier / 店家設定也要進備份，還原才完整
       }
       const id = 'bk' + Date.now()
       const createdAt = new Date().toISOString()
@@ -1453,21 +1540,20 @@ module.exports = function initDatabase(dbPath) {
       }
       // 同步落一份 JSON 到 DB 檔旁的 backups/ 資料夾：backups table 與 DB 同檔共生死，
       // 斷電損毀 pos-data.db 時這些檔案是唯一救援來源。寫檔失敗不影響備份成功（僅記 log）。
+      //
+      // 檔名帶粗略筆數 bk<ts>-r<totalRows>.json：損毀復原後 App 會在「空資料庫」上
+      // 繼續自動備份，若照舊「只留最新 10 個」，幾天內空快照就會把災前唯一有料的
+      // 備份全數輪替掉 — 復原機制反而自我毀滅。不變式：空快照永遠不得害非空快照被刪。
       let file = null
       try {
         fs.mkdirSync(backupDir, { recursive: true })
-        file = path.join(backupDir, `${id}.json`)
+        const totalRows = (allData.orders?.length || 0) + (allData.products?.length || 0) +
+          (allData.members?.length || 0) + (allData.kasbonRecords?.length || 0)
+        file = path.join(backupDir, `${id}-r${totalRows}.json`)
         const tmp = file + '.tmp'
         fs.writeFileSync(tmp, json)
         fs.renameSync(tmp, file) // 原子替換，避免寫到一半斷電留下殘缺備份檔
-        // 只保留最新 10 個檔案（檔名 bk<timestamp>.json，字典序 = 時間序）
-        const files = fs.readdirSync(backupDir)
-          .filter(f => /^bk\d+\.json$/.test(f))
-          .sort()
-          .reverse()
-        for (const old of files.slice(10)) {
-          try { fs.unlinkSync(path.join(backupDir, old)) } catch { /* 清舊檔失敗不致命 */ }
-        }
+        rotateBackupFiles(backupDir)
       } catch (e) {
         console.error('[DB] 備份 JSON 寫檔失敗（DB 內備份仍成功）:', e.message)
         file = null
@@ -1509,6 +1595,7 @@ module.exports = function initDatabase(dbPath) {
         kasbonRecords: db.prepare('SELECT * FROM kasbon_records').all(),
         kasbonPayments: db.prepare('SELECT * FROM kasbon_payments').all(),
         memberKasbonBalance: db.prepare('SELECT * FROM member_kasbon_balance').all(),
+        settings: Object.fromEntries(stmts.getAllSettings.all().map(r => [r.key, r.value])),
       }
     },
     importData(data) {
@@ -1740,3 +1827,6 @@ module.exports = function initDatabase(dbPath) {
     },
   }
 }
+
+// 供純 node 測試腳本直接驗證輪替不變式（不需先建 DB）
+module.exports._rotateBackupFiles = rotateBackupFiles

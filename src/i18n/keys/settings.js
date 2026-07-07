@@ -162,6 +162,10 @@ export default {
     'settings.confirm_restore': '確認還原？',
     'settings.restore_warning': '目前所有資料將被備份覆蓋，此操作無法復原',
     'settings.confirm_restore_btn': '確認還原',
+    'settings.confirm_import': '確認匯入？',
+    'settings.import_warning': '目前所有資料將被匯入的備份檔「整批取代」，此操作無法復原',
+    'settings.confirm_import_btn': '確認匯入',
+    'settings.import_invalid': '不是有效的備份檔（找不到 products / orders 資料）',
 
     'settings.search_audit_ph': '搜尋人員或操作...',
     'settings.level_info': '一般',
@@ -399,6 +403,10 @@ export default {
     'settings.confirm_restore': 'Confirm restore?',
     'settings.restore_warning': 'All current data will be overwritten by this backup. This cannot be undone.',
     'settings.confirm_restore_btn': 'Confirm Restore',
+    'settings.confirm_import': 'Confirm import?',
+    'settings.import_warning': 'All current data will be REPLACED by the imported backup file. This cannot be undone.',
+    'settings.confirm_import_btn': 'Confirm Import',
+    'settings.import_invalid': 'Not a valid backup file (no products / orders data found)',
 
     'settings.search_audit_ph': 'Search user or action...',
     'settings.level_info': 'Info',
@@ -636,6 +644,10 @@ export default {
     'settings.confirm_restore': 'Konfirmasi pemulihan?',
     'settings.restore_warning': 'Semua data saat ini akan ditimpa oleh cadangan ini. Tindakan ini tidak dapat dibatalkan.',
     'settings.confirm_restore_btn': 'Konfirmasi Pulihkan',
+    'settings.confirm_import': 'Konfirmasi impor?',
+    'settings.import_warning': 'Semua data saat ini akan DIGANTI oleh file cadangan yang diimpor. Tindakan ini tidak dapat dibatalkan.',
+    'settings.confirm_import_btn': 'Konfirmasi Impor',
+    'settings.import_invalid': 'Bukan file cadangan yang valid (data products / orders tidak ditemukan)',
 
     'settings.search_audit_ph': 'Cari petugas atau aksi...',
     'settings.level_info': 'Umum',

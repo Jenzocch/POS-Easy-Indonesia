@@ -255,9 +255,18 @@ const BACKUP_KEYS    = ['pos2_products','pos2_members','pos2_orders','pos2_manua
 export function createBackup(session, label = '') {
   try {
     if (isElectron) {
-      // Electron: SQLite 備份
-      window.electronAPI.db.createBackup(label || '自動備份', session?.username || '系統').catch(() => {})
-      return { id: 'BK' + Date.now() }
+      // Electron: SQLite 備份（promise 一併回傳，讓備份頁能 await 後刷新清單）
+      const promise = window.electronAPI.db.createBackup(label || '自動備份', session?.username || '系統').catch(() => {})
+      // 同步在 localStorage 留一筆「輕量 metadata 戳記」（不含資料本體）：
+      // App.jsx 的「今天是否已備份」檢查讀的是 pos_backups —— 以前 Electron 分支
+      // 從不寫入，導致每次登入/登出都觸發備份，加速輪替把舊備份擠掉。
+      const id = 'BK' + Date.now()
+      try {
+        const stamps = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]')
+        stamps.unshift({ id, createdAt: new Date().toISOString(), label: label || '自動備份' })
+        localStorage.setItem(BACKUP_KEY, JSON.stringify(stamps.slice(0, 30)))
+      } catch { /* 戳記寫失敗不影響備份本體 */ }
+      return { id, promise }
     }
 
     const backups = getBackupList()

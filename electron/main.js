@@ -81,6 +81,30 @@ app.whenReady().then(async () => {
     return
   }
 
+  // 資料庫損毀復原「必須大聲」：console.error 在打包後沒人看得到，店家會在
+  // 全空的資料庫上交易一整天而不自知。這裡用「阻斷式」對話框 — 不關店（不 quit，
+  // 讓他們能繼續營業），但一定要看到並按掉才會開視窗。
+  if (db.recoveryInfo && db.recoveryInfo.recovered) {
+    const corruptName = path.basename(db.recoveryInfo.corruptFile || '')
+    dialog.showMessageBoxSync({
+      type: 'warning',
+      title: 'POS Easy — Pemulihan Database / 資料庫復原',
+      message: 'Database rusak — database baru yang kosong telah dibuat\n資料庫損毀 — 已建立全新空白資料庫',
+      detail:
+        'Database lama rusak (kemungkinan karena listrik padam) dan tidak bisa dibuka. ' +
+        'Sistem sudah membuat database baru yang KOSONG supaya toko tetap bisa berjualan.\n\n' +
+        `File lama disimpan sebagai: ${corruptName}\n\n` +
+        'Data dapat dipulihkan lewat menu Pengaturan > Cadangan & Pulihkan ' +
+        '(pulihkan cadangan, atau impor file JSON dari folder backups/).\n\n' +
+        '────────────────\n\n' +
+        '舊資料庫已損毀（可能因斷電）無法開啟。系統已建立「全新空白」資料庫，讓您可以繼續營業。\n\n' +
+        `舊檔已保留為：${corruptName}\n\n` +
+        '請至 設定 > 備份還原 分頁還原備份，或匯入 backups/ 資料夾中的 JSON 備份檔以取回資料。',
+      buttons: ['OK / 我知道了'],
+      noLink: true,
+    })
+  }
+
   // 啟動顧客點餐伺服器
   try {
     const startOrderServer = require('./server')
