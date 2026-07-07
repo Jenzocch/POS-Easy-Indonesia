@@ -118,6 +118,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getAll: () => ipcRenderer.invoke('settings:getAll'),
   },
 
+  // ----- License 授權金鑰 -----
+  license: {
+    getStatus: () => ipcRenderer.invoke('license:getStatus'),
+    activate: (code) => ipcRenderer.invoke('license:activate', code),
+  },
+
   // ----- Server -----
   server: {
     // DEAD-13: server:getLocalIP IPC 通道渲染端零呼叫已移除；getLocalIP() 這個 plain function

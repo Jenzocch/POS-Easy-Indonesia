@@ -105,6 +105,17 @@ app.whenReady().then(async () => {
     })
   }
 
+  // 授權金鑰重新驗證（每次開機都跑，不信任資料表裡存的 tier 字串）：
+  // licenseCode 是唯一持久化的來源，subscriptionTier 每次都從簽章重新推導、覆寫——
+  // 這樣有人直接手改 settings 表偽造 tier 就完全失效。kasbon-shared.js 的
+  // getSubscription() 只讀 subscriptionTier，這裡處理完它不需要任何改動。
+  try {
+    const license = require('./license')
+    license.syncSubscriptionTier(db)
+  } catch (err) {
+    console.error('[POS] 授權驗證失敗，視同 free tier:', err)
+  }
+
   // 啟動顧客點餐伺服器
   try {
     const startOrderServer = require('./server')
@@ -254,6 +265,25 @@ function registerIpcHandlers() {
   ipcMain.handle('db:getKastonPayments', (_e, recordId) => kasbon.listPayments(db, recordId))
   ipcMain.handle('db:getKastonStoreTotal', () => kasbon.getStoreTotal(db))
   ipcMain.handle('db:getKastonAgingReport', () => kasbon.getAgingReport(db))
+
+  // ----- License 授權金鑰 -----
+  // 不信任渲染端傳來的任何 tier 字串——每次 getStatus/activate 都用 electron/license.js
+  // 重新驗證簽章，settings 裡只存原始 licenseCode，衍生出的 subscriptionTier 每次都重寫。
+  const license = require('./license')
+  ipcMain.handle('license:getStatus', () => {
+    const code = db.getSetting('licenseCode')
+    if (!code) return { valid: false, reason: 'absent' }
+    return license.verifyLicense(code)
+  })
+  ipcMain.handle('license:activate', (_e, code) => {
+    const result = license.verifyLicense(code)
+    if (!result.valid) {
+      return result
+    }
+    db.setSetting('licenseCode', code)
+    license.syncSubscriptionTier(db)
+    return result
+  })
 
   // ----- Printer -----
   ipcMain.handle('printer:printReceipt', async (_e, orderData) => {
