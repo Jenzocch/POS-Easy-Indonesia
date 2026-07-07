@@ -48,6 +48,25 @@ describe('translation key parity (catches forgotten translations)', () => {
     }
     expect(empty).toEqual([])
   })
+
+  // I18N-01 guard: t() interpolates single-brace {var}. A leftover double-brace
+  // {{count}} (i18next syntax) never gets substituted and leaks raw onto the screen.
+  it('no double-brace {{...}} placeholders (t() only substitutes {var})', () => {
+    const offenders = []
+    for (const lang of ['zh', 'en', 'id']) {
+      for (const [key, val] of Object.entries(translations[lang])) {
+        if (typeof val === 'string' && /\{\{|\}\}/.test(val)) offenders.push(`${lang}: ${key} = ${val}`)
+      }
+    }
+    expect(offenders, `Double-brace placeholders won't interpolate:\n${offenders.join('\n')}`).toEqual([])
+  })
+
+  // I18N-01 guard: keys referenced by AccountingPage TABS must resolve (were missing balance/expense).
+  it('accounting tab keys all resolve (no raw key leaks)', () => {
+    for (const key of ['acct.tab_pnl', 'acct.tab_journal', 'acct.tab_balance', 'acct.tab_expense']) {
+      expect(key in translations.zh && key in translations.en && key in translations.id, `missing: ${key}`).toBe(true)
+    }
+  })
 })
 
 describe('fmtMoney / Rupiah formatting', () => {

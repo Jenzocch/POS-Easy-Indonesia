@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Lock, Eye, EyeOff, AlertTriangle, Shield, Sparkles, ShoppingBag, TrendingUp, Users as UsersIcon, Smartphone } from 'lucide-react'
-import { hashPassword, verifyPassword, createSession, writeAuditLog } from '../utils/security'
+import { hashPassword, verifyPassword, createSession, writeAuditLog, checkRateLimit, resetRateLimit } from '../utils/security'
 import { isElectron } from '../utils/dataAccess'
 import useIsMobile from '../hooks/useIsMobile'
 import { t, getCurrentLanguage, LanguageSwitcher } from '../i18n'
@@ -95,12 +95,23 @@ export default function LoginScreen({ onLogin }) {
         setLoading(false)
         return
       }
+      // DEAD-02: 接線暴力破解防護 —— 每次登入嘗試都經過速率限制器（同帳號預設 5 次後鎖 30 分鐘）。
+      // 這讓 SettingsPage SecurityTab「暴力破解防護 已啟用」的宣稱名符其實。
+      const rl = checkRateLimit('login:' + username)
+      if (!rl.allowed) {
+        writeAuditLog('LOGIN_FAIL', null, { username, locked: true })
+        setError(t('login.locked_out', { min: Math.ceil(rl.lockedFor / 60) }))
+        setLoading(false)
+        return
+      }
       const ok = await verifyPassword(password, user.password)
       if (!ok) {
+        writeAuditLog('LOGIN_FAIL', null, { username })
         setError(t('login.wrong_password'))
         setLoading(false)
         return
       }
+      resetRateLimit('login:' + username) // 登入成功清除失敗計數
       const session = createSession(user)
       writeAuditLog('LOGIN', session, { username })
       onLogin(session)

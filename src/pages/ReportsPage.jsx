@@ -191,7 +191,7 @@ export default function ReportsPage({ store, session }) {
   const KPIS = [
     { label:t('reports.revenue'), value:fmtMoney(revenue), delta:revDelta, icon:<TrendingUp size={16}/>, color:'var(--gold)' },
     { label:t('reports.profit'),  value:fmtMoney(profit),  delta:null,     icon:<ArrowUp size={16}/>,   color:'var(--green)' },
-    { label:t('reports.order_count'), value:t('reports.n_orders', { n: filtered.length }), delta:null, icon:<ShoppingCart size={16}/>, color:'var(--blue)' },
+    { label:t('reports.order_count'), value:t('reports.n_orders', { count: filtered.length }), delta:null, icon:<ShoppingCart size={16}/>, color:'var(--blue)' },
     { label:t('reports.avg_ticket'), value:fmtMoney(avgOrder), delta:null, icon:<Package size={16}/>,   color:'var(--teal)' },
   ]
 

@@ -216,7 +216,7 @@ function JournalView({ grouped, manualEntries, deleteManualEntry }) {
             }}>
               {open ? <ChevronDown size={14} style={{color:'var(--text-tertiary)',flexShrink:0}}/> : <ChevronRight size={14} style={{color:'var(--text-tertiary)',flexShrink:0}}/>}
               <span style={{fontFamily:'var(--font-mono)',fontSize:13,color:'var(--text-secondary)',minWidth:90}}>{date}</span>
-              <span style={{fontSize:12,color:'var(--text-tertiary)'}}>{t('acct.n_entries', { n: entries.length })}</span>
+              <span style={{fontSize:12,color:'var(--text-tertiary)'}}>{t('acct.n_entries', { count: entries.length })}</span>
               {dayTotal > 0 && <span style={{marginLeft:'auto',fontFamily:'var(--font-mono)',fontSize:13,color:'var(--gold-bright)',fontWeight:500}}>{fmtMoney(dayTotal)}</span>}
             </button>
 

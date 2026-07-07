@@ -103,7 +103,12 @@ export default function CartPanel({
     setEditingPriceId(null); setPriceInput('')
   }
 
-  const quickAmounts = [total, 100, 500, 1000].filter((v,i,a) => v > 0 && a.indexOf(v)===i).sort((a,b)=>a-b).slice(0,5)
+  // UX-01: 現金快捷面額改用 Rupiah 動態進位 —— 應收金額本身 + 進位到 5.000/10.000 常用鈔票
+  // 面額，外加固定大鈔（20.000/50.000/100.000），只保留 >= 應收的金額（避免找零為負）。
+  // 目前硬編印尼面額；未來多市場需改為讀 market profile 的貨幣面額表。
+  const ceilTo = (v, step) => Math.ceil(v / step) * step
+  const quickAmounts = [total, ceilTo(total, 5000), ceilTo(total, 10000), 20000, 50000, 100000]
+    .filter((v,i,a) => v >= total && v > 0 && a.indexOf(v)===i).sort((a,b)=>a-b).slice(0,5)
 
   // ===== Done stage =====
   if (stage === 'done' && lastOrder) return (
@@ -111,12 +116,21 @@ export default function CartPanel({
       <div style={cs.doneWrap}>
         <div style={cs.doneCheck}><Check size={28} strokeWidth={2.5} /></div>
         <div style={{fontSize:16, fontWeight:600, color:'var(--text-primary)', marginBottom:6}}>{t('pos.checkout_done')}</div>
-        <div style={{fontFamily:'var(--font-mono)', fontSize:32, fontWeight:500, letterSpacing:'-.02em', marginBottom:4}}>
-          {fmtMoney(lastOrder.total)}
-        </div>
-        {lastOrder.payMethod === 'cash' && lastOrder.change > 0 && (
-          <div style={{fontSize:13, color:'var(--text-secondary)'}}>
-            {t('pos.change')} <span style={{color:'var(--gold)', fontFamily:'var(--font-mono)', fontWeight:500}}>{fmtMoney(lastOrder.change)}</span>
+        {/* UX-02: 現金找零是收銀員結帳後唯一要做的動作，設為主角（大字綠色）；總額退為輔助小字。
+            非現金或無找零時，總額維持原本主顯示。 */}
+        {lastOrder.payMethod === 'cash' && lastOrder.change > 0 ? (
+          <>
+            <div style={{fontSize:12, color:'var(--text-secondary)', marginBottom:2}}>{t('pos.change')}</div>
+            <div style={{fontFamily:'var(--font-mono)', fontSize:40, fontWeight:700, letterSpacing:'-.02em', color:'var(--green)', lineHeight:1.1, marginBottom:6}}>
+              {fmtMoney(lastOrder.change)}
+            </div>
+            <div style={{fontSize:13, color:'var(--text-tertiary)'}}>
+              {t('pos.total')} <span style={{fontFamily:'var(--font-mono)'}}>{fmtMoney(lastOrder.total)}</span>
+            </div>
+          </>
+        ) : (
+          <div style={{fontFamily:'var(--font-mono)', fontSize:32, fontWeight:500, letterSpacing:'-.02em', marginBottom:4}}>
+            {fmtMoney(lastOrder.total)}
           </div>
         )}
         {lastOrder.payMethod === 'mixed' && lastOrder.payments?.length > 0 && (
