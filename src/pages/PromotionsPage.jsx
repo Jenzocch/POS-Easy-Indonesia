@@ -226,21 +226,21 @@ export default function PromotionsPage({ store, session }) {
               <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:10}}>折扣條件</div>
               {form.type === 'threshold' && (
                 <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
-                  <div><FL>滿額（NT$）</FL><input type="number" className="field" value={form.condition.threshold} onChange={e=>setForm(f=>({...f,condition:{...f.condition,threshold:parseFloat(e.target.value)||0}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
-                  <div><FL>折抵（NT$）</FL><input type="number" className="field" value={form.condition.discount} onChange={e=>setForm(f=>({...f,condition:{...f.condition,discount:parseFloat(e.target.value)||0}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
+                  <div><FL>滿額（NT$）</FL><input type="number" inputMode="numeric" className="field" value={form.condition.threshold} onChange={e=>setForm(f=>({...f,condition:{...f.condition,threshold:parseFloat(e.target.value)||0}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
+                  <div><FL>折抵（NT$）</FL><input type="number" inputMode="numeric" className="field" value={form.condition.discount} onChange={e=>setForm(f=>({...f,condition:{...f.condition,discount:parseFloat(e.target.value)||0}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
                 </div>
               )}
               {form.type === 'percent' && (
-                <div><FL>折扣率（0.9 = 九折）</FL><input type="number" min={0.1} max={1} step={0.05} className="field" value={form.condition.rate} onChange={e=>setForm(f=>({...f,condition:{...f.condition,rate:parseFloat(e.target.value)||0.9}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
+                <div><FL>折扣率（0.9 = 九折）</FL><input type="number" inputMode="decimal" min={0.1} max={1} step={0.05} className="field" value={form.condition.rate} onChange={e=>setForm(f=>({...f,condition:{...f.condition,rate:parseFloat(e.target.value)||0.9}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
               )}
               {form.type === 'buyget' && (
                 <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
-                  <div><FL>買幾件</FL><input type="number" className="field" value={form.condition.buy} onChange={e=>setForm(f=>({...f,condition:{...f.condition,buy:parseInt(e.target.value)||2}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
-                  <div><FL>送幾件</FL><input type="number" className="field" value={form.condition.get} onChange={e=>setForm(f=>({...f,condition:{...f.condition,get:parseInt(e.target.value)||1}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
+                  <div><FL>買幾件</FL><input type="number" inputMode="numeric" className="field" value={form.condition.buy} onChange={e=>setForm(f=>({...f,condition:{...f.condition,buy:parseInt(e.target.value)||2}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
+                  <div><FL>送幾件</FL><input type="number" inputMode="numeric" className="field" value={form.condition.get} onChange={e=>setForm(f=>({...f,condition:{...f.condition,get:parseInt(e.target.value)||1}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
                 </div>
               )}
               {form.type === 'fixed' && (
-                <div><FL>折抵金額（NT$）</FL><input type="number" className="field" value={form.condition.discount} onChange={e=>setForm(f=>({...f,condition:{...f.condition,discount:parseFloat(e.target.value)||0}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
+                <div><FL>折抵金額（NT$）</FL><input type="number" inputMode="numeric" className="field" value={form.condition.discount} onChange={e=>setForm(f=>({...f,condition:{...f.condition,discount:parseFloat(e.target.value)||0}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
               )}
             </div>
 

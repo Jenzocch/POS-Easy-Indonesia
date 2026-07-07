@@ -95,7 +95,7 @@ export default function RefundModal({ order, onClose, onRefund, session, priorRe
                 </div>
                 <div style={{display:'flex', alignItems:'center', gap:6}}>
                   <button onClick={()=>setQty(item.id, cur - 1)} style={rm.qtyBtn} disabled={done}>−</button>
-                  <input type="number" value={cur} onChange={e=>setQty(item.id, e.target.value)} disabled={done}
+                  <input type="number" inputMode="numeric" value={cur} onChange={e=>setQty(item.id, e.target.value)} disabled={done}
                     style={{width:50, textAlign:'center', fontFamily:'var(--font-mono)', fontSize:14, background:'var(--bg-overlay)', borderRadius:6, padding:'4px 0', border:'1px solid var(--border-dim)'}}/>
                   <button onClick={()=>setQty(item.id, cur + 1)} style={rm.qtyBtn} disabled={done}>+</button>
                   <button onClick={()=>setQty(item.id, maxQty)} style={{fontSize:11, color: done ? 'var(--text-tertiary)' : 'var(--gold)', marginLeft:4, padding:4}} disabled={done}>{done ? t('pos.refund_all_done') : t('pos.refund_max')}</button>

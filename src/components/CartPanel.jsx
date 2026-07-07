@@ -248,12 +248,12 @@ export default function CartPanel({
             <div style={{display:'flex', gap:6, marginBottom:6, alignItems:'center'}}>
               <Banknote size={14} style={{color:'var(--text-secondary)', flexShrink:0}}/>
               <span style={{fontSize:12, color:'var(--text-secondary)', width:40}}>{t('pos.cash')}</span>
-              <input className="field" type="number" value={splitCash} onChange={e=>setSplitCash(e.target.value)} placeholder="0" style={{flex:1, padding:'6px 10px'}}/>
+              <input className="field" type="number" inputMode="numeric" value={splitCash} onChange={e=>setSplitCash(e.target.value)} placeholder="0" style={{flex:1, padding:'6px 10px'}}/>
             </div>
             <div style={{display:'flex', gap:6, marginBottom:6, alignItems:'center'}}>
               <CreditCard size={14} style={{color:'var(--text-secondary)', flexShrink:0}}/>
               <span style={{fontSize:12, color:'var(--text-secondary)', width:40}}>{t('pos.digital_short')}</span>
-              <input className="field" type="number" value={splitCard} onChange={e=>setSplitCard(e.target.value)} placeholder="0" style={{flex:1, padding:'6px 10px'}}/>
+              <input className="field" type="number" inputMode="numeric" value={splitCard} onChange={e=>setSplitCard(e.target.value)} placeholder="0" style={{flex:1, padding:'6px 10px'}}/>
             </div>
             <div style={{fontSize:11, color: splitOK ? 'var(--green)' : 'var(--red)', marginTop:4}}>
               {splitOK ? t('pos.split_ok', { amt: fmtMoney(splitTotal) }) : t('pos.split_diff', { amt: fmtMoney(total - splitTotal) })}
@@ -265,7 +265,7 @@ export default function CartPanel({
         {!splitMode && payMethod === 'cash' && (
           <>
             <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:6}}>{t('pos.amount_received')}</div>
-            <input className="field" type="number" value={paidInput} onChange={e=>setPaidInput(e.target.value)} placeholder={t('pos.enter_amount')} style={{fontSize:22, fontFamily:'var(--font-mono)', marginBottom:10, width:'100%'}}/>
+            <input className="field" type="number" inputMode="numeric" value={paidInput} onChange={e=>setPaidInput(e.target.value)} placeholder={t('pos.enter_amount')} style={{fontSize:22, fontFamily:'var(--font-mono)', marginBottom:10, width:'100%'}}/>
             <div style={{display:'flex', gap:6, flexWrap:'wrap', marginBottom:12}}>
               {quickAmounts.map(a => (
                 <button key={a} onClick={()=>setPaidInput(String(a))} style={{...cs.quickBtn,
@@ -293,7 +293,7 @@ export default function CartPanel({
             <Receipt size={11} style={{verticalAlign:'middle', marginRight:4}}/>
             {t('pos.tax_id_toggle')} {taxId && <span style={{color:'var(--gold)'}}>· {taxId}</span>}
           </summary>
-          <input className="field" value={taxId} onChange={e=>setTaxId(e.target.value.replace(/\D/g,'').slice(0,8))} placeholder={t('pos.tax_id_placeholder')} style={{marginTop:6, width:'100%'}}/>
+          <input className="field" inputMode="numeric" value={taxId} onChange={e=>setTaxId(e.target.value.replace(/\D/g,'').slice(0,8))} placeholder={t('pos.tax_id_placeholder')} style={{marginTop:6, width:'100%'}}/>
         </details>
       </div>
       <div style={cs.stageFooter}>
@@ -399,7 +399,7 @@ export default function CartPanel({
                 {editingPriceId === item.id ? (
                   <span>
                     <span>Rp </span>
-                    <input type="number" value={priceInput} autoFocus
+                    <input type="number" inputMode="numeric" value={priceInput} autoFocus
                       onChange={e=>setPriceInput(e.target.value)}
                       onBlur={()=>commitEditPrice(item)}
                       onKeyDown={e=>{ if(e.key==='Enter') commitEditPrice(item); if(e.key==='Escape'){ setEditingPriceId(null); setPriceInput('') } }}
@@ -434,7 +434,7 @@ export default function CartPanel({
             <span style={{color:'var(--text-secondary)', fontSize:13, display:'flex', alignItems:'center', gap:4}}>
               <Percent size={12}/> {t('pos.manual_discount')}
             </span>
-            <input type="number" value={manualDiscount || ''} onChange={e=>setManualDiscount(parseFloat(e.target.value) || 0)}
+            <input type="number" inputMode="numeric" value={manualDiscount || ''} onChange={e=>setManualDiscount(parseFloat(e.target.value) || 0)}
               placeholder="0" style={{width:80, textAlign:'right', fontFamily:'var(--font-mono)', fontSize:13, background:'var(--bg-overlay)', borderRadius:4, padding:'4px 8px', border:'1px solid var(--border-dim)'}}/>
           </div>
           <div style={cs.subtotalRow}>

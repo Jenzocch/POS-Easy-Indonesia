@@ -70,7 +70,15 @@ const SEED_MANUAL = [
 ]
 
 function loadLS(k,fb){try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb}catch{return fb}}
-function saveLS(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+// LOAD-6 止血：寫入失敗（最常見是 5MB quota 滿 → 新訂單默默不落盤）不可再靜默吞掉，
+// 浮出全域事件讓 App 顯示錯誤 banner——「默默丟單」與「可感知故障」的分界線。
+function saveLS(k,v){
+  try{localStorage.setItem(k,JSON.stringify(v))}
+  catch(e){
+    console.error('[POS] saveLS failed:', k, e)
+    try{window.dispatchEvent(new CustomEvent('pos-storage-error',{detail:{key:k,error:e?.name||String(e)}}))}catch{}
+  }
+}
 // DB 寫入錯誤至少 log 出來，避免 silent fail（audit #3）
 const logDbErr = (op) => (e) => console.error(`[POS DB] ${op} failed:`, e)
 
@@ -475,22 +483,28 @@ export function useStore(){
   }, [openShift])
 
   // 損耗
-  const recordWaste = useCallback(async (data) => {
+  // opts.skipStockDeduct：FLOW-03 盤點盤虧走此路徑——庫存已被盤點的絕對值更新修正，
+  // 再扣一次會二次扣庫存（Electron 端 addWaste 也以同名旗標跳過 delta）
+  const recordWaste = useCallback(async (data, opts = {}) => {
+    const { skipStockDeduct = false } = opts
     const w = {
       id: 'W' + Date.now(),
       time: new Date().toISOString(),
       ...data,
     }
     setWasteLog(p => [w, ...p])
-    setProducts(prev => prev.map(p => p.id === data.productId
-      ? { ...p, stock: Math.max(0, p.stock - Math.abs(data.qty)) } : p))
-    if (isElectron) await addWaste(w)
+    if (!skipStockDeduct) {
+      setProducts(prev => prev.map(p => p.id === data.productId
+        ? { ...p, stock: Math.max(0, p.stock - Math.abs(data.qty)) } : p))
+    }
+    // 一律持久化（dataAccess 內部分流 SQLite / localStorage；舊版 web 模式從未落盤，重整就掉）
+    await addWaste(isElectron && skipStockDeduct ? { ...w, skipStockDeduct: true } : w)
     return w
   }, [])
 
   const removeWaste = useCallback(async (id) => {
     setWasteLog(p => p.filter(w => w.id !== id))
-    if (isElectron) await deleteWaste(id)
+    await deleteWaste(id) // 同上：web 模式也要同步 localStorage
   }, [])
 
   // 會員儲值
@@ -570,12 +584,20 @@ export function useStore(){
     setManualEntries(j)
   }, [])
 
-  const categories    = [...new Set(products.map(p=>p.category))]
+  // PERF-05 步驟1：衍生值 memo 化——useStore 掛在 App 根部，任何 state 變動都重渲染整個 App 樹，
+  // 這四個值先前每 render 裸算（todayProfit 內還有 O(P) 的 products.find），是加購物車掉幀的主因之一。
+  const categories    = useMemo(()=>[...new Set(products.map(p=>p.category))],[products])
   // 排除完整退貨原訂單（status='refunded'）；部分退貨負數訂單保留，與原單抵銷正確
-  const todayOrders   = orders.filter(o=>new Date(o.time).toDateString()===new Date().toDateString() && o.status!=='refunded' && !(o.refundOf && o.fullRefund))
-  const todayRevenue  = todayOrders.reduce((s,o)=>s+o.total,0)
-  const lowStockCount = products.filter(needsRestock).length // 需補貨 = 低庫存 + 缺貨（Sidebar 徽章與庫存頁 header 同源）
-  const todayProfit   = todayOrders.reduce((s,o)=>s+o.items.reduce((a,i)=>{const prod=products.find(p=>p.id===i.id);return a+(prod?(i.price-(prod.cost||0))*i.qty:0)},0),0)
+  const todayOrders   = useMemo(()=>{
+    const todayStr = new Date().toDateString()
+    return orders.filter(o=>new Date(o.time).toDateString()===todayStr && o.status!=='refunded' && !(o.refundOf && o.fullRefund))
+  },[orders])
+  const todayRevenue  = useMemo(()=>todayOrders.reduce((s,o)=>s+o.total,0),[todayOrders])
+  const lowStockCount = useMemo(()=>products.filter(needsRestock).length,[products]) // 需補貨 = 低庫存 + 缺貨（Sidebar 徽章與庫存頁 header 同源）
+  const todayProfit   = useMemo(()=>{
+    const costById = new Map(products.map(p=>[p.id, p.cost||0])) // 消掉每單每品項的 products.find O(P)
+    return todayOrders.reduce((s,o)=>s+o.items.reduce((a,i)=>costById.has(i.id)?a+(i.price-costById.get(i.id))*i.qty:a,0),0)
+  },[todayOrders, products])
 
   return {
     products,members,orders,cart,view,setView,ready,

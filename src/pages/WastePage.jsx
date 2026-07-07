@@ -195,7 +195,8 @@ export default function WastePage({ store, session }) {
       {showAdd && (
         <>
           <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:998}} onClick={()=>setShowAdd(false)}/>
-          <div style={{position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', background:'var(--bg-raised)', borderRadius:12, width:420, maxWidth:'90vw', boxShadow:'var(--shadow-lg)', zIndex:999}}>
+          {/* RWD-01：maxHeight + overflowY，手機上表單長於視窗時可捲動 */}
+          <div style={{position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', background:'var(--bg-raised)', borderRadius:12, width:420, maxWidth:'90vw', maxHeight:'88vh', overflowY:'auto', boxShadow:'var(--shadow-lg)', zIndex:999}}>
             <div style={{padding:'14px 18px', borderBottom:'1px solid var(--border-dim)', fontSize:15, fontWeight:600}}>{t('waste.record_title')}</div>
             <div style={{padding:18}}>
               <div style={{marginBottom:10}}>
@@ -207,7 +208,7 @@ export default function WastePage({ store, session }) {
               </div>
               <div style={{marginBottom:10}}>
                 <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>{t('common.qty')}</div>
-                <input className="field" type="number" value={qty} onChange={e=>setQty(e.target.value)} placeholder="0"/>
+                <input className="field" type="number" inputMode="numeric" value={qty} onChange={e=>setQty(e.target.value)} placeholder="0"/>
               </div>
               <div style={{marginBottom:10}}>
                 <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>{t('waste.reason')}</div>

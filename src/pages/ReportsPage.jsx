@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react'
-import { TrendingUp, ShoppingCart, Users, Package, ArrowUp, ArrowDown, Download, Zap, AlertTriangle, Trophy } from 'lucide-react'
+import { TrendingUp, ShoppingCart, Users, Package, ArrowUp, ArrowDown, Download, Zap, AlertTriangle, Trophy, RotateCcw } from 'lucide-react'
 import { exportXLS } from '../utils/exportXLS'
 import { productPerformance } from '../utils/analytics'
+import RefundModal from '../components/RefundModal'
 import { t, fmtMoney, formatDateTime } from '../i18n'
 
-export default function ReportsPage({ store }) {
-  const { orders: rawOrders, products, members } = store
+export default function ReportsPage({ store, session }) {
+  const { orders: rawOrders, products, members, refund } = store
   const [range, setRange] = useState('today')
+  // FLOW-02：散客退貨入口——訂單紀錄列表對任何 completed 訂單（含 memberId:null）掛 RefundModal
+  const [refundOrder, setRefundOrder] = useState(null)
 
   const rangeLabels = {
     today: t('reports.range_today'),
@@ -443,6 +446,68 @@ export default function ReportsPage({ store }) {
           </div>
         )}
       </div>
+
+      {/* 訂單紀錄（FLOW-02：非會員訂單的退貨入口——會員頁只能退會員單） */}
+      <div className="card" style={{padding:'18px 20px', flexShrink:0}}>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+          <div style={rs.cardTitle}>{t('reports.order_details')}</div>
+          <span style={{fontSize:11, color:'var(--text-tertiary)'}}>{rangeLabels[range]}</span>
+        </div>
+        {filtered.length === 0 ? (
+          <div style={{color:'var(--text-tertiary)', fontSize:13, padding:'24px 0', textAlign:'center'}}>{t('reports.no_data_period')}</div>
+        ) : (
+          <div style={{overflowX:'auto', marginTop:8}}>
+            <table style={{width:'100%', fontSize:13, minWidth:520}}>
+              <thead>
+                <tr style={{color:'var(--text-tertiary)', fontSize:11, textTransform:'uppercase', letterSpacing:'.05em'}}>
+                  <th style={{textAlign:'left', padding:'8px 6px'}}>{t('reports.order_id')}</th>
+                  <th style={{textAlign:'left', padding:'8px 6px'}}>{t('common.time')}</th>
+                  <th style={{textAlign:'left', padding:'8px 6px'}}>{t('reports.member')}</th>
+                  <th style={{textAlign:'left', padding:'8px 6px'}}>{t('reports.pay_method')}</th>
+                  <th style={{textAlign:'right', padding:'8px 6px'}}>{t('reports.amount')}</th>
+                  <th style={{textAlign:'right', padding:'8px 6px'}}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.slice(0, 30).map(o => {
+                  const isRefund = !!o.refundOf
+                  const canRefund = !isRefund && o.status !== 'refunded' && (o.total || 0) > 0
+                  return (
+                    <tr key={o.id} style={{borderTop:'1px solid var(--border-dim)'}}>
+                      <td style={{padding:'8px 6px', fontFamily:'var(--font-mono)', fontSize:12}}>
+                        {o.id}
+                        {isRefund && <span className="badge badge-red" style={{marginLeft:6}}>{t('members.refund')}</span>}
+                      </td>
+                      <td style={{padding:'8px 6px', color:'var(--text-secondary)', whiteSpace:'nowrap'}}>{formatDateTime(o.time)}</td>
+                      <td style={{padding:'8px 6px'}}>{o.memberId ? (members.find(m => m.id === o.memberId)?.name || '—') : '—'}</td>
+                      <td style={{padding:'8px 6px', color:'var(--text-secondary)'}}>
+                        {o.payMethod === 'cash' ? t('reports.cash') : o.payMethod === 'mixed' ? t('reports.mixed') : t('reports.epay')}
+                      </td>
+                      <td style={{padding:'8px 6px', textAlign:'right', fontFamily:'var(--font-mono)', fontWeight:500, color: o.total < 0 ? 'var(--red)' : 'inherit'}}>
+                        {fmtMoney(o.total)}
+                      </td>
+                      <td style={{padding:'8px 6px', textAlign:'right'}}>
+                        {canRefund && (
+                          <button onClick={() => setRefundOrder(o)} className="btn btn-ghost btn-sm" style={{gap:4}} title={t('pos.refund')}>
+                            <RotateCcw size={12}/>{t('pos.refund')}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {refundOrder && (
+        <RefundModal order={refundOrder} session={session}
+          priorRefunds={rawOrders.filter(o => o.refundOf === refundOrder.id)}
+          onClose={() => setRefundOrder(null)}
+          onRefund={async (o, items, opts) => await refund(o, items, opts)}/>
+      )}
     </div>
   )
 }

@@ -455,19 +455,19 @@ export default function InventoryPage({ store }) {
               </div>
               <div>
                 <FieldLabel>{t('inv.price_label')} *</FieldLabel>
-                <input className="field" type="number" value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} placeholder="0"/>
+                <input className="field" type="number" inputMode="numeric" value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} placeholder="0"/>
               </div>
               <div>
                 <FieldLabel>{t('inv.cost_label')}</FieldLabel>
-                <input className="field" type="number" value={form.cost} onChange={e=>setForm(f=>({...f,cost:e.target.value}))} placeholder="0"/>
+                <input className="field" type="number" inputMode="numeric" value={form.cost} onChange={e=>setForm(f=>({...f,cost:e.target.value}))} placeholder="0"/>
               </div>
               <div>
                 <FieldLabel>{t('inv.stock_qty')}</FieldLabel>
-                <input className="field" type="number" value={form.stock} onChange={e=>setForm(f=>({...f,stock:e.target.value}))} placeholder="0"/>
+                <input className="field" type="number" inputMode="numeric" value={form.stock} onChange={e=>setForm(f=>({...f,stock:e.target.value}))} placeholder="0"/>
               </div>
               <div>
                 <FieldLabel>{t('inv.reorder_label')}</FieldLabel>
-                <input className="field" type="number" value={form.reorderLevel} onChange={e=>setForm(f=>({...f,reorderLevel:e.target.value}))} placeholder={t('inv.reorder_ph')}/>
+                <input className="field" type="number" inputMode="numeric" value={form.reorderLevel} onChange={e=>setForm(f=>({...f,reorderLevel:e.target.value}))} placeholder={t('inv.reorder_ph')}/>
               </div>
               <div style={{gridColumn:'1/-1'}}>
                 <FieldLabel><Truck size={11} style={{verticalAlign:'-1px',marginRight:4}}/>{t('inv.supplier')}</FieldLabel>
@@ -793,7 +793,7 @@ export default function InventoryPage({ store }) {
                 <FieldLabel>
                   {batchForm.action === 'priceAdjust' ? t('inv.pct_label') : t('inv.value')}
                 </FieldLabel>
-                <input className="field" type="number" value={batchForm.value} onChange={e=>setBatchForm(f=>({...f, value:e.target.value}))} placeholder={batchForm.action==='priceAdjust' ? t('inv.pct_ph') : '0'}/>
+                <input className="field" type="number" inputMode="numeric" value={batchForm.value} onChange={e=>setBatchForm(f=>({...f, value:e.target.value}))} placeholder={batchForm.action==='priceAdjust' ? t('inv.pct_ph') : '0'}/>
               </>
             )}
 
@@ -827,6 +827,7 @@ const iv = {
   colHead:{ display:'flex', alignItems:'center', gap:4, fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.06em', textTransform:'uppercase', cursor:'pointer', background:'none', fontFamily:'var(--font-sans)' },
   empty:{ textAlign:'center', padding:'48px', color:'var(--text-tertiary)', fontSize:13 },
   overlay:{ position:'fixed', inset:0, background:'rgba(44,42,38,0.3)', backdropFilter:'blur(2px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100 },
-  drawer:{ background:'var(--bg-raised)', border:'1px solid var(--border-dim)', borderRadius:16, padding:24, width:'90%', maxWidth:460, boxShadow:'var(--shadow-lg)' },
+  // RWD-01：maxHeight + overflowY，手機上表單長於視窗時可捲動、儲存鈕不再按不到（照抄 RefundModal 範本）
+  drawer:{ background:'var(--bg-raised)', border:'1px solid var(--border-dim)', borderRadius:16, padding:24, width:'90%', maxWidth:460, maxHeight:'88vh', overflowY:'auto', boxShadow:'var(--shadow-lg)' },
   drawerHeader:{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 },
 }

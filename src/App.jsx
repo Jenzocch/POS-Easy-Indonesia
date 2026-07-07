@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Menu, X, Cloud } from 'lucide-react'
+import { Menu, X, Cloud, AlertTriangle } from 'lucide-react'
 import { useStore } from './store/useStore'
 import { getSession, destroySession, writeAuditLog, startIdleTimer, hasPermission, createBackup } from './utils/security'
 import { getCloudConfig } from './utils/supabaseClient'
@@ -32,7 +32,15 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [pendingOrders, setPendingOrders] = useState(0)
   const [autoSync, setAutoSync] = useState(null) // 'syncing' | 'done' | 'failed' | null
+  const [storageError, setStorageError] = useState(null) // LOAD-6：localStorage 寫入失敗（quota 滿）浮出 UI
   const isMobile = useIsMobile()
+
+  // LOAD-6：useStore 的 saveLS 寫入失敗會 dispatch 此事件（quota 滿 = 新訂單默默不落盤）
+  useEffect(() => {
+    const onStorageError = (e) => setStorageError(e.detail || { key: '?', error: 'unknown' })
+    window.addEventListener('pos-storage-error', onStorageError)
+    return () => window.removeEventListener('pos-storage-error', onStorageError)
+  }, [])
 
   // 監聽顧客點餐通知
   useEffect(() => {
@@ -109,6 +117,18 @@ export default function App() {
 
   return (
     <div style={{ display:'flex', height:'100dvh', background:'var(--bg-base)', overflow:'hidden' }}>
+      {storageError && (
+        <div style={storageBanner.root} role="alert">
+          <AlertTriangle size={16} style={{flexShrink:0}}/>
+          <span style={{flex:1, minWidth:0}}>
+            {t('common.storage_error')}
+            <span style={{opacity:.7, marginLeft:6, fontSize:11, fontFamily:'var(--font-mono)'}}>({storageError.key} · {storageError.error})</span>
+          </span>
+          <button onClick={() => setStorageError(null)} style={{color:'inherit', padding:4, display:'flex'}} aria-label={t('common.close')}>
+            <X size={15}/>
+          </button>
+        </div>
+      )}
       {!isMobile && (
         <Sidebar view={view} setView={setView} session={session}
           lowStockCount={lowStockCount} todayRevenue={todayRevenue}
@@ -178,6 +198,17 @@ export default function App() {
       )}
     </div>
   )
+}
+
+const storageBanner = {
+  root: {
+    position:'fixed', top:0, left:0, right:0, zIndex:10000,
+    display:'flex', alignItems:'center', gap:10,
+    padding:'10px 16px',
+    background:'var(--red)', color:'#fff',
+    fontSize:13, fontWeight:600, lineHeight:1.5,
+    boxShadow:'var(--shadow-md)',
+  },
 }
 
 const syncOverlay = {

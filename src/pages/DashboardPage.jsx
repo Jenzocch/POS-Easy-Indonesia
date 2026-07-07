@@ -186,7 +186,7 @@ export default function DashboardPage({ store, session }) {
             <button className="btn btn-ghost btn-sm" onClick={()=>setEditingGoal(true)}>{t('dash.set_goal')}</button>
           ) : (
             <div style={{display:'flex', gap:6}}>
-              <input className="field" type="number" value={goalInput} onChange={e=>setGoalInput(e.target.value)}
+              <input className="field" type="number" inputMode="numeric" value={goalInput} onChange={e=>setGoalInput(e.target.value)}
                 style={{width:120, padding:'4px 8px', fontSize:13}}/>
               <button className="btn btn-primary btn-sm" onClick={handleSaveGoal}>{t('common.save')}</button>
               <button className="btn btn-ghost btn-sm" onClick={()=>{setEditingGoal(false);setGoalInput(String(salesGoal))}}>{t('common.cancel')}</button>

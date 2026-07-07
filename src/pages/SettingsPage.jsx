@@ -135,7 +135,7 @@ function GeneralTab({ session }) {
       <Section title={t('settings.daily_sales_goal')}>
         <div style={{display:'flex', gap:8, alignItems:'center'}}>
           <span style={{fontSize:13, color:'var(--text-secondary)', minWidth:60}}>{t('settings.goal_amount')}</span>
-          <input className="field" type="number" value={salesGoal} onChange={e=>setSalesGoal(e.target.value)} placeholder={t('settings.eg_amount')} style={{flex:1, maxWidth:200}}/>
+          <input className="field" type="number" inputMode="numeric" value={salesGoal} onChange={e=>setSalesGoal(e.target.value)} placeholder={t('settings.eg_amount')} style={{flex:1, maxWidth:200}}/>
           <span style={{fontSize:13, color:'var(--text-tertiary)'}}>Rp</span>
           <button className="btn btn-primary btn-sm" onClick={saveGoal}>{t('common.save')}</button>
           {savedMsg && <span style={{fontSize:12, color:'var(--green)'}}>{savedMsg}</span>}
@@ -202,11 +202,11 @@ function BusinessTab({ session, store }) {
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
           <div>
             <FieldLabel>{t('settings.field_earn_rate')}</FieldLabel>
-            <input className="field" type="number" value={earn} onChange={e=>setEarn(e.target.value)}/>
+            <input className="field" type="number" inputMode="numeric" value={earn} onChange={e=>setEarn(e.target.value)}/>
           </div>
           <div>
             <FieldLabel>{t('settings.field_redeem_value')}</FieldLabel>
-            <input className="field" type="number" step="0.5" value={redeem} onChange={e=>setRedeem(e.target.value)}/>
+            <input className="field" type="number" inputMode="decimal" step="0.5" value={redeem} onChange={e=>setRedeem(e.target.value)}/>
           </div>
         </div>
       </Section>
@@ -214,7 +214,7 @@ function BusinessTab({ session, store }) {
       <Section title={t('settings.birthday_bonus')}>
         <div style={{display:'flex', gap:8, alignItems:'center'}}>
           <span style={{fontSize:13, color:'var(--text-secondary)', minWidth:140}}>{t('settings.birthday_bonus_label')}</span>
-          <input className="field" type="number" value={birthdayBonus} onChange={e=>setBirthdayBonus(e.target.value)} style={{width:120}}/>
+          <input className="field" type="number" inputMode="numeric" value={birthdayBonus} onChange={e=>setBirthdayBonus(e.target.value)} style={{width:120}}/>
           <span style={{fontSize:13, color:'var(--text-tertiary)'}}>{t('settings.points_unit')}</span>
         </div>
         <p style={{fontSize:12, color:'var(--text-tertiary)', marginTop:8}}>
@@ -1246,8 +1246,10 @@ const ss = {
   root:{display:'flex',flexDirection:'column',height:'100%',padding:'16px',gap:12,overflow:'hidden'},
   header:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexShrink:0},
   title:{fontFamily:'var(--font-serif)',fontSize:20,fontWeight:600},
-  tabBar:{display:'flex',borderBottom:'1px solid var(--border-dim)',flexShrink:0},
-  tab:{display:'flex',alignItems:'center',gap:7,padding:'9px 14px',fontSize:13,fontWeight:500,transition:'all 150ms',borderRadius:0,letterSpacing:'.01em'},
+  // RWD-02：overflowX auto（照 POSPage ps.catWrap 模式）——9 個分頁籤在手機上可橫捲，不再被硬裁 6 個進不去
+  tabBar:{display:'flex',borderBottom:'1px solid var(--border-dim)',flexShrink:0,overflowX:'auto'},
+  tab:{display:'flex',alignItems:'center',gap:7,padding:'9px 14px',fontSize:13,fontWeight:500,transition:'all 150ms',borderRadius:0,letterSpacing:'.01em',whiteSpace:'nowrap',flexShrink:0},
   overlay:{position:'fixed',inset:0,background:'rgba(44,42,38,0.25)',backdropFilter:'blur(2px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200},
-  modal:{background:'var(--bg-raised)',border:'1px solid var(--border-dim)',borderRadius:'var(--r4)',padding:24,width:'90%',maxWidth:420},
+  // RWD-01：maxHeight + overflowY，手機上表單長於視窗時可捲動
+  modal:{background:'var(--bg-raised)',border:'1px solid var(--border-dim)',borderRadius:'var(--r4)',padding:24,width:'90%',maxWidth:420,maxHeight:'88vh',overflowY:'auto'},
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   effectiveOrders, computeSalesVelocity, suggestReorderQty,
-  productPerformance, computeMemberRFM, getExpiringProducts,
+  productPerformance, computeMemberRFM, computeAllRFM, getExpiringProducts,
   getReorderList, averageTicket, profitAnalysis, customerSegmentation,
   getProductHistory, parseLocalDate, daysUntilExpiry,
 } from './analytics'
@@ -101,6 +101,28 @@ describe('computeMemberRFM', () => {
     const r = computeMemberRFM(member, orders)
     expect(r.frequency).toBe(1)
     expect(r.monetary).toBe(100)
+  })
+})
+
+describe('computeAllRFM（單趟 groupBy 改寫，PERF-06）', () => {
+  it('輸出與逐會員 computeMemberRFM 完全等價', () => {
+    const members = [{ id: 'm1' }, { id: 'm2' }, { id: 'm3' }]
+    const orders = [
+      // m1：高頻高額
+      ...Array.from({ length: 6 }, (_, i) => ({ memberId: 'm1', status: 'completed', time: daysAgo(i + 1), total: 1500 })),
+      // m1：部分退貨（保留）+ 完整退貨配對（排除）
+      { memberId: 'm1', status: 'completed', refundOf: 'Ox', fullRefund: false, time: daysAgo(1), total: -200 },
+      { memberId: 'm1', status: 'refunded', time: daysAgo(2), total: 300 },
+      // m2：沉睡
+      { memberId: 'm2', status: 'completed', time: daysAgo(90), total: 500 },
+      // 散客訂單（不屬於任何會員）
+      { memberId: null, status: 'completed', time: daysAgo(1), total: 999 },
+      // m3 無消費
+    ]
+    const batch = computeAllRFM(members, orders)
+    for (const m of members) {
+      expect(batch.find(b => b.id === m.id).rfm).toEqual(computeMemberRFM(m, orders))
+    }
   })
 })
 

@@ -209,7 +209,7 @@ async function writeLocal(allByKey) {
 // ===== Push：本機 → 雲端（upsert） =====
 export async function pushAll(onProgress = () => {}) {
   if (!isCloudEnabled()) throw new Error('尚未設定雲端')
-  const sb = getSupabase()
+  const sb = await getSupabase()
   if (!sb) throw new Error('雲端 client 初始化失敗')
 
   const allLocal = await readLocal()
@@ -242,7 +242,7 @@ export async function pushAll(onProgress = () => {}) {
 // ===== Pull：雲端 → 本機（全替換） =====
 export async function pullAll(onProgress = () => {}) {
   if (!isCloudEnabled()) throw new Error('尚未設定雲端')
-  const sb = getSupabase()
+  const sb = await getSupabase()
   if (!sb) throw new Error('雲端 client 初始化失敗')
 
   const result = {}

@@ -1322,8 +1322,8 @@ module.exports = function initDatabase(dbPath) {
         time: data.time || new Date().toISOString(),
         cashier: data.cashier || '',
       })
-      // 同步扣庫存
-      if (data.productId && data.qty) {
+      // 同步扣庫存（skipStockDeduct：盤點盤虧等「庫存已另行修正」的來源跳過，避免二次扣）
+      if (!data.skipStockDeduct && data.productId && data.qty) {
         stmts.updateProductStock.run({ id: data.productId, delta: -Math.abs(data.qty) })
       }
       return { success: true }

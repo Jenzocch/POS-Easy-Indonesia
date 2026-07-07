@@ -388,7 +388,7 @@ function ExpenseView({ addManualEntry }) {
           </div>
           <div>
             <FieldLabel>{t('acct.amount_label')} *</FieldLabel>
-            <input type="number" className="field" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} placeholder="0" style={{fontFamily:'var(--font-mono)'}}/>
+            <input type="number" inputMode="numeric" className="field" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} placeholder="0" style={{fontFamily:'var(--font-mono)'}}/>
           </div>
         </div>
 

@@ -53,7 +53,18 @@ export default function PurchasePage({ store, session }) {
 
   useEffect(() => {
     loadSuppliers(SEED_SUPPLIERS).then(setSuppliers)
-    loadPurchases(SEED_PURCHASES).then(setPurchases)
+    loadPurchases(SEED_PURCHASES).then(list => {
+      const arr = Array.isArray(list) ? list : []
+      // 一次性資料修復：舊版「標記付款」曾寫入 STATUS map 查無的 status:'paid'，
+      // 造成 PurchaseList 渲染 crash（全站白屏）。修回 'received'（付款狀態以 paidDate 區分）。
+      const repaired = arr.map(p => p.status === 'paid' ? { ...p, status: 'received' } : p)
+      const fixed = repaired.filter((p, i) => p !== arr[i])
+      setPurchases(repaired)
+      if (fixed.length > 0) {
+        if (!isElectron) localStorage.setItem('pos_purchases', JSON.stringify(repaired))
+        else fixed.forEach(p => dbUpdatePurchase(p.id, p).catch(e => console.error('repair purchase failed:', e)))
+      }
+    })
   }, [])
 
   function saveSuppliers(s) {
@@ -129,7 +140,9 @@ export default function PurchasePage({ store, session }) {
       {tab === 'payable'   && <PayableTab   purchases={purchases} suppliers={suppliers} onMarkPaid={(id)=>{
         const target = purchases.find(p => p.id === id)
         if (!target) return
-        const updatedPo = { ...target, paidDate: new Date().toISOString().slice(0,10), status:'paid' }
+        // 只寫 paidDate、不改 status：付款與收貨是兩個維度（PayableTab 以 paidDate 區分已付/未付）；
+        // 寫入 STATUS map 查無的 status 會讓 PurchaseList 渲染 crash
+        const updatedPo = { ...target, paidDate: new Date().toISOString().slice(0,10) }
         const updated = purchases.map(p => p.id === id ? updatedPo : p)
         savePurchases(updated)
         persistPurchase(updatedPo)
@@ -158,7 +171,7 @@ function PurchaseList({ purchases, selected, onSelect, onReceive }) {
           <div style={{textAlign:'center', padding:'40px', color:'var(--text-tertiary)', fontSize:13}}>{t('purchase.no_pos')}</div>
         )}
         {purchases.map(po => {
-          const st = STATUS[po.status]
+          const st = STATUS[po.status] || STATUS.draft // fallback：未知 status（舊壞資料）不再炸整頁
           return (
             <button key={po.id} onClick={()=>onSelect(po)} style={{
               ...ps.poCard,
@@ -524,8 +537,8 @@ function NewPurchase({ products, suppliers, purchases, orders = [], onSave }) {
                   {daysOfStock && <span style={{fontSize:10, color:'var(--text-tertiary)'}}>{t('purchase.days_of_stock', {days: daysOfStock})}</span>}
                 </div>
               </div>
-              <input type="number" className="field" value={item.qty} min={1} onChange={e=>updateItem(i,'qty',e.target.value)} style={{textAlign:'right', padding:'6px 8px', fontFamily:'var(--font-mono)', fontSize:13}}/>
-              <input type="number" className="field" value={item.unitCost} min={0} onChange={e=>updateItem(i,'unitCost',e.target.value)} style={{textAlign:'right', padding:'6px 8px', fontFamily:'var(--font-mono)', fontSize:13}}/>
+              <input type="number" inputMode="numeric" className="field" value={item.qty} min={1} onChange={e=>updateItem(i,'qty',e.target.value)} style={{textAlign:'right', padding:'6px 8px', fontFamily:'var(--font-mono)', fontSize:13}}/>
+              <input type="number" inputMode="numeric" className="field" value={item.unitCost} min={0} onChange={e=>updateItem(i,'unitCost',e.target.value)} style={{textAlign:'right', padding:'6px 8px', fontFamily:'var(--font-mono)', fontSize:13}}/>
               <span style={{textAlign:'right', fontFamily:'var(--font-mono)', fontSize:13}}>{fmtMoney(item.qty*item.unitCost)}</span>
               <button className="btn-icon btn-sm" style={{color:'var(--red)'}} onClick={()=>setItems(prev=>prev.filter((_,idx)=>idx!==i))}><X size={13}/></button>
             </div>
@@ -626,7 +639,7 @@ function ReceiveModal({ po, products, onConfirm, onClose }) {
               </div>
               <div style={{textAlign:'right', fontSize:12, color:'var(--text-secondary)'}}>{t('purchase.ordered_qty_short', {qty: item.qty})}</div>
               <input
-                type="number" min={0} max={item.qty * 2}
+                type="number" inputMode="numeric" min={0} max={item.qty * 2}
                 className="field"
                 value={qtys[item.productId] ?? item.qty}
                 onChange={e=>setQtys(q=>({...q,[item.productId]:parseInt(e.target.value)||0}))}

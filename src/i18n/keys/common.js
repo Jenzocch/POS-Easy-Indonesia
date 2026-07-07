@@ -38,6 +38,7 @@ export default {
     'common.category': '分類',
     'common.warning': '警告',
     'common.error': '錯誤',
+    'common.storage_error': '資料儲存失敗（儲存空間可能已滿）！最新的變更可能沒有保存，請立即匯出備份並清理舊資料。',
   },
   en: {
     'common.confirm': 'Confirm',
@@ -76,6 +77,7 @@ export default {
     'common.category': 'Category',
     'common.warning': 'Warning',
     'common.error': 'Error',
+    'common.storage_error': 'Failed to save data (storage may be full)! Recent changes may be lost — export a backup and clear old data now.',
   },
   id: {
     'common.confirm': 'Konfirmasi',
@@ -114,5 +116,6 @@ export default {
     'common.category': 'Kategori',
     'common.warning': 'Peringatan',
     'common.error': 'Kesalahan',
+    'common.storage_error': 'Gagal menyimpan data (penyimpanan mungkin penuh)! Perubahan terbaru mungkin hilang — segera ekspor cadangan dan hapus data lama.',
   },
 }

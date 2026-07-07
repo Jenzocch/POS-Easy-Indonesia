@@ -91,6 +91,16 @@ export default function POSPage({ store, session }) {
     updateCartItemPrice(id, newPrice)
   }, [updateCartItemPrice])
 
+  // FLOW-06 交換式取回：取回掛單前，若正在結的購物車非空，先自動掛起（含會員/手動折讓），
+  // 不再靜默覆蓋掉正在進行的交易
+  const handleRecall = useCallback(async (h) => {
+    if (cart.length > 0) {
+      await holdCart('', session?.username || '')
+      showFeedback(true, t('pos.held_success'))
+    }
+    await recallHeld(h)
+  }, [cart.length, holdCart, recallHeld, session])
+
   const handleCheckout = useCallback((payMethod, paid, pointsUsed, opts) => {
     return checkout(payMethod, paid, pointsUsed, { ...opts, cashier: session?.username || '' })
   }, [checkout, session])
@@ -265,7 +275,7 @@ export default function POSPage({ store, session }) {
 
       {showHeld && (
         <HeldOrdersModal heldOrders={heldOrders} members={members}
-          onRecall={recallHeld} onRemove={removeHeld}
+          onRecall={handleRecall} onRemove={removeHeld}
           onClose={()=>setShowHeld(false)}/>
       )}
       {showLookup && (

@@ -212,7 +212,7 @@ export default function ShiftPage({ store, session }) {
         <Modal title={t('shift.open')} onClose={()=>setShowOpen(false)}>
           <Field label={t('shift.cashier')}><div style={{padding:'10px 14px', fontSize:14}}>{session?.username}</div></Field>
           <Field label={t('shift.opening_float')}>
-            <input className="field" type="number" value={openCash} onChange={e=>setOpenCash(e.target.value)} placeholder="0" autoFocus/>
+            <input className="field" type="number" inputMode="numeric" value={openCash} onChange={e=>setOpenCash(e.target.value)} placeholder="0" autoFocus/>
           </Field>
           <button className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleOpen}>{t('shift.open_confirm')}</button>
         </Modal>
@@ -227,7 +227,7 @@ export default function ShiftPage({ store, session }) {
             </div>
           </div>
           <Field label={t('shift.actual_cash')}>
-            <input className="field" type="number" value={closeCash} onChange={e=>setCloseCash(e.target.value)} autoFocus/>
+            <input className="field" type="number" inputMode="numeric" value={closeCash} onChange={e=>setCloseCash(e.target.value)} autoFocus/>
           </Field>
           {closeCash !== '' && (
             <div style={{padding:'8px 14px', borderRadius:8,
@@ -261,7 +261,7 @@ export default function ShiftPage({ store, session }) {
             </div>
           </Field>
           <Field label={t('shift.amount')}>
-            <input className="field" type="number" value={cashAmount} onChange={e=>setCashAmount(e.target.value)} autoFocus/>
+            <input className="field" type="number" inputMode="numeric" value={cashAmount} onChange={e=>setCashAmount(e.target.value)} autoFocus/>
           </Field>
           <Field label={t('shift.reason')}>
             <input className="field" value={cashReason} onChange={e=>setCashReason(e.target.value)} placeholder={t('shift.reason_ph')}/>

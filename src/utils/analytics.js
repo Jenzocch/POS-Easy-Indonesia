@@ -103,6 +103,12 @@ export function productPerformance(products = [], orders = [], days = 30) {
 // 自動 tag：VIP / 核心會員 / 新會員 / 流失預警 / 沉睡會員
 export function computeMemberRFM(member, orders = []) {
   const memberOrders = effectiveOrders(orders).filter(o => o.memberId === member.id)
+  return rfmFromMemberOrders(memberOrders)
+}
+
+// 核心計算：吃「該會員的有效訂單」小陣列（computeAllRFM 先單趟 groupBy 預過濾，
+// 避免 O(members × orders) 的全量重複掃描；輸出與逐會員 filter 完全等價）
+function rfmFromMemberOrders(memberOrders) {
   // 頻次與最近購買只看「銷售單」：退貨單不算一次來店，也不該讓退貨時間誤判為最近活躍
   const sales = memberOrders.filter(o => !o.refundOf)
   const monetary = memberOrders.reduce((s, o) => s + (o.total || 0), 0) // 淨額（含退貨負數）
@@ -132,9 +138,16 @@ export function computeMemberRFM(member, orders = []) {
   return { recencyDays, frequency, monetary, tag, tagColor }
 }
 
-// 批次計算所有會員的 RFM
+// 批次計算所有會員的 RFM（單趟：effectiveOrders 只做一次，依 memberId 建 Map）
 export function computeAllRFM(members = [], orders = []) {
-  return members.map(m => ({ ...m, rfm: computeMemberRFM(m, orders) }))
+  const byMember = new Map()
+  for (const o of effectiveOrders(orders)) {
+    if (!o.memberId) continue
+    const arr = byMember.get(o.memberId)
+    if (arr) arr.push(o)
+    else byMember.set(o.memberId, [o])
+  }
+  return members.map(m => ({ ...m, rfm: rfmFromMemberOrders(byMember.get(m.id) || []) }))
 }
 
 // ===== 安全日期解析 =====

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, Pencil, Trash2, X, Check, Gift, TrendingUp, Phone, Wallet, RotateCcw, Cake } from 'lucide-react'
 import RefundModal from '../components/RefundModal'
-import { computeMemberRFM } from '../utils/analytics'
+import { computeAllRFM } from '../utils/analytics'
 import { t, fmtMoney } from '../i18n'
 
 // label 是 i18n key；tier 儲存值（normal/silver/gold）不變，顯示時才翻譯
@@ -40,10 +40,10 @@ export default function MembersPage({ store, session }) {
   // 重新從 list 取最新資料（避免顯示過期）
   const selectedLive = selected ? members.find(m => m.id === selected.id) || selected : null
 
-  // 預先計算每位會員的 RFM 標籤
+  // 預先計算每位會員的 RFM 標籤（computeAllRFM 內部單趟 groupBy，避免每會員全量掃訂單）
   const rfmMap = useMemo(() => {
     const m = new Map()
-    for (const mem of members) m.set(mem.id, computeMemberRFM(mem, orders))
+    for (const mem of computeAllRFM(members, orders)) m.set(mem.id, mem.rfm)
     return m
   }, [members, orders])
 
@@ -293,9 +293,9 @@ export default function MembersPage({ store, session }) {
               {selectedLive.name} · {t('members.current_balance')} <strong style={{fontFamily:'var(--font-mono)'}}>{fmtMoney(selectedLive.balance||0)}</strong>
             </div>
             <FieldLabel>{t('members.topup_amount')} *</FieldLabel>
-            <input className="field" type="number" value={topupAmt} onChange={e=>setTopupAmt(e.target.value)} placeholder="1000" autoFocus style={{marginBottom:12}}/>
+            <input className="field" type="number" inputMode="numeric" value={topupAmt} onChange={e=>setTopupAmt(e.target.value)} placeholder="1000" autoFocus style={{marginBottom:12}}/>
             <FieldLabel>{t('members.bonus_amount')}</FieldLabel>
-            <input className="field" type="number" value={topupBonus} onChange={e=>setTopupBonus(e.target.value)} placeholder={t('members.bonus_ph')} style={{marginBottom:12}}/>
+            <input className="field" type="number" inputMode="numeric" value={topupBonus} onChange={e=>setTopupBonus(e.target.value)} placeholder={t('members.bonus_ph')} style={{marginBottom:12}}/>
             <FieldLabel>{t('members.pay_method')}</FieldLabel>
             <div style={{display:'flex', gap:8, marginBottom:18}}>
               {[['cash',t('members.cash')],['card',t('members.card')]].map(([k,l]) => (
@@ -400,5 +400,6 @@ const ms = {
   sectionTitle:{ fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.08em', textTransform:'uppercase', flexShrink:0 },
   orderRow:{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid var(--border-dim)' },
   overlay:{ position:'fixed', inset:0, background:'rgba(44,42,38,0.25)',backdropFilter:'blur(2px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100 },
-  drawer:{ background:'var(--bg-raised)', border:'1px solid var(--border-mid)', borderRadius:'var(--r4)', padding:24, width:'90%', maxWidth:420 },
+  // RWD-01：maxHeight + overflowY，手機上表單長於視窗時可捲動
+  drawer:{ background:'var(--bg-raised)', border:'1px solid var(--border-mid)', borderRadius:'var(--r4)', padding:24, width:'90%', maxWidth:420, maxHeight:'88vh', overflowY:'auto' },
 }

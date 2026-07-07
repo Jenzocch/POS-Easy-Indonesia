@@ -10,7 +10,7 @@ const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal
 const ALL_CATEGORY = '全部'
 
 export default function StocktakePage({ store, session }) {
-  const { products, updateProduct } = store
+  const { products, updateProduct, recordWaste } = store
   const [counts,    setCounts]    = useState({})   // productId -> counted qty
   const [search,    setSearch]    = useState('')
   const [category,  setCategory]  = useState(ALL_CATEGORY)
@@ -70,10 +70,26 @@ export default function StocktakePage({ store, session }) {
     }
   }
 
-  function applyAdjustments() {
+  async function applyAdjustments() {
     diffs.forEach(p => {
       updateProduct(p.id, { stock: counts[p.id] })
     })
+    // FLOW-03：盤虧自動記入損耗（reason='盤虧' 為儲存值，顯示時翻譯），
+    // 走 skipStockDeduct 路徑——庫存已被上面的絕對值更新修正，不可再扣一次
+    for (let i = 0; i < shortages.length; i++) {
+      const p = shortages[i]
+      const shortQty = p.stock - (counts[p.id] ?? p.stock)
+      if (shortQty <= 0) continue
+      try {
+        await recordWaste({
+          id: 'W' + Date.now() + '-' + i, // 批次寫入，避免同毫秒 id 撞號
+          productId: p.id, productName: p.name,
+          qty: shortQty, cost: p.cost || 0,
+          reason: '盤虧',
+          cashier: session?.username || '',
+        }, { skipStockDeduct: true })
+      } catch (e) { console.error('[POS] stocktake waste record failed:', e) }
+    }
     writeAuditLog('STOCKTAKE_DONE', session, {
       total, counted, diffs: diffs.length,
       shortages: shortages.length, surpluses: surpluses.length,
@@ -268,7 +284,7 @@ export default function StocktakePage({ store, session }) {
                 <div style={{display:'flex', justifyContent:'flex-end'}}>
                   <input
                     ref={el=>{ if (el) inputRefs.current[p.id]=el; else delete inputRefs.current[p.id] }}
-                    type="number" min={0}
+                    type="number" inputMode="numeric" min={0}
                     value={cnt ?? ''}
                     onChange={e=>setCount(p.id, e.target.value)}
                     onKeyDown={e=>handleKeyDown(e,idx)}
