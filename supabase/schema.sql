@@ -200,6 +200,76 @@ create table if not exists audit_log (
 );
 create index if not exists idx_audit_timestamp on audit_log("timestamp");
 
+-- ===== 賒帳（Kasbon 信用帳戶）=====
+-- v2.5.1 新增：credit ledger 模組（Warung/Resto 限定功能）
+create table if not exists kasbon_records (
+  "id" text primary key,
+  "memberId" text not null,
+  "transactionType" text not null check ("transactionType" in ('credit_sale','payment','adjustment')),
+  "status" text not null default 'open' check ("status" in ('open','partial','closed','overdue')),
+
+  -- 金額（印尼盾）
+  "principalAmount" numeric not null,     -- 原始賒帳金額
+  "paidAmount" numeric default 0,         -- 已付金額
+  "balanceDue" numeric not null,          -- 待付金額（原始 - 已付）
+
+  -- 日期
+  "transactionDate" text not null,
+  "dueDate" text default null,            -- 可選：信用期限
+  "lastPaymentDate" text default null,
+
+  -- 備註
+  "notes" text default '',
+  "createdBy" text default '',
+  "createdAt" timestamptz default now(),
+  "updatedAt" timestamptz default now(),
+  "deletedAt" timestamptz default null,
+
+  foreign key ("memberId") references members("id") on delete restrict
+);
+create index if not exists idx_kasbon_records_member on kasbon_records("memberId");
+create index if not exists idx_kasbon_records_status on kasbon_records("status");
+create index if not exists idx_kasbon_records_date on kasbon_records("transactionDate");
+
+-- 賒帳付款交易
+create table if not exists kasbon_payments (
+  "id" text primary key,
+  "kasbon_record_id" text not null,
+
+  "amount" numeric not null,
+  "paymentDate" text not null,
+  "paymentMethod" text check ("paymentMethod" in ('cash','transfer','check','other')),
+
+  "referenceNumber" text default '',      -- 發票/支票號碼
+  "notes" text default '',
+
+  "createdBy" text default '',
+  "createdAt" timestamptz default now(),
+  "deletedAt" timestamptz default null,
+
+  foreign key ("kasbon_record_id") references kasbon_records("id") on delete cascade
+);
+create index if not exists idx_kasbon_payments_record on kasbon_payments("kasbon_record_id");
+create index if not exists idx_kasbon_payments_date on kasbon_payments("paymentDate");
+
+-- 會員賒帳餘額摘要（快取，提高查詢效能）
+create table if not exists member_kasbon_balance (
+  "id" text primary key,
+  "memberId" text not null unique,
+
+  "totalCredit" numeric default 0,        -- 總授信金額
+  "totalPaid" numeric default 0,          -- 已還款金額
+  "balanceDue" numeric default 0,         -- 待還金額
+
+  "activeRecordCount" integer default 0,  -- 未結案筆數
+  "isBlacklisted" boolean default false,  -- 禁用新信用？
+
+  "updatedAt" timestamptz default now(),
+
+  foreign key ("memberId") references members("id") on delete cascade
+);
+create index if not exists idx_member_kasbon_balance_member on member_kasbon_balance("memberId");
+
 -- ===== 關閉 RLS（單店家用模式）=====
 -- ⚠️ 警告：關閉 RLS = 任何拿到 anon key 的人可讀寫所有資料（包含員工密碼 hash）
 -- 適用單店家 / 自有裝置；多店家或不可信員工請改用 RLS policy
@@ -219,3 +289,6 @@ alter table cash_log disable row level security;
 alter table waste_log disable row level security;
 alter table member_topups disable row level security;
 alter table audit_log disable row level security;
+alter table kasbon_records disable row level security;
+alter table kasbon_payments disable row level security;
+alter table member_kasbon_balance disable row level security;

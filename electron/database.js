@@ -222,6 +222,56 @@ module.exports = function initDatabase(dbPath) {
       note TEXT DEFAULT ''
     );
     CREATE INDEX IF NOT EXISTS idx_topups_member ON member_topups(memberId);
+
+    CREATE TABLE IF NOT EXISTS kasbon_records (
+      id TEXT PRIMARY KEY,
+      memberId TEXT NOT NULL,
+      transactionType TEXT NOT NULL CHECK (transactionType IN ('credit_sale','payment','adjustment')),
+      status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','partial','closed','overdue')),
+      principalAmount REAL NOT NULL,
+      paidAmount REAL DEFAULT 0,
+      balanceDue REAL NOT NULL,
+      transactionDate TEXT NOT NULL,
+      dueDate TEXT DEFAULT NULL,
+      lastPaymentDate TEXT DEFAULT NULL,
+      notes TEXT DEFAULT '',
+      createdBy TEXT DEFAULT '',
+      createdAt TEXT DEFAULT (datetime('now','localtime')),
+      updatedAt TEXT DEFAULT (datetime('now','localtime')),
+      deletedAt TEXT DEFAULT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_kasbon_records_member ON kasbon_records(memberId);
+    CREATE INDEX IF NOT EXISTS idx_kasbon_records_status ON kasbon_records(status);
+    CREATE INDEX IF NOT EXISTS idx_kasbon_records_date ON kasbon_records(transactionDate);
+
+    CREATE TABLE IF NOT EXISTS kasbon_payments (
+      id TEXT PRIMARY KEY,
+      kasbon_record_id TEXT NOT NULL,
+      amount REAL NOT NULL,
+      paymentDate TEXT NOT NULL,
+      paymentMethod TEXT CHECK (paymentMethod IN ('cash','transfer','check','other')),
+      referenceNumber TEXT DEFAULT '',
+      notes TEXT DEFAULT '',
+      createdBy TEXT DEFAULT '',
+      createdAt TEXT DEFAULT (datetime('now','localtime')),
+      deletedAt TEXT DEFAULT NULL,
+      FOREIGN KEY (kasbon_record_id) REFERENCES kasbon_records(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_kasbon_payments_record ON kasbon_payments(kasbon_record_id);
+    CREATE INDEX IF NOT EXISTS idx_kasbon_payments_date ON kasbon_payments(paymentDate);
+
+    CREATE TABLE IF NOT EXISTS member_kasbon_balance (
+      id TEXT PRIMARY KEY,
+      memberId TEXT NOT NULL UNIQUE,
+      totalCredit REAL DEFAULT 0,
+      totalPaid REAL DEFAULT 0,
+      balanceDue REAL DEFAULT 0,
+      activeRecordCount INTEGER DEFAULT 0,
+      isBlacklisted INTEGER DEFAULT 0,
+      updatedAt TEXT DEFAULT (datetime('now','localtime')),
+      FOREIGN KEY (memberId) REFERENCES members(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_member_kasbon_balance_member ON member_kasbon_balance(memberId);
   `)
 
   // === 自動補欄位（升級舊資料庫）===
@@ -1349,6 +1399,81 @@ module.exports = function initDatabase(dbPath) {
         stmts.updateMemberBalance.run({ id: data.memberId, delta: totalCredit })
       }
       return { success: true, credited: totalCredit }
+    },
+
+    // ===== Kasbon 賒帳 (Credit Ledger) =====
+    getKastonRecords(memberId) {
+      return memberId
+        ? db.prepare('SELECT * FROM kasbon_records WHERE memberId = ? ORDER BY transactionDate DESC').all(memberId)
+        : db.prepare('SELECT * FROM kasbon_records ORDER BY transactionDate DESC').all()
+    },
+    getKastonRecord(id) {
+      return db.prepare('SELECT * FROM kasbon_records WHERE id = ?').get(id)
+    },
+    addKastonRecord(data) {
+      const id = data.id || 'KR' + Date.now()
+      db.prepare(`
+        INSERT INTO kasbon_records (id, memberId, transactionType, status, principalAmount, paidAmount, balanceDue, transactionDate, dueDate, notes, createdBy)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        id, data.memberId, data.transactionType || 'credit_sale', 'open',
+        data.principalAmount || 0, data.paidAmount || 0, data.principalAmount || 0,
+        data.transactionDate || new Date().toISOString(), data.dueDate || null,
+        data.notes || '', data.createdBy || ''
+      )
+      // Initialize balance record if needed
+      const existing = db.prepare('SELECT * FROM member_kasbon_balance WHERE memberId = ?').get(data.memberId)
+      if (!existing) {
+        db.prepare(`
+          INSERT INTO member_kasbon_balance (id, memberId, totalCredit, totalPaid, balanceDue, activeRecordCount)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run('MCB' + Date.now(), data.memberId, data.principalAmount || 0, 0, data.principalAmount || 0, 1)
+      } else {
+        db.prepare(`
+          UPDATE member_kasbon_balance SET totalCredit = totalCredit + ?, balanceDue = balanceDue + ?, activeRecordCount = activeRecordCount + 1, updatedAt = datetime('now','localtime') WHERE memberId = ?
+        `).run(data.principalAmount || 0, data.principalAmount || 0, data.memberId)
+      }
+      return { success: true, id }
+    },
+    recordKastonPayment(data) {
+      const record = this.getKastonRecord(data.kastonRecordId)
+      if (!record) return { success: false, error: 'Kasbon record not found' }
+      if (record.status === 'closed') return { success: false, error: 'Kasbon already closed' }
+      if (data.amount > record.balanceDue) return { success: false, error: 'Payment exceeds balance due' }
+
+      const paymentId = data.id || 'KP' + Date.now()
+      db.prepare(`
+        INSERT INTO kasbon_payments (id, kasbon_record_id, amount, paymentDate, paymentMethod, referenceNumber, notes, createdBy)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        paymentId, data.kastonRecordId, data.amount || 0,
+        data.paymentDate || new Date().toISOString(),
+        data.paymentMethod || 'cash', data.referenceNumber || '',
+        data.notes || '', data.createdBy || ''
+      )
+
+      // Update kasbon record
+      const newPaidAmount = (record.paidAmount || 0) + (data.amount || 0)
+      const newBalanceDue = record.principalAmount - newPaidAmount
+      const newStatus = newBalanceDue <= 0 ? 'closed' : 'partial'
+
+      db.prepare(`
+        UPDATE kasbon_records SET paidAmount = ?, balanceDue = ?, status = ?, lastPaymentDate = ?, updatedAt = datetime('now','localtime')
+        WHERE id = ?
+      `).run(newPaidAmount, newBalanceDue, newStatus, new Date().toISOString(), data.kastonRecordId)
+
+      // Update member balance
+      db.prepare(`
+        UPDATE member_kasbon_balance SET totalPaid = totalPaid + ?, balanceDue = balanceDue - ?, updatedAt = datetime('now','localtime') WHERE memberId = ?
+      `).run(data.amount || 0, data.amount || 0, record.memberId)
+
+      return { success: true, paymentId, newStatus }
+    },
+    getMemberKastonBalance(memberId) {
+      return db.prepare('SELECT * FROM member_kasbon_balance WHERE memberId = ?').get(memberId)
+    },
+    getKastonPayments(kastonRecordId) {
+      return db.prepare('SELECT * FROM kasbon_payments WHERE kasbon_record_id = ? ORDER BY paymentDate DESC').all(kastonRecordId)
     },
 
     close() {
