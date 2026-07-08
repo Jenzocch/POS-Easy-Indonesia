@@ -106,6 +106,39 @@ function rotateBackupFiles(backupDir) {
   for (const old of empties.slice(KEEP)) unlink(old)
 }
 
+// ===== 通用 CRUD 工廠 =====
+// members / purchases / promotions / users 的 get/add/update/delete 骨架完全一樣，
+// 只有「每欄預設值／合併算式」不同——這些欄位語意（哪個沒預設值、哪個要 JSON
+// 轉換、哪個用 !== undefined 而非 ??）仍由呼叫端逐欄宣告、照搬自原本寫法，
+// factory 不猜規則，只收「流程骨架」。existing 一律是原始列（未經 mapRow），
+// items/condition_data 這類 JSON 字串欄位的合併算式才對得上。
+// products/suppliers 刻意不套用，理由見各自方法上方註解。
+function makeCrud({ getAllStmt, getByIdStmt, insertStmt, updateStmt, deleteStmt, idPrefix, columns, mapRow }) {
+  const mapOne = mapRow || (row => row)
+  return {
+    getAll: () => getAllStmt.all().map(mapOne),
+    getById: (id) => getByIdStmt.get(id),
+    add(data) {
+      const row = { id: data.id || idPrefix + Date.now() }
+      for (const col of columns) if (col.onInsert) row[col.key] = col.onInsert(data)
+      insertStmt.run(row)
+      return { success: true }
+    },
+    update(id, data) {
+      const existing = getByIdStmt.get(id)
+      if (!existing) return { success: false }
+      const row = { id }
+      for (const col of columns) if (col.onUpdate) row[col.key] = col.onUpdate(data, existing)
+      updateStmt.run(row)
+      return { success: true }
+    },
+    remove(id) {
+      deleteStmt.run(id)
+      return { success: true }
+    },
+  }
+}
+
 module.exports = function initDatabase(dbPath) {
   const { db, recoveryInfo } = openDatabaseWithRecovery(dbPath)
   db.pragma('journal_mode = WAL')
@@ -478,6 +511,8 @@ module.exports = function initDatabase(dbPath) {
 
     // --- Purchases ---
     getAllPurchases: db.prepare('SELECT * FROM purchases ORDER BY date DESC'),
+    // 給 makeCrud 用（取代原本 getAllPurchases().find(...) 全表掃描找現有列，同款式見 getProductById）
+    getPurchaseById: db.prepare('SELECT * FROM purchases WHERE id = ?'),
     insertPurchase: db.prepare(`
       INSERT INTO purchases (id, supplierId, supplierName, status, date, receivedDate, paidDate, note, total, items)
       VALUES (@id, @supplierId, @supplierName, @status, @date, @receivedDate, @paidDate, @note, @total, @items)
@@ -491,6 +526,8 @@ module.exports = function initDatabase(dbPath) {
 
     // --- Promotions ---
     getAllPromotions: db.prepare('SELECT * FROM promotions'),
+    // 給 makeCrud 用，同 getPurchaseById 的理由（取代 getAllPromotions().find(...)）
+    getPromotionById: db.prepare('SELECT * FROM promotions WHERE id = ?'),
     insertPromotion: db.prepare(`
       INSERT INTO promotions (id, name, type, condition_data, enabled, startAt, endAt)
       VALUES (@id, @name, @type, @condition_data, @enabled, @startAt, @endAt)
@@ -503,6 +540,8 @@ module.exports = function initDatabase(dbPath) {
 
     // --- Users ---
     getAllUsers: db.prepare('SELECT * FROM users'),
+    // 給 makeCrud 用，同 getPurchaseById 的理由（取代 getAllUsers().find(...)）
+    getUserById: db.prepare('SELECT * FROM users WHERE id = ?'),
     getUserByUsername: db.prepare('SELECT * FROM users WHERE username = ?'),
     insertUser: db.prepare(`
       INSERT INTO users (id, username, password, role)
@@ -586,6 +625,70 @@ module.exports = function initDatabase(dbPath) {
       VALUES (@id, @memberId, @amount, @bonus, @payMethod, @time, @cashier, @note)
     `),
   }
+
+  // ===== CRUD 工廠 instances（見上方 makeCrud 定義與排除理由）=====
+  const membersCrud = makeCrud({
+    getAllStmt: stmts.getAllMembers, getByIdStmt: stmts.getMemberById, idPrefix: 'm',
+    insertStmt: stmts.insertMember, updateStmt: stmts.updateMember, deleteStmt: stmts.deleteMember,
+    columns: [
+      { key: 'name', onInsert: d => d.name || '', onUpdate: (d, e) => d.name ?? e.name },
+      { key: 'phone', onInsert: d => d.phone || '', onUpdate: (d, e) => d.phone ?? e.phone },
+      { key: 'points', onInsert: d => d.points || 0, onUpdate: (d, e) => d.points ?? e.points },
+      { key: 'tier', onInsert: d => d.tier || 'normal', onUpdate: (d, e) => d.tier ?? e.tier },
+      { key: 'totalSpent', onInsert: d => d.totalSpent || 0, onUpdate: (d, e) => d.totalSpent ?? e.totalSpent },
+      // joinDate 只在 insert 給值——updateMember 這條 SQL 本來就不含 @joinDate（入會日不可改）
+      { key: 'joinDate', onInsert: d => d.joinDate || new Date().toISOString().slice(0, 10) },
+      { key: 'balance', onInsert: d => d.balance || 0, onUpdate: (d, e) => d.balance ?? e.balance ?? 0 },
+      { key: 'birthday', onInsert: d => d.birthday || '', onUpdate: (d, e) => d.birthday ?? e.birthday ?? '' },
+      { key: 'lastBirthdayBonus', onInsert: d => d.lastBirthdayBonus || '', onUpdate: (d, e) => d.lastBirthdayBonus ?? e.lastBirthdayBonus ?? '' },
+    ],
+  })
+
+  const purchasesCrud = makeCrud({
+    getAllStmt: stmts.getAllPurchases, getByIdStmt: stmts.getPurchaseById, idPrefix: 'po',
+    insertStmt: stmts.insertPurchase, updateStmt: stmts.updatePurchase, deleteStmt: stmts.deletePurchase,
+    mapRow: p => ({ ...p, items: JSON.parse(p.items || '[]') }),
+    columns: [
+      { key: 'supplierId', onInsert: d => d.supplierId || '', onUpdate: (d, e) => d.supplierId ?? e.supplierId },
+      { key: 'supplierName', onInsert: d => d.supplierName || '', onUpdate: (d, e) => d.supplierName ?? e.supplierName },
+      { key: 'status', onInsert: d => d.status || 'draft', onUpdate: (d, e) => d.status ?? e.status },
+      { key: 'date', onInsert: d => d.date || '', onUpdate: (d, e) => d.date ?? e.date },
+      { key: 'receivedDate', onInsert: d => d.receivedDate || '', onUpdate: (d, e) => d.receivedDate ?? e.receivedDate },
+      { key: 'paidDate', onInsert: d => d.paidDate || '', onUpdate: (d, e) => d.paidDate ?? e.paidDate ?? '' },
+      { key: 'note', onInsert: d => d.note || '', onUpdate: (d, e) => d.note ?? e.note },
+      { key: 'total', onInsert: d => d.total || 0, onUpdate: (d, e) => d.total ?? e.total },
+      // items 是 JSON 字串欄位，跟原本 updatePurchase 一致：沒給新值就序列化「解析現有值」
+      { key: 'items', onInsert: d => JSON.stringify(d.items || []), onUpdate: (d, e) => JSON.stringify(d.items || JSON.parse(e.items || '[]')) },
+    ],
+  })
+
+  const promotionsCrud = makeCrud({
+    getAllStmt: stmts.getAllPromotions, getByIdStmt: stmts.getPromotionById, idPrefix: 'promo',
+    insertStmt: stmts.insertPromotion, updateStmt: stmts.updatePromotion, deleteStmt: stmts.deletePromotion,
+    mapRow: p => ({ ...p, condition: JSON.parse(p.condition_data || '{}'), enabled: !!p.enabled }),
+    columns: [
+      { key: 'name', onInsert: d => d.name || '', onUpdate: (d, e) => d.name ?? e.name },
+      { key: 'type', onInsert: d => d.type || '', onUpdate: (d, e) => d.type ?? e.type },
+      // 外部欄位叫 condition，DB 欄位叫 condition_data；update 沒給新 condition 時保留舊 JSON 字串原樣
+      { key: 'condition_data', onInsert: d => JSON.stringify(d.condition || {}), onUpdate: (d, e) => (d.condition ? JSON.stringify(d.condition) : e.condition_data) },
+      // enabled 用 !== undefined 而非 ??，維持原本「只有明確傳 undefined 才 fallback」的判斷方式
+      { key: 'enabled', onInsert: d => (d.enabled ? 1 : 0), onUpdate: (d, e) => ((d.enabled !== undefined ? d.enabled : e.enabled) ? 1 : 0) },
+      { key: 'startAt', onInsert: d => d.startAt || '', onUpdate: (d, e) => d.startAt ?? e.startAt },
+      { key: 'endAt', onInsert: d => d.endAt || '', onUpdate: (d, e) => d.endAt ?? e.endAt },
+    ],
+  })
+
+  const usersCrud = makeCrud({
+    getAllStmt: stmts.getAllUsers, getByIdStmt: stmts.getUserById, idPrefix: 'u',
+    insertStmt: stmts.insertUser, updateStmt: stmts.updateUser, deleteStmt: stmts.deleteUser,
+    columns: [
+      // username 沒有預設值，原本就是把 data.username 原封不動傳給 prepared statement，
+      // 缺漏時讓 better-sqlite3 直接 throw；這裡不補預設值蓋掉這個行為
+      { key: 'username', onInsert: d => d.username, onUpdate: (d, e) => d.username ?? e.username },
+      { key: 'password', onInsert: d => d.password || '', onUpdate: (d, e) => d.password ?? e.password },
+      { key: 'role', onInsert: d => d.role || 'staff', onUpdate: (d, e) => d.role ?? e.role },
+    ],
+  })
 
   // ===== Transaction helpers =====
   const orderInsertParams = (o) => ({
@@ -1184,7 +1287,10 @@ module.exports = function initDatabase(dbPath) {
     // 損毀復原資訊（main.js 據此彈出阻斷式警告；正常開啟時 recovered = false）
     recoveryInfo,
 
-    // Products
+    // Products —— 刻意不套用 makeCrud 工廠：updateProduct 找不到列時回傳
+    // {success:false, error:'not found'}（其他 entity 都是純 {success:false}）、
+    // noBarcode 要 boolean 轉換、還有 findByBarcode 這個非 CRUD 查詢方法。
+    // Products 又是收銀最核心的 entity，牽動面大，不值得為了省重複碼冒風險。
     getProducts() {
       return stmts.getAllProducts.all().map(p => ({ ...p, noBarcode: !!p.noBarcode }))
     },
@@ -1235,48 +1341,12 @@ module.exports = function initDatabase(dbPath) {
       return p ? { ...p, noBarcode: !!p.noBarcode } : null
     },
 
-    // Members
-    getMembers() {
-      return stmts.getAllMembers.all()
-    },
-    addMember(data) {
-      stmts.insertMember.run({
-        id: data.id || 'm' + Date.now(),
-        name: data.name || '',
-        phone: data.phone || '',
-        points: data.points || 0,
-        tier: data.tier || 'normal',
-        totalSpent: data.totalSpent || 0,
-        joinDate: data.joinDate || new Date().toISOString().slice(0, 10),
-        balance: data.balance || 0,
-        birthday: data.birthday || '',
-        lastBirthdayBonus: data.lastBirthdayBonus || '',
-      })
-      return { success: true }
-    },
-    updateMember(id, data) {
-      const existing = stmts.getMemberById.get(id)
-      if (!existing) return { success: false }
-      stmts.updateMember.run({
-        id,
-        name: data.name ?? existing.name,
-        phone: data.phone ?? existing.phone,
-        points: data.points ?? existing.points,
-        tier: data.tier ?? existing.tier,
-        totalSpent: data.totalSpent ?? existing.totalSpent,
-        balance: data.balance ?? existing.balance ?? 0,
-        birthday: data.birthday ?? existing.birthday ?? '',
-        lastBirthdayBonus: data.lastBirthdayBonus ?? existing.lastBirthdayBonus ?? '',
-      })
-      return { success: true }
-    },
-    deleteMember(id) {
-      stmts.deleteMember.run(id)
-      return { success: true }
-    },
-    getMemberById(id) {
-      return stmts.getMemberById.get(id)
-    },
+    // Members（get/add/update/delete 已抽成 makeCrud 工廠，見上方 membersCrud 與其欄位定義）
+    getMembers() { return membersCrud.getAll() },
+    addMember(data) { return membersCrud.add(data) },
+    updateMember(id, data) { return membersCrud.update(id, data) },
+    deleteMember(id) { return membersCrud.remove(id) },
+    getMemberById(id) { return membersCrud.getById(id) },
 
     // Orders
     getOrders() {
@@ -1330,7 +1400,9 @@ module.exports = function initDatabase(dbPath) {
       return { success: true }
     },
 
-    // Suppliers
+    // Suppliers —— 刻意不套用 makeCrud 工廠：updateSupplier 不查現有列、不合併，
+    // 是直接用 data.field || '' 整欄覆寫（跟其他 4 個 entity 的「合併」語意不同）。
+    // 硬套同一個工廠只會多出一個只服務單一 entity 的特殊分支，不如維持原樣。
     getSuppliers() { return stmts.getAllSuppliers.all() },
     addSupplier(data) {
       stmts.insertSupplier.run({
@@ -1349,104 +1421,23 @@ module.exports = function initDatabase(dbPath) {
     },
     deleteSupplier(id) { stmts.deleteSupplier.run(id); return { success: true } },
 
-    // Purchases
-    getPurchases() {
-      return stmts.getAllPurchases.all().map(p => ({ ...p, items: JSON.parse(p.items || '[]') }))
-    },
-    addPurchase(data) {
-      stmts.insertPurchase.run({
-        id: data.id || 'po' + Date.now(),
-        supplierId: data.supplierId || '',
-        supplierName: data.supplierName || '',
-        status: data.status || 'draft',
-        date: data.date || '',
-        receivedDate: data.receivedDate || '',
-        paidDate: data.paidDate || '',
-        note: data.note || '',
-        total: data.total || 0,
-        items: JSON.stringify(data.items || []),
-      })
-      return { success: true }
-    },
-    updatePurchase(id, data) {
-      const existing = stmts.getAllPurchases.all().find(p => p.id === id)
-      if (!existing) return { success: false }
-      stmts.updatePurchase.run({
-        id,
-        supplierId: data.supplierId ?? existing.supplierId,
-        supplierName: data.supplierName ?? existing.supplierName,
-        status: data.status ?? existing.status,
-        date: data.date ?? existing.date,
-        receivedDate: data.receivedDate ?? existing.receivedDate,
-        paidDate: data.paidDate ?? existing.paidDate ?? '',
-        note: data.note ?? existing.note,
-        total: data.total ?? existing.total,
-        items: JSON.stringify(data.items || JSON.parse(existing.items || '[]')),
-      })
-      return { success: true }
-    },
-    deletePurchase(id) { stmts.deletePurchase.run(id); return { success: true } },
+    // Purchases（get/add/update/delete 已抽成 makeCrud 工廠，見上方 purchasesCrud 與其欄位定義）
+    getPurchases() { return purchasesCrud.getAll() },
+    addPurchase(data) { return purchasesCrud.add(data) },
+    updatePurchase(id, data) { return purchasesCrud.update(id, data) },
+    deletePurchase(id) { return purchasesCrud.remove(id) },
 
-    // Promotions
-    getPromotions() {
-      return stmts.getAllPromotions.all().map(p => ({
-        ...p,
-        condition: JSON.parse(p.condition_data || '{}'),
-        enabled: !!p.enabled,
-      }))
-    },
-    addPromotion(data) {
-      stmts.insertPromotion.run({
-        id: data.id || 'promo' + Date.now(),
-        name: data.name || '',
-        type: data.type || '',
-        condition_data: JSON.stringify(data.condition || {}),
-        enabled: data.enabled ? 1 : 0,
-        startAt: data.startAt || '',
-        endAt: data.endAt || '',
-      })
-      return { success: true }
-    },
-    updatePromotion(id, data) {
-      const all = stmts.getAllPromotions.all()
-      const existing = all.find(p => p.id === id)
-      if (!existing) return { success: false }
-      stmts.updatePromotion.run({
-        id,
-        name: data.name ?? existing.name,
-        type: data.type ?? existing.type,
-        condition_data: data.condition ? JSON.stringify(data.condition) : existing.condition_data,
-        enabled: (data.enabled !== undefined ? data.enabled : existing.enabled) ? 1 : 0,
-        startAt: data.startAt ?? existing.startAt,
-        endAt: data.endAt ?? existing.endAt,
-      })
-      return { success: true }
-    },
-    deletePromotion(id) { stmts.deletePromotion.run(id); return { success: true } },
+    // Promotions（get/add/update/delete 已抽成 makeCrud 工廠，見上方 promotionsCrud 與其欄位定義）
+    getPromotions() { return promotionsCrud.getAll() },
+    addPromotion(data) { return promotionsCrud.add(data) },
+    updatePromotion(id, data) { return promotionsCrud.update(id, data) },
+    deletePromotion(id) { return promotionsCrud.remove(id) },
 
-    // Users
-    getUsers() { return stmts.getAllUsers.all() },
-    addUser(data) {
-      stmts.insertUser.run({
-        id: data.id || 'u' + Date.now(),
-        username: data.username,
-        password: data.password || '',
-        role: data.role || 'staff',
-      })
-      return { success: true }
-    },
-    updateUser(id, data) {
-      const existing = stmts.getAllUsers.all().find(u => u.id === id)
-      if (!existing) return { success: false }
-      stmts.updateUser.run({
-        id,
-        username: data.username ?? existing.username,
-        password: data.password ?? existing.password,
-        role: data.role ?? existing.role,
-      })
-      return { success: true }
-    },
-    deleteUser(id) { stmts.deleteUser.run(id); return { success: true } },
+    // Users（get/add/update/delete 已抽成 makeCrud 工廠，見上方 usersCrud 與其欄位定義）
+    getUsers() { return usersCrud.getAll() },
+    addUser(data) { return usersCrud.add(data) },
+    updateUser(id, data) { return usersCrud.update(id, data) },
+    deleteUser(id) { return usersCrud.remove(id) },
 
     // Audit Log
     getAuditLogs(filters) {
