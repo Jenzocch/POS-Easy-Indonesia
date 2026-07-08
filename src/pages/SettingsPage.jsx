@@ -1075,9 +1075,9 @@ function AuditTab({ session }) {
   return (
     <div style={{display:'flex',flexDirection:'column',gap:12,height:'100%'}}>
       <div style={{display:'flex',gap:10,flexShrink:0,flexWrap:'wrap',alignItems:'center'}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="搜尋人員或操作..." style={{flex:1,maxWidth:220,background:'var(--bg-overlay)',border:'1px solid var(--border-subtle)',borderRadius:8,padding:'7px 12px',fontSize:13,color:'var(--text-primary)'}}/>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={t('settings.search_audit_ph')} style={{flex:1,maxWidth:220,background:'var(--bg-overlay)',border:'1px solid var(--border-subtle)',borderRadius:8,padding:'7px 12px',fontSize:13,color:'var(--text-primary)'}}/>
         <div style={{display:'flex',gap:4}}>
-          {[['all','全部',logs.length],['info','一般',null],['warning','警告',counts.warning],['critical','重大',counts.critical]].map(([k,l,n])=>(
+          {[['all',t('common.all'),logs.length],['info',t('settings.level_info'),null],['warning',t('settings.level_warning'),counts.warning],['critical',t('settings.level_critical'),counts.critical]].map(([k,l,n])=>(
             <button key={k} onClick={()=>setFilter(k)} style={{padding:'5px 10px',borderRadius:6,fontSize:12,cursor:'pointer',background:filter===k?'var(--bg-active)':'transparent',color:filter===k?'var(--text-primary)':'var(--text-tertiary)',border:`1px solid ${filter===k?'var(--border-mid)':'transparent'}`}}>
               {l}{n!==null&&<span style={{marginLeft:4,fontFamily:'var(--font-mono)',fontSize:10}}>{n}</span>}
             </button>
@@ -1088,17 +1088,17 @@ function AuditTab({ session }) {
 
       <div style={{flex:1,overflowY:'auto',background:'var(--bg-raised)',border:'1px solid var(--border-dim)',borderRadius:'var(--r3)',overflow:'hidden',display:'flex',flexDirection:'column'}}>
         <div style={{display:'grid',gridTemplateColumns:'140px 70px 70px 1fr 1fr',gap:8,padding:'8px 14px',background:'var(--bg-overlay)',fontSize:11,color:'var(--text-tertiary)',letterSpacing:'.05em',flexShrink:0}}>
-          <span>時間</span><span>人員</span><span>等級</span><span>操作</span><span>詳情</span>
+          <span>{t('common.time')}</span><span>{t('settings.audit_user')}</span><span>{t('settings.audit_level')}</span><span>{t('settings.audit_action')}</span><span>{t('settings.audit_detail')}</span>
         </div>
         <div style={{flex:1,overflowY:'auto'}}>
           {filtered.length===0 ? (
-            <div style={{textAlign:'center',padding:'40px',color:'var(--text-tertiary)',fontSize:13}}>無符合記錄</div>
+            <div style={{textAlign:'center',padding:'40px',color:'var(--text-tertiary)',fontSize:13}}>{t('settings.no_matching_records')}</div>
           ) : filtered.slice(0,500).map(l=>{
             const lvl = LEVEL_STYLE[l.level] || LEVEL_STYLE.info
             return (
               <div key={l.id} style={{display:'grid',gridTemplateColumns:'140px 70px 70px 1fr 1fr',gap:8,padding:'9px 14px',borderBottom:'1px solid var(--border-dim)',fontSize:12,alignItems:'center'}}>
                 <span style={{fontFamily:'var(--font-mono)',fontSize:10,color:'var(--text-tertiary)',whiteSpace:'nowrap'}}>
-                  {new Date(l.timestamp).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+                  {new Date(l.timestamp).toLocaleString('id-ID',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})}
                 </span>
                 <span style={{fontWeight:500,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.username}</span>
                 <span>
@@ -1132,7 +1132,7 @@ function WebhookTab({ session }) {
   function handleSave() {
     saveWebhookConfig({ url: url.trim(), events: Array.from(events) })
     writeAuditLog('WEBHOOK_CONFIG_SAVE', session, { hasUrl: !!url, eventCount: events.size })
-    showMsg('✓ 設定已儲存')
+    showMsg('✓ ' + t('settings.saved_settings'))
   }
 
   function toggleEvent(key) {
@@ -1145,19 +1145,19 @@ function WebhookTab({ session }) {
   }
 
   async function handleTest() {
-    if (!url) { showMsg('✗ 請先填 URL'); return }
+    if (!url) { showMsg('✗ ' + t('settings.fill_url_first')); return }
     setTesting(true)
     // 先暫存 + 用 checkout 事件測試
     saveWebhookConfig({ url: url.trim(), events: ['checkout'] })
     const ok = await fireWebhook('checkout', {
-      _title: '🧪 測試訊息',
-      _description: '這是 POS Easy 的 webhook 測試',
-      _fields: [{ name: '時間', value: new Date().toLocaleString('id-ID') }],
+      _title: '🧪 ' + t('settings.test_message'),
+      _description: t('settings.test_message_desc'),
+      _fields: [{ name: t('common.time'), value: new Date().toLocaleString('id-ID') }],
     })
     // 還原設定
     saveWebhookConfig({ url: url.trim(), events: Array.from(events) })
     setTesting(false)
-    showMsg(ok ? '✓ 測試訊息已送出，請檢查目的端' : '✗ 送出失敗（可能是 URL 錯誤或 CORS）', 5000)
+    showMsg(ok ? '✓ ' + t('settings.test_sent') : '✗ ' + t('settings.test_send_failed'), 5000)
   }
 
   return (
@@ -1166,32 +1166,32 @@ function WebhookTab({ session }) {
         <div style={{display:'flex', alignItems:'center', gap:10}}>
           <Wifi size={18} style={{color:'var(--blue)'}}/>
           <div style={{flex:1}}>
-            <div style={{fontWeight:600, fontSize:14}}>通知 Webhook</div>
+            <div style={{fontWeight:600, fontSize:14}}>{t('settings.tab_webhook')}</div>
             <div style={{fontSize:12, color:'var(--text-secondary)', marginTop:2}}>
-              關鍵事件發生時自動 POST 通知到指定 URL — 可接 Discord / Slack / Zapier / Make / 自家伺服器
+              {t('settings.webhook_desc')}
             </div>
           </div>
         </div>
       </div>
 
-      <Section title="連線設定">
+      <Section title={t('settings.connection_settings')}>
         <div style={{display:'flex', flexDirection:'column', gap:12}}>
           <div>
             <FL>Webhook URL</FL>
             <input className="field" value={url} onChange={e=>setUrl(e.target.value)}
-              placeholder="https://discord.com/api/webhooks/... 或 https://hooks.slack.com/... 或自家 URL"
+              placeholder={t('settings.webhook_url_ph')}
               style={{fontFamily:'var(--font-mono)', fontSize:12}}/>
             <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:4, lineHeight:1.5}}>
-              · Discord 用：<strong>伺服器設定 → 整合 → Webhook → 複製 URL</strong><br/>
-              · Slack 用：<strong>Apps → Incoming Webhooks → Add → 複製 URL</strong><br/>
-              · 自家後端：自動發送 POST + JSON（含 event / timestamp / payload）<br/>
-              · Zapier / Make：用「Webhook by Zapier」當觸發
+              · {t('settings.wh_for_discord')}<strong>{t('settings.wh_help_discord')}</strong><br/>
+              · {t('settings.wh_for_slack')}<strong>{t('settings.wh_help_slack')}</strong><br/>
+              · {t('settings.wh_backend_label')}{t('settings.wh_backend_desc')}<br/>
+              · Zapier / Make：{t('settings.wh_zapier_desc')}
             </div>
           </div>
         </div>
       </Section>
 
-      <Section title="觸發事件">
+      <Section title={t('settings.trigger_events')}>
         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))', gap:8}}>
           {WEBHOOK_EVENTS.map(ev => {
             const on = events.has(ev.key)
@@ -1219,10 +1219,10 @@ function WebhookTab({ session }) {
 
       <div style={{display:'flex', gap:8, flexShrink:0, flexWrap:'wrap'}}>
         <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={!url}>
-          <Check size={14}/>儲存設定
+          <Check size={14}/>{t('settings.save_settings')}
         </button>
         <button className="btn btn-ghost btn-sm" onClick={handleTest} disabled={!url || testing}>
-          {testing ? <RefreshCw size={14} className="spin"/> : <Wifi size={14}/>}測試送出
+          {testing ? <RefreshCw size={14} className="spin"/> : <Wifi size={14}/>}{t('settings.test_send')}
         </button>
       </div>
 
@@ -1262,17 +1262,17 @@ function CloudSyncTab({ session }) {
     setEnabled(isCloudEnabled())
     setTestResult(null)
     writeAuditLog('CLOUD_CONFIG_SAVE', session, { hasConfig: !!(url && anonKey) })
-    showMsg('✓ 設定已儲存')
+    showMsg('✓ ' + t('settings.saved_settings'))
   }
 
   function handleClear() {
-    if (!confirm('確認清除雲端設定？')) return
+    if (!confirm(t('settings.confirm_clear_cloud'))) return
     clearCloudConfig()
     setUrl('')
     setAnonKey('')
     setEnabled(false)
     setTestResult(null)
-    showMsg('已清除設定')
+    showMsg(t('settings.cleared'))
   }
 
   async function handleTest() {
@@ -1294,9 +1294,9 @@ function CloudSyncTab({ session }) {
       localStorage.setItem('pos_last_sync', new Date().toISOString())
       setLastSync(new Date().toISOString())
       writeAuditLog('CLOUD_PUSH', session, { total, tables: report.length })
-      showMsg(`✓ 推送完成（共 ${total} 筆，${report.length} 張表）`, 5000)
+      showMsg('✓ ' + t('settings.push_done', { total, tables: report.length }), 5000)
     } catch (e) {
-      showMsg(`✗ 推送失敗：${e.message}`, 8000)
+      showMsg('✗ ' + t('settings.push_failed', { error: e.message }), 8000)
       writeAuditLog('CLOUD_PUSH_FAIL', session, { error: e.message })
     }
     setBusy(null)
@@ -1314,10 +1314,10 @@ function CloudSyncTab({ session }) {
       localStorage.setItem('pos_last_sync', new Date().toISOString())
       setLastSync(new Date().toISOString())
       writeAuditLog('CLOUD_PULL', session, { total, tables: report.length })
-      showMsg(`✓ 拉取完成（共 ${total} 筆）— 自動重新載入...`, 3000)
+      showMsg('✓ ' + t('settings.pull_done', { total }), 3000)
       setTimeout(() => location.reload(), 1500)
     } catch (e) {
-      showMsg(`✗ 拉取失敗：${e.message}`, 8000)
+      showMsg('✗ ' + t('settings.pull_failed', { error: e.message }), 8000)
       writeAuditLog('CLOUD_PULL_FAIL', session, { error: e.message })
     }
     setBusy(null)
@@ -1330,12 +1330,12 @@ function CloudSyncTab({ session }) {
           <Cloud size={18} style={{color: enabled ? 'var(--green)' : 'var(--text-tertiary)'}}/>
           <div style={{flex:1}}>
             <div style={{fontWeight:600, fontSize:14}}>
-              {enabled ? '雲端已設定' : '尚未設定雲端'}
+              {enabled ? t('settings.cloud_configured') : t('settings.cloud_not_configured')}
             </div>
             <div style={{fontSize:12, color:'var(--text-secondary)', marginTop:2}}>
               {enabled
-                ? `上次同步：${lastSync ? new Date(lastSync).toLocaleString('id-ID') : '尚未同步'}`
-                : '在下方輸入 Supabase URL 和 anon key，啟用跨裝置同步'}
+                ? t('settings.last_sync', { time: lastSync ? new Date(lastSync).toLocaleString('id-ID') : t('settings.never_synced') })
+                : t('settings.cloud_setup_hint')}
             </div>
           </div>
         </div>
@@ -1343,7 +1343,7 @@ function CloudSyncTab({ session }) {
 
       {/* 設定區 */}
       <div>
-        <Section title="Supabase 連線設定">
+        <Section title={t('settings.supabase_conn')}>
           <div style={{display:'flex', flexDirection:'column', gap:12}}>
             <div>
               <FL>Project URL</FL>
@@ -1353,19 +1353,19 @@ function CloudSyncTab({ session }) {
               <FL>anon / public key</FL>
               <input type="password" className="field" value={anonKey} onChange={e=>setAnonKey(e.target.value)} placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." style={{fontFamily:'var(--font-mono)', fontSize:12}}/>
               <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:4}}>
-                Supabase Dashboard → Settings → API → Project URL 與 anon key（不是 service_role）
+                {t('settings.supabase_hint')}
               </div>
             </div>
             <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
               <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={!url || !anonKey}>
-                <Check size={14}/>儲存設定
+                <Check size={14}/>{t('settings.save_settings')}
               </button>
               <button className="btn btn-ghost btn-sm" onClick={handleTest} disabled={!enabled || testing}>
-                {testing ? <RefreshCw size={14} className="spin"/> : <Wifi size={14}/>}測試連線
+                {testing ? <RefreshCw size={14} className="spin"/> : <Wifi size={14}/>}{t('settings.test_connection')}
               </button>
               {enabled && (
                 <button className="btn btn-ghost btn-sm" style={{color:'var(--red)'}} onClick={handleClear}>
-                  <X size={14}/>清除設定
+                  <X size={14}/>{t('settings.clear_settings')}
                 </button>
               )}
             </div>
@@ -1375,7 +1375,7 @@ function CloudSyncTab({ session }) {
                 background: testResult.ok ? 'var(--green-dim)' : 'var(--red-dim)',
                 color: testResult.ok ? 'var(--green)' : 'var(--red)',
               }}>
-                {testResult.ok ? '✓ 連線成功，已可進行同步' : `✗ 連線失敗：${testResult.error}`}
+                {testResult.ok ? '✓ ' + t('settings.conn_ok') : '✗ ' + t('settings.conn_failed', { error: testResult.error })}
               </div>
             )}
           </div>
@@ -1385,7 +1385,7 @@ function CloudSyncTab({ session }) {
       {/* 同步操作 */}
       {enabled && (
         <div>
-          <Section title="同步操作">
+          <Section title={t('settings.sync_ops')}>
             <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:12}}>
               <button
                 className="card"
@@ -1395,11 +1395,11 @@ function CloudSyncTab({ session }) {
               >
                 <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:6}}>
                   <ArrowUp size={18} style={{color:'var(--blue)'}}/>
-                  <span style={{fontWeight:600, fontSize:14}}>推上雲端</span>
+                  <span style={{fontWeight:600, fontSize:14}}>{t('settings.push_to_cloud')}</span>
                 </div>
                 <div style={{fontSize:12, color:'var(--text-secondary)', lineHeight:1.5}}>
-                  把本機資料 upsert 到雲端。已存在的（同 id）會覆蓋，新的會新增。<br/>
-                  <span style={{color:'var(--text-tertiary)'}}>不會刪除雲端有但本機沒有的資料。</span>
+                  {t('settings.push_desc_1')}<br/>
+                  <span style={{color:'var(--text-tertiary)'}}>{t('settings.push_desc_2')}</span>
                 </div>
               </button>
 
@@ -1411,11 +1411,11 @@ function CloudSyncTab({ session }) {
               >
                 <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:6}}>
                   <ArrowDown size={18} style={{color:'var(--amber)'}}/>
-                  <span style={{fontWeight:600, fontSize:14}}>從雲端拉下來</span>
+                  <span style={{fontWeight:600, fontSize:14}}>{t('settings.pull_from_cloud')}</span>
                 </div>
                 <div style={{fontSize:12, color:'var(--text-secondary)', lineHeight:1.5}}>
-                  從雲端拉取所有資料，<strong style={{color:'var(--amber)'}}>覆蓋本機現有資料</strong>。<br/>
-                  <span style={{color:'var(--text-tertiary)'}}>用於其他裝置看到雲端最新版。</span>
+                  {t('settings.pull_desc_pre')}<strong style={{color:'var(--amber)'}}>{t('settings.pull_desc_strong')}</strong><br/>
+                  <span style={{color:'var(--text-tertiary)'}}>{t('settings.pull_desc_2')}</span>
                 </div>
               </button>
             </div>
@@ -1423,7 +1423,7 @@ function CloudSyncTab({ session }) {
             {progress.length > 0 && (
               <div style={{marginTop:14, padding:'12px 14px', background:'var(--bg-overlay)', borderRadius:8, maxHeight:200, overflowY:'auto'}}>
                 <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:6, letterSpacing:'.05em'}}>
-                  {busy === 'push' ? '推送進度' : busy === 'pull' ? '拉取進度' : '完成'}
+                  {busy === 'push' ? t('settings.push_progress') : busy === 'pull' ? t('settings.pull_progress') : t('settings.done')}
                 </div>
                 {progress.map((p, i) => (
                   <div key={i} style={{fontSize:12, color:'var(--text-secondary)', padding:'3px 0', fontFamily:'var(--font-mono)'}}>
@@ -1452,15 +1452,15 @@ function CloudSyncTab({ session }) {
           <div style={{...ss.modal, maxWidth:400}} className="animate-scale">
             <div style={{textAlign:'center', padding:'8px 0 18px'}}>
               <AlertTriangle size={36} style={{color:'var(--amber)', marginBottom:12}}/>
-              <div style={{fontWeight:700, fontSize:15, marginBottom:8}}>確認從雲端拉取？</div>
+              <div style={{fontWeight:700, fontSize:15, marginBottom:8}}>{t('settings.confirm_pull_title')}</div>
               <div style={{fontSize:13, color:'var(--text-secondary)', lineHeight:1.6}}>
-                本機目前資料將被<strong style={{color:'var(--red)'}}>完全覆蓋</strong>為雲端版本。<br/>
-                建議先 "立即備份" 一次再進行此操作。
+                {t('settings.pull_warn_pre')}<strong style={{color:'var(--red)'}}>{t('settings.pull_warn_strong')}</strong>{t('settings.pull_warn_post')}<br/>
+                {t('settings.pull_warn_2')}
               </div>
             </div>
             <div style={{display:'flex', gap:10}}>
-              <button className="btn btn-danger" style={{flex:1}} onClick={handlePull}>確認拉取</button>
-              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setConfirmPull(false)}>取消</button>
+              <button className="btn btn-danger" style={{flex:1}} onClick={handlePull}>{t('settings.confirm_pull_btn')}</button>
+              <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setConfirmPull(false)}>{t('common.cancel')}</button>
             </div>
           </div>
         </div>

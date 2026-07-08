@@ -170,9 +170,11 @@ export default {
 
     'settings.search_audit_ph': '搜尋人員或操作...',
     'settings.level_info': '一般',
+    'settings.level_warning': '警告',
     'settings.level_critical': '重大',
     'settings.audit_user': '人員',
     'settings.audit_level': '等級',
+    'settings.audit_action': '操作',
     'settings.audit_detail': '詳情',
     'settings.no_matching_records': '無符合記錄',
 
@@ -432,9 +434,11 @@ export default {
 
     'settings.search_audit_ph': 'Search user or action...',
     'settings.level_info': 'Info',
+    'settings.level_warning': 'Warning',
     'settings.level_critical': 'Critical',
     'settings.audit_user': 'User',
     'settings.audit_level': 'Level',
+    'settings.audit_action': 'Action',
     'settings.audit_detail': 'Details',
     'settings.no_matching_records': 'No matching records',
 
@@ -694,9 +698,11 @@ export default {
 
     'settings.search_audit_ph': 'Cari petugas atau aksi...',
     'settings.level_info': 'Umum',
+    'settings.level_warning': 'Peringatan',
     'settings.level_critical': 'Kritis',
     'settings.audit_user': 'Petugas',
     'settings.audit_level': 'Tingkat',
+    'settings.audit_action': 'Aksi',
     'settings.audit_detail': 'Detail',
     'settings.no_matching_records': 'Tidak ada catatan yang cocok',
 
