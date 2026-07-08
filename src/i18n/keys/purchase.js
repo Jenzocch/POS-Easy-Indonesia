@@ -97,6 +97,7 @@ export default {
     // ── PromotionsPage ──
     'promo.title': '促銷活動',
     'promo.summary': '{active} 個活動進行中 · 共 {total} 個',
+    'promo.applied_title': '已套用促銷',
     'promo.type_threshold': '滿額折扣',
     'promo.desc_threshold': '消費滿 X 元折 Y 元',
     'promo.type_percent': '全館折扣',
@@ -227,6 +228,7 @@ export default {
     // ── PromotionsPage ──
     'promo.title': 'Promotions',
     'promo.summary': '{active} active · {total} total',
+    'promo.applied_title': 'Promotions applied',
     'promo.type_threshold': 'Spend & Save',
     'promo.desc_threshold': 'Spend X, save Y',
     'promo.type_percent': 'Storewide Discount',
@@ -357,6 +359,7 @@ export default {
     // ── PromotionsPage ──
     'promo.title': 'Promo',
     'promo.summary': '{active} promo aktif · total {total}',
+    'promo.applied_title': 'Promo diterapkan',
     'promo.type_threshold': 'Diskon Minimal Belanja',
     'promo.desc_threshold': 'Belanja X dapat potongan Y',
     'promo.type_percent': 'Diskon Semua Produk',

@@ -15,7 +15,7 @@ export default function POSPage({ store, session }) {
   const {
     products, members, cart, cartSubtotal, activeMember, setActiveMember,
     addToCart, removeFromCart, updateCartQty, updateCartItemPrice, clearCart, checkout,
-    findByBarcode, findMember, categories,
+    findByBarcode, findMember, categories, promotions,
     heldOrders, holdCart, recallHeld, removeHeld,
     openShift, pointsRule, manualDiscount, setManualDiscount,
     setView,
@@ -246,7 +246,7 @@ export default function POSPage({ store, session }) {
             onUpdateQty={updateCartQty} onRemove={removeFromCart} onClear={clearCart}
             onCheckout={handleCheckout} onFindMember={findMember} onSelectMember={setActiveMember}
             onUpdatePrice={handleUpdatePrice} onHold={handleHold}
-            pointsRule={pointsRule}
+            pointsRule={pointsRule} promotions={promotions}
             manualDiscount={manualDiscount} setManualDiscount={setManualDiscount}/>
         </div>
       )}
@@ -274,7 +274,7 @@ export default function POSPage({ store, session }) {
                 onCheckout={(m,p,pts,opts) => { const r = handleCheckout(m,p,pts,opts); if(r) setShowCart(false); return r }}
                 onFindMember={findMember} onSelectMember={setActiveMember}
                 onUpdatePrice={handleUpdatePrice} onHold={handleHold}
-                pointsRule={pointsRule}
+                pointsRule={pointsRule} promotions={promotions}
                 manualDiscount={manualDiscount} setManualDiscount={setManualDiscount}/>
             </div>
           </div>

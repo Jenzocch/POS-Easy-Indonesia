@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { Trash2, Plus, Minus, User, X, CreditCard, Banknote, Check, ChevronRight, Gift, Printer, Pause, Percent, Wallet, Receipt, ShoppingCart } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Trash2, Plus, Minus, User, X, CreditCard, Banknote, Check, ChevronRight, Gift, Printer, Pause, Percent, Wallet, Receipt, ShoppingCart, Tag } from 'lucide-react'
 import { maskPhone } from '../utils/security'
+import { applyPromotions } from '../utils/promotions'
 import { t, fmtMoney } from '../i18n'
 
 export default function CartPanel({
@@ -10,6 +11,7 @@ export default function CartPanel({
   onUpdatePrice, // 改價
   onHold,        // 掛單
   pointsRule = { earn: 10, redeem: 1 },
+  promotions = [],
   manualDiscount = 0, setManualDiscount,
 }) {
   const [stage, setStage]       = useState('cart')   // cart | member | pay | done
@@ -29,12 +31,16 @@ export default function CartPanel({
   const [editingPriceId, setEditingPriceId] = useState(null)
   const [priceInput, setPriceInput] = useState('')
 
+  // 自動促銷：依購物車內容即時試算，不需店員手動觸發（PromotionsPage 只負責建立/啟用規則）
+  const promoResult = useMemo(() => applyPromotions(cart, promotions, cartSubtotal), [cart, promotions, cartSubtotal])
+  const promoDiscount = promoResult.totalDiscount
+
   // 點數折抵：1 點 = redeem 元
   const redeemRate = pointsRule.redeem || 1
   const earnRate = pointsRule.earn || 10
   const maxPointsByCart = Math.min(activeMember?.points || 0, Math.floor(cartSubtotal / redeemRate))
   const pointsDiscount = pointsUsed * redeemRate
-  const totalDiscount = pointsDiscount + (manualDiscount || 0) + balanceUsed
+  const totalDiscount = pointsDiscount + (manualDiscount || 0) + promoDiscount + balanceUsed
   const total = Math.max(0, cartSubtotal - totalDiscount)
   const paid = parseFloat(paidInput) || 0
   const change = paid - total
@@ -62,6 +68,7 @@ export default function CartPanel({
           ...(splitCardAmt > 0 ? [{ method: 'card', amount: splitCardAmt }] : []),
         ],
         manualDiscountAmt: manualDiscount,
+        promoDiscountAmt: promoDiscount,
         balanceUsed,
       })
       if (order) {
@@ -75,6 +82,7 @@ export default function CartPanel({
     const order = onCheckout(payMethod, paid, pointsUsed, {
       taxId,
       manualDiscountAmt: manualDiscount,
+      promoDiscountAmt: promoDiscount,
       balanceUsed,
     })
     if (order) {
@@ -172,6 +180,19 @@ export default function CartPanel({
         <button className="btn-icon" onClick={() => setStage('cart')}><X size={16}/></button>
       </div>
       <div style={cs.stageContent}>
+        {/* 自動促銷（依購物車內容即時試算，非店員手動觸發） */}
+        {promoResult.applied.length > 0 && (
+          <div style={{...cs.pointsBox, background:'var(--green-dim)', borderColor:'var(--green-dim)'}}>
+            <div style={{fontSize:12, color:'var(--text-secondary)', marginBottom:6}}>
+              <Tag size={12} style={{marginRight:4, verticalAlign:'middle'}}/>
+              {t('promo.applied_title')}
+            </div>
+            {promoResult.applied.map(a => (
+              <div key={a.id} style={{fontSize:12, color:'var(--green)'}}>{a.label}</div>
+            ))}
+          </div>
+        )}
+
         {/* 點數折抵 */}
         {activeMember && maxPointsByCart > 0 && (
           <div style={cs.pointsBox}>
@@ -199,7 +220,7 @@ export default function CartPanel({
                 {t('pos.balance')} {fmtMoney(memberBalance)}
               </div>
               <button onClick={() => {
-                const max = Math.min(memberBalance, cartSubtotal - pointsDiscount - manualDiscount)
+                const max = Math.min(memberBalance, cartSubtotal - pointsDiscount - manualDiscount - promoDiscount)
                 setBalanceUsed(p => p > 0 ? 0 : Math.max(0, max))
               }} style={{fontSize:11, color:'var(--teal)', background:'none'}}>
                 {balanceUsed > 0 ? t('pos.cancel_use') : t('pos.use_all')}
@@ -446,6 +467,12 @@ export default function CartPanel({
 
       {cart.length > 0 && (
         <div style={cs.footer}>
+          {/* 自動促銷提示（明細見結帳頁） */}
+          {promoResult.applied.length > 0 && (
+            <div style={{fontSize:11.5, color:'var(--green)', display:'flex', alignItems:'center', gap:4}}>
+              <Tag size={11}/> {t('promo.applied_title')} · -{fmtMoney(promoDiscount)}
+            </div>
+          )}
           {/* 手動折讓 */}
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
             <span style={{color:'var(--text-secondary)', fontSize:13, display:'flex', alignItems:'center', gap:4}}>
@@ -457,7 +484,7 @@ export default function CartPanel({
           <div style={cs.subtotalRow}>
             <span style={{color:'var(--text-secondary)', fontSize:13}}>{t('common.subtotal')}</span>
             <span style={{fontFamily:'var(--font-mono)', fontSize:22, fontWeight:500}}>
-              {fmtMoney(Math.max(0, cartSubtotal - (manualDiscount || 0)))}
+              {fmtMoney(Math.max(0, cartSubtotal - (manualDiscount || 0) - promoDiscount))}
             </span>
           </div>
           <button className="btn btn-primary" style={{width:'100%', padding:'14px', fontSize:15, letterSpacing:'.04em'}} onClick={()=>setStage('pay')}>

@@ -292,13 +292,13 @@ export function useStore(){
   // payments: [{method:'cash',amount:50},{method:'card',amount:50}]，若沒帶就用 payMethod+paid
   const checkout = useCallback((payMethod, paid, pointsUsed=0, opts={}) => {
     if(!cart.length) return null
-    const { taxId='', payments=null, manualDiscountAmt=0, balanceUsed=0, cashier='' } = opts
+    const { taxId='', payments=null, manualDiscountAmt=0, promoDiscountAmt=0, balanceUsed=0, cashier='' } = opts
     // 夾限：不可超用會員點數/儲值（UI 已擋，這裡再防呆——避免 stale snapshot、跨裝置或直接呼叫造成負值/超折抵）
     const usePoints  = activeMember ? Math.min(Math.max(0, pointsUsed),  activeMember.points  || 0) : 0
     const useBalance = activeMember ? Math.min(Math.max(0, balanceUsed), activeMember.balance || 0) : 0
     const subtotal = cartSubtotal
     const pointsDiscount = usePoints * (pointsRule.redeem || 1)
-    const totalDiscount = pointsDiscount + manualDiscountAmt + useBalance
+    const totalDiscount = pointsDiscount + manualDiscountAmt + promoDiscountAmt + useBalance
     const total = Math.max(0, subtotal - totalDiscount)
     let pointsEarned = Math.floor(total / (pointsRule.earn || 10))
 
@@ -328,6 +328,7 @@ export function useStore(){
       id: 'O' + Date.now(),
       items: [...cart],
       subtotal, discount: pointsDiscount, manualDiscount: manualDiscountAmt,
+      promoDiscount: promoDiscountAmt,
       balanceUsed: useBalance,
       total,
       payMethod: actualPayments.length > 1 ? 'mixed' : (actualPayments[0]?.method || payMethod),
