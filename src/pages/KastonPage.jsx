@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { Plus, Search, X, AlertCircle } from 'lucide-react'
 import { t, fmtMoney } from '../i18n'
 import { isElectron, loadKastonRecords, createKasbon, recordKastonPayment, getKastonAgingReport } from '../utils/dataAccess'
+import { friendlyError } from '../utils/friendlyError'
 
 const TABS = [
   { id: 'active', label: 'kasbon.active' },
@@ -34,7 +35,8 @@ export default function KastonPage({ store, session }) {
         setRecords(data.data || [])
       }
     } catch (err) {
-      setError(err.message)
+      console.error('[Kasbon] loadRecords failed:', err)
+      setError(friendlyError(err, 'kasbon'))
     } finally {
       setLoading(false)
     }
@@ -47,7 +49,8 @@ export default function KastonPage({ store, session }) {
         setAgingReport(data.data)
       }
     } catch (err) {
-      setError(err.message)
+      console.error('[Kasbon] loadAgingReport failed:', err)
+      setError(friendlyError(err, 'kasbon'))
     }
   }
 
@@ -114,7 +117,8 @@ export default function KastonPage({ store, session }) {
         setError(response.error || t('kasbon.create_failed'))
       }
     } catch (err) {
-      setError(err.message)
+      console.error('[Kasbon] createKasbon failed:', err)
+      setError(friendlyError(err, 'kasbon'))
     }
   }
 
@@ -132,7 +136,8 @@ export default function KastonPage({ store, session }) {
         setError(response.error || t('kasbon.payment_failed'))
       }
     } catch (err) {
-      setError(err.message)
+      console.error('[Kasbon] recordKastonPayment failed:', err)
+      setError(friendlyError(err, 'kasbon'))
     }
   }
 
@@ -420,7 +425,8 @@ function NewKastonModal({ members, onClose, onSubmit }) {
       await onSubmit({ memberId, amount: parseFloat(amount), dueDate, notes })
       setError(null)
     } catch (err) {
-      setError(err.message)
+      console.error('[Kasbon] NewKastonModal submit failed:', err)
+      setError(friendlyError(err, 'kasbon'))
     } finally {
       setLoading(false)
     }
@@ -516,7 +522,8 @@ function PaymentModal({ record, onClose, onSubmit }) {
       await onSubmit({ id: paymentId, amount: amt, paymentDate, paymentMethod, referenceNumber, notes })
       setError(null)
     } catch (err) {
-      setError(err.message)
+      console.error('[Kasbon] PaymentModal submit failed:', err)
+      setError(friendlyError(err, 'kasbon'))
     } finally {
       setLoading(false)
     }

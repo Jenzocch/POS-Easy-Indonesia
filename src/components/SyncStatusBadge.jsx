@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Cloud, CloudOff, ArrowUp, ArrowDown, RefreshCw, Check } from 'lucide-react'
 import { isCloudEnabled } from '../utils/supabaseClient'
 import { pushAll, pullAll } from '../utils/cloudSync'
+import { friendlyError } from '../utils/friendlyError'
 import { t } from '../i18n'
 
 function formatAgo(iso) {
@@ -45,7 +46,8 @@ export default function SyncStatusBadge({ onGoToSettings }) {
       setFeedback(`✓ ${t('sync.pushed', { n: total })}`)
       setTimeout(() => setFeedback(''), 3000)
     } catch (e) {
-      setFeedback(`✗ ${e.message}`)
+      console.error('[SyncStatusBadge] push failed:', e)
+      setFeedback(`✗ ${friendlyError(e, 'cloud')}`)
       setTimeout(() => setFeedback(''), 5000)
     }
     setBusy(null)
@@ -62,7 +64,8 @@ export default function SyncStatusBadge({ onGoToSettings }) {
       setFeedback(`✓ ${t('sync.pulled')}`)
       setTimeout(() => location.reload(), 800)
     } catch (e) {
-      setFeedback(`✗ ${e.message}`)
+      console.error('[SyncStatusBadge] pull failed:', e)
+      setFeedback(`✗ ${friendlyError(e, 'cloud')}`)
       setTimeout(() => setFeedback(''), 5000)
       setBusy(null)
     }

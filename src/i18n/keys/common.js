@@ -27,6 +27,12 @@ export default {
     'common.category': '分類',
     'common.error': '錯誤',
     'common.storage_error': '資料儲存失敗（儲存空間可能已滿）！最新的變更可能沒有保存，請立即匯出備份並清理舊資料。',
+
+    // friendlyError()：把原始例外訊息換成年長/低識字使用者看得懂、附下一步動作的白話文案
+    'errors.network': '沒有網路連線。請檢查 WiFi / 行動數據，然後再試一次。',
+    'errors.cloud_config': '雲端設定錯誤。請到「設定」檢查網址與金鑰。',
+    'errors.csv_format': '檔案格式不符。請確認使用正確的 CSV 檔案。',
+    'errors.generic': '發生問題。請再試一次，如果一直失敗請聯絡店主。',
   },
   en: {
     'common.confirm': 'Confirm',
@@ -54,6 +60,11 @@ export default {
     'common.category': 'Category',
     'common.error': 'Error',
     'common.storage_error': 'Failed to save data (storage may be full)! Recent changes may be lost — export a backup and clear old data now.',
+
+    'errors.network': 'No internet connection. Check your WiFi/mobile data, then try again.',
+    'errors.cloud_config': 'Cloud settings are wrong. Check the URL and key in Settings.',
+    'errors.csv_format': 'File format does not match. Make sure you are using the correct CSV file.',
+    'errors.generic': 'Something went wrong. Try again, or contact the shop owner if it keeps failing.',
   },
   id: {
     'common.confirm': 'Konfirmasi',
@@ -81,5 +92,10 @@ export default {
     'common.category': 'Kategori',
     'common.error': 'Kesalahan',
     'common.storage_error': 'Gagal menyimpan data (penyimpanan mungkin penuh)! Perubahan terbaru mungkin hilang — segera ekspor cadangan dan hapus data lama.',
+
+    'errors.network': 'Tidak ada koneksi internet. Periksa koneksi WiFi/data, lalu coba lagi.',
+    'errors.cloud_config': 'Pengaturan cloud salah. Periksa URL dan kunci di menu Pengaturan.',
+    'errors.csv_format': 'File tidak sesuai format. Pastikan menggunakan file CSV yang benar.',
+    'errors.generic': 'Terjadi masalah. Coba lagi, atau hubungi pemilik toko jika masih gagal.',
   },
 }
