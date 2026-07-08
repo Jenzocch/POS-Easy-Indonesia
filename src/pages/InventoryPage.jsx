@@ -7,6 +7,7 @@ import { parseCSV, stringifyCSV, downloadCSV, readFileAsText, PRODUCT_CSV_HEADER
 import { isLowStock, isOutOfStock } from '../utils/stock'
 import { friendlyError } from '../utils/friendlyError'
 import { t, fmtMoney, parseCurrencyInput } from '../i18n'
+import FieldLabel from '../components/FieldLabel'
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
 
 function BarcodeDisplay({ value }) {
@@ -845,10 +846,6 @@ export default function InventoryPage({ store }) {
       )}
     </div>
   )
-}
-
-function FieldLabel({ children }) {
-  return <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:5, letterSpacing:'.03em'}}>{children}</div>
 }
 
 const iv = {

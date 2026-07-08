@@ -17,6 +17,7 @@ import { getWebhookConfig, saveWebhookConfig, fireWebhook, WEBHOOK_EVENTS } from
 import { friendlyError } from '../utils/friendlyError'
 import { setSoundEnabledCache } from '../utils/sound'
 import { t, fmtMoney, formatDateTime, LanguageSwitcher } from '../i18n'
+import FL from '../components/FieldLabel'
 
 const TABS = [
   { key:'general',  label:t('settings.tab_general'),  Icon:Cog      },
@@ -1149,8 +1150,6 @@ function AuditTab({ session }) {
     </div>
   )
 }
-
-function FL({children}){return <div style={{fontSize:11,color:'var(--text-tertiary)',marginBottom:5,letterSpacing:'.03em'}}>{children}</div>}
 
 // ── Webhook 通知 ─────────────────────────────────────────────
 function WebhookTab({ session }) {

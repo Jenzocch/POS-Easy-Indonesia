@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Plus, X, Check, Tag, Clock, Percent, Gift } from 'lucide-react'
 import { writeAuditLog, sanitizeObject } from '../utils/security'
 import { t, fmtMoney } from '../i18n'
+import FieldLabel from '../components/FieldLabel'
 
 // 型別鍵值（threshold/percent/...）為儲存值，勿改；label/desc 僅供顯示
 export const PROMO_TYPES = {
@@ -142,12 +143,12 @@ export default function PromotionsPage({ store, session }) {
               <button className="btn-icon" onClick={()=>{setEditing(null);setForm(null)}}><X size={16}/></button>
             </div>
 
-            <FL>{t('promo.name_label')} *</FL>
+            <FieldLabel>{t('promo.name_label')} *</FieldLabel>
             <input className="field" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder={t('promo.name_ph')} style={{marginBottom:14}}/>
 
             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14}}>
-              <div><FL>{t('promo.start_at')}</FL><input type="datetime-local" className="field" value={form.startAt} onChange={e=>setForm(f=>({...f,startAt:e.target.value}))}/></div>
-              <div><FL>{t('promo.end_at')}</FL><input type="datetime-local" className="field" value={form.endAt}   onChange={e=>setForm(f=>({...f,endAt:e.target.value}))}/></div>
+              <div><FieldLabel>{t('promo.start_at')}</FieldLabel><input type="datetime-local" className="field" value={form.startAt} onChange={e=>setForm(f=>({...f,startAt:e.target.value}))}/></div>
+              <div><FieldLabel>{t('promo.end_at')}</FieldLabel><input type="datetime-local" className="field" value={form.endAt}   onChange={e=>setForm(f=>({...f,endAt:e.target.value}))}/></div>
             </div>
 
             {/* Condition fields by type */}
@@ -155,25 +156,25 @@ export default function PromotionsPage({ store, session }) {
               <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:10}}>{t('promo.condition')}</div>
               {form.type === 'threshold' && (
                 <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
-                  <div><FL>{t('promo.min_spend')}</FL><input type="number" inputMode="numeric" className="field" value={form.condition.threshold} onChange={e=>setForm(f=>({...f,condition:{...f.condition,threshold:parseFloat(e.target.value)||0}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
-                  <div><FL>{t('promo.discount_amt')}</FL><input type="number" inputMode="numeric" className="field" value={form.condition.discount} onChange={e=>setForm(f=>({...f,condition:{...f.condition,discount:parseFloat(e.target.value)||0}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
+                  <div><FieldLabel>{t('promo.min_spend')}</FieldLabel><input type="number" inputMode="numeric" className="field" value={form.condition.threshold} onChange={e=>setForm(f=>({...f,condition:{...f.condition,threshold:parseFloat(e.target.value)||0}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
+                  <div><FieldLabel>{t('promo.discount_amt')}</FieldLabel><input type="number" inputMode="numeric" className="field" value={form.condition.discount} onChange={e=>setForm(f=>({...f,condition:{...f.condition,discount:parseFloat(e.target.value)||0}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
                 </div>
               )}
               {form.type === 'percent' && (
-                <div><FL>{t('promo.rate_label')}</FL><input type="number" inputMode="decimal" min={0.1} max={1} step={0.05} className="field" value={form.condition.rate} onChange={e=>setForm(f=>({...f,condition:{...f.condition,rate:parseFloat(e.target.value)||0.9}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
+                <div><FieldLabel>{t('promo.rate_label')}</FieldLabel><input type="number" inputMode="decimal" min={0.1} max={1} step={0.05} className="field" value={form.condition.rate} onChange={e=>setForm(f=>({...f,condition:{...f.condition,rate:parseFloat(e.target.value)||0.9}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
               )}
               {form.type === 'buyget' && (
                 <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
-                  <div><FL>{t('promo.buy_qty')}</FL><input type="number" inputMode="numeric" className="field" value={form.condition.buy} onChange={e=>setForm(f=>({...f,condition:{...f.condition,buy:parseInt(e.target.value)||2}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
-                  <div><FL>{t('promo.get_qty')}</FL><input type="number" inputMode="numeric" className="field" value={form.condition.get} onChange={e=>setForm(f=>({...f,condition:{...f.condition,get:parseInt(e.target.value)||1}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
+                  <div><FieldLabel>{t('promo.buy_qty')}</FieldLabel><input type="number" inputMode="numeric" className="field" value={form.condition.buy} onChange={e=>setForm(f=>({...f,condition:{...f.condition,buy:parseInt(e.target.value)||2}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
+                  <div><FieldLabel>{t('promo.get_qty')}</FieldLabel><input type="number" inputMode="numeric" className="field" value={form.condition.get} onChange={e=>setForm(f=>({...f,condition:{...f.condition,get:parseInt(e.target.value)||1}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
                 </div>
               )}
               {form.type === 'fixed' && (
-                <div><FL>{t('promo.fixed_amt')}</FL><input type="number" inputMode="numeric" className="field" value={form.condition.discount} onChange={e=>setForm(f=>({...f,condition:{...f.condition,discount:parseFloat(e.target.value)||0}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
+                <div><FieldLabel>{t('promo.fixed_amt')}</FieldLabel><input type="number" inputMode="numeric" className="field" value={form.condition.discount} onChange={e=>setForm(f=>({...f,condition:{...f.condition,discount:parseFloat(e.target.value)||0}}))} style={{fontFamily:'var(--font-mono)'}}/></div>
               )}
             </div>
 
-            <FL>{t('promo.note_label')}</FL>
+            <FieldLabel>{t('promo.note_label')}</FieldLabel>
             <input className="field" value={form.note||''} onChange={e=>setForm(f=>({...f,note:e.target.value}))} placeholder={t('common.optional')} style={{marginBottom:16}}/>
 
             <div style={{display:'flex', gap:10}}>
@@ -196,8 +197,6 @@ function describeCondition(p) {
   if (p.type==='fixed')     return t('promo.desc_cond_fixed', { amt: fmtMoney(p.condition.discount) })
   return ''
 }
-
-function FL({children}){return <div style={{fontSize:11,color:'var(--text-tertiary)',marginBottom:5,letterSpacing:'.03em'}}>{children}</div>}
 
 const pm = {
   root:{display:'flex',flexDirection:'column',height:'100%',padding:'16px',gap:14,overflow:'hidden'},

@@ -4,6 +4,7 @@ import RefundModal from '../components/RefundModal'
 import { computeAllRFM } from '../utils/analytics'
 import { maskPhone } from '../utils/security'
 import { t, fmtMoney } from '../i18n'
+import FieldLabel from '../components/FieldLabel'
 
 // label 是 i18n key；tier 儲存值（normal/silver/gold）不變，顯示時才翻譯
 // min/max 門檻需跟 utils/analytics.js 的 memberTier() 保持一致（單一事實來源在那邊算 tier，
@@ -373,10 +374,6 @@ function StatCard({ label, value, color }) {
       <div style={{fontFamily:'var(--font-mono)', fontSize:16, fontWeight:500, color}}>{value}</div>
     </div>
   )
-}
-
-function FieldLabel({ children }) {
-  return <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:5, letterSpacing:'.03em'}}>{children}</div>
 }
 
 const ms = {

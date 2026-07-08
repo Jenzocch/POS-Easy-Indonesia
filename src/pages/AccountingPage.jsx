@@ -7,6 +7,7 @@ import {
 import { downloadCSV } from '../utils/csv'
 import { Download, Plus, Trash2, X, Check, ChevronDown, ChevronRight, BookOpen, TrendingUp, Scale, FileText } from 'lucide-react'
 import { t, fmtMoney } from '../i18n'
+import FieldLabel from '../components/FieldLabel'
 
 // 科目名稱只在顯示時翻譯：帳本資料存的是科目「代號」（如 '4101'），
 // accounting.js 的 ACCOUNTS 中文名稱為資料來源，不可更動。
@@ -436,10 +437,6 @@ function ExpenseView({ addManualEntry }) {
       </div>
     </div>
   )
-}
-
-function FieldLabel({ children }) {
-  return <div style={{fontSize:11,color:'var(--text-tertiary)',marginBottom:5,letterSpacing:'.03em'}}>{children}</div>
 }
 
 const ac = {
