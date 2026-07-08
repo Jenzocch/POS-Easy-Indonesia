@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Clock, Plus, Minus, LogIn, LogOut, FileText, AlertCircle } from 'lucide-react'
-import { t, fmtMoney } from '../i18n'
+import { t, fmtMoney, formatDateTime, formatTime } from '../i18n'
 
 export default function ShiftPage({ store, session }) {
   const { openShift, startShift, endShift, logCash, orders, shifts = [], cashLog: allCashLog = [] } = store
@@ -19,6 +19,9 @@ export default function ShiftPage({ store, session }) {
   const [cashAmount, setCashAmount] = useState('')
   const [cashType, setCashType] = useState('in')
   const [cashReason, setCashReason] = useState('')
+  // B2：交班結果原本用瀏覽器原生 alert() 顯示現金對帳，年長/低識字員工看不懂突兀的系統彈窗，
+  // 也沒有視覺語言可循。改成跟本頁其他對話框一致的 Modal，差額當成最醒目的主角數字。
+  const [closeSummary, setCloseSummary] = useState(null) // { expected, actual, diff }
 
   // 即時統計這班
   const shiftStats = (() => {
@@ -58,15 +61,12 @@ export default function ShiftPage({ store, session }) {
 
   async function handleClose() {
     const cash = parseFloat(closeCash) || 0
+    const expected = shiftStats?.expected || 0
     const r = await endShift(cash, closeNote)
     setShowClose(false); setCloseCash(''); setCloseNote('')
     if (r) {
-      const diff = (r.diff != null ? r.diff : (cash - shiftStats.expected))
-      alert(t('shift.close_summary', {
-        expected: fmtMoney(shiftStats.expected),
-        actual: fmtMoney(cash),
-        diff: `${diff >= 0 ? '+' : ''}${fmtMoney(diff)}`,
-      }))
+      const diff = (r.diff != null ? r.diff : (cash - expected))
+      setCloseSummary({ expected, actual: cash, diff })
     }
   }
 
@@ -110,7 +110,7 @@ export default function ShiftPage({ store, session }) {
               <div style={{fontSize:18, fontWeight:600}}>{openShift.cashier}</div>
               <div style={{fontSize:12, color:'var(--text-secondary)', marginTop:2}}>
                 <Clock size={11} style={{verticalAlign:'middle', marginRight:4}}/>
-                {t('shift.open')} {new Date(openShift.openTime).toLocaleString('zh-TW')}
+                {t('shift.open')} {formatDateTime(openShift.openTime)}
               </div>
             </div>
             <span className="badge badge-green">{t('shift.status_open')}</span>
@@ -139,7 +139,7 @@ export default function ShiftPage({ store, session }) {
                 <tbody>
                   {cashLog.map(c => (
                     <tr key={c.id}>
-                      <td>{new Date(c.time).toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})}</td>
+                      <td>{formatTime(c.time)}</td>
                       <td>
                         <span className={`badge badge-${c.type==='in'?'green':'red'}`}>{c.type==='in'?t('shift.in'):t('shift.out')}</span>
                       </td>
@@ -179,8 +179,8 @@ export default function ShiftPage({ store, session }) {
               {shifts.map(s => (
                 <tr key={s.id}>
                   <td>{s.cashier}</td>
-                  <td>{new Date(s.openTime).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
-                  <td>{s.closeTime ? new Date(s.closeTime).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-'}</td>
+                  <td>{new Date(s.openTime).toLocaleString('id-ID',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+                  <td>{s.closeTime ? new Date(s.closeTime).toLocaleString('id-ID',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-'}</td>
                   <td style={{textAlign:'right', fontFamily:'var(--font-mono)'}}>{fmtMoney(s.cashSales || 0)}</td>
                   <td style={{textAlign:'right', fontFamily:'var(--font-mono)'}}>{fmtMoney(s.cardSales || 0)}</td>
                   <td style={{textAlign:'right', fontFamily:'var(--font-mono)', color: s.diff > 0 ? 'var(--green)' : s.diff < 0 ? 'var(--red)' : 'inherit'}}>
@@ -259,6 +259,32 @@ export default function ShiftPage({ store, session }) {
           <button className="btn btn-primary" style={{width:'100%', padding:12, marginTop:12}} onClick={handleCash}>{t('shift.record')}</button>
         </Modal>
       )}
+
+      {closeSummary && (
+        <Modal title={t('shift.close_result_title')} onClose={()=>setCloseSummary(null)}>
+          <div style={{display:'flex', flexDirection:'column', gap:14}}>
+            <Row label={t('shift.expected_cash')} value={fmtMoney(closeSummary.expected)}/>
+            <Row label={t('shift.actual_cash')} value={fmtMoney(closeSummary.actual)}/>
+            <div style={{
+              textAlign:'center', padding:'18px 14px', borderRadius:10, marginTop:4,
+              background: closeSummary.diff >= 0 ? 'var(--green-dim)' : 'var(--red-dim)',
+            }}>
+              <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:6, textTransform:'uppercase', letterSpacing:'.04em'}}>
+                {t('shift.diff')}
+              </div>
+              <div style={{
+                fontFamily:'var(--font-mono)', fontWeight:700, fontSize:32, lineHeight:1.1,
+                color: closeSummary.diff >= 0 ? 'var(--green)' : 'var(--red)',
+              }}>
+                {closeSummary.diff >= 0 ? '+' : ''}{fmtMoney(closeSummary.diff)}
+              </div>
+            </div>
+          </div>
+          <button className="btn btn-primary" style={{width:'100%', padding:12, marginTop:16}} onClick={()=>setCloseSummary(null)}>
+            {t('common.confirm')}
+          </button>
+        </Modal>
+      )}
     </div>
   )
 }
@@ -277,6 +303,16 @@ function Field({ label, children }) {
     <div style={{marginBottom:10}}>
       <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:4}}>{label}</div>
       {children}
+    </div>
+  )
+}
+
+// B2：交班對帳彈窗用的簡單「標籤—數值」列（預期現金 / 實際現金），差額另外用醒目的大字呈現
+function Row({ label, value }) {
+  return (
+    <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:14}}>
+      <span style={{color:'var(--text-secondary)'}}>{label}</span>
+      <span style={{fontFamily:'var(--font-mono)', fontWeight:600}}>{value}</span>
     </div>
   )
 }

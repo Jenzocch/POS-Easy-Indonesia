@@ -450,16 +450,18 @@ export default function CartPanel({
                 )}
               </div>
             </div>
-            <div style={{display:'flex', alignItems:'center', gap:6}}>
-              <button style={cs.qtyBtn} onClick={()=>onUpdateQty(item.id,item.qty-1)}><Minus size={11}/></button>
-              <span style={{fontFamily:'var(--font-mono)', fontSize:13, minWidth:22, textAlign:'center', fontWeight:500}}>{item.qty}</span>
-              <button style={cs.qtyBtn} onClick={()=>onUpdateQty(item.id,item.qty+1)}><Plus size={11}/></button>
+            <div style={{display:'flex', alignItems:'center', gap:5}}>
+              <button style={cs.qtyBtn} onClick={()=>onUpdateQty(item.id,item.qty-1)}><Minus size={13}/></button>
+              <span style={{fontFamily:'var(--font-mono)', fontSize:13, minWidth:20, textAlign:'center', fontWeight:500}}>{item.qty}</span>
+              <button style={cs.qtyBtn} onClick={()=>onUpdateQty(item.id,item.qty+1)}><Plus size={13}/></button>
             </div>
             <div style={{textAlign:'right', minWidth:64}}>
               <div style={{fontFamily:'var(--font-mono)', fontSize:13, color:'var(--text-primary)', fontWeight:500}}>
                 {fmtMoney(item.price * item.qty)}
               </div>
-              <button style={{fontSize:10, color:'var(--text-tertiary)', marginTop:2, display:'block', marginLeft:'auto'}} onClick={()=>onRemove(item.id)}>{t('pos.remove')}</button>
+              {/* UX：移除鈕本身文字維持小字（fontSize:10），但點擊熱區用 padding 撐大到接近
+                  44px 觸控標準，靠負 margin 抵銷 padding 造成的視覺位移，方便年長使用者的手指操作 */}
+              <button style={{fontSize:10, color:'var(--text-tertiary)', marginTop:-4, marginRight:-8, display:'block', marginLeft:'auto', padding:'8px', borderRadius:'var(--r1)'}} onClick={()=>onRemove(item.id)}>{t('pos.remove')}</button>
             </div>
           </div>
         ))}
@@ -542,12 +544,15 @@ const cs = {
   },
   itemList:{ flex:1, overflowY:'auto', padding:'6px 0' },
   cartItem:{
-    display:'flex', alignItems:'center', gap:12,
-    padding:'12px 20px', borderBottom:'1px solid var(--border-dim)',
+    display:'flex', alignItems:'center', gap:10,
+    padding:'12px 16px', borderBottom:'1px solid var(--border-dim)',
     transition:'background var(--t2)',
   },
   qtyBtn:{
-    width:28, height:28, borderRadius:'var(--r2)',
+    // B1：原本 28×28 是全 App 點最多次的控制項卻遠低於 44px 觸控標準，對年長使用者的手指
+    // 特別不友善。放大到 40×40（購物車面板桌機寬 340px，行內還有商品名 + 價格，40px 是
+    // 兼顧觸控大小與版面不擠壓換行的折衷；cs.cartItem 那排已把其餘 gap 收緊配合）。
+    width:40, height:40, borderRadius:'var(--r2)',
     background:'var(--bg-overlay)', border:'1px solid var(--border-subtle)',
     color:'var(--text-secondary)',
     display:'flex', alignItems:'center', justifyContent:'center',

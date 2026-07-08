@@ -46,6 +46,9 @@ export default function InventoryPage({ store }) {
   const [showBatch, setShowBatch] = useState(false)
   const [batchForm, setBatchForm] = useState({ action: 'price', value: '', supplierId: '', category: '' })
   const [csvImport, setCsvImport] = useState(null) // { records, toAdd, toUpdate, errors }
+  // B2：CSV 讀檔失敗 / 匯入完成原本用 alert()，跟本頁其餘的 inline 回饋風格不一致、也擋住整個
+  // 畫面。改成跟頂部標題列同寬的小 banner，可手動關閉。{ type:'error'|'success', text }
+  const [csvMsg, setCsvMsg] = useState(null)
   const [showHistory, setShowHistory] = useState(false)
   const csvFileRef = useRef(null)
 
@@ -98,8 +101,9 @@ export default function InventoryPage({ store }) {
       })
 
       setCsvImport({ records, toAdd, toUpdate, errors })
+      setCsvMsg(null)
     } catch (err) {
-      alert(t('inv.csv_read_fail', { msg: err.message || err }))
+      setCsvMsg({ type:'error', text: t('inv.csv_read_fail', { msg: err.message || err }) })
     }
     if (csvFileRef.current) csvFileRef.current.value = ''
   }
@@ -115,9 +119,11 @@ export default function InventoryPage({ store }) {
       const { id: _, supplierName, stock, ...rest } = data
       updateProduct(id, rest)
     })
-    const total = csvImport.toAdd.length + csvImport.toUpdate.length
+    const added = csvImport.toAdd.length
+    const updated = csvImport.toUpdate.length
+    const total = added + updated
     setCsvImport(null)
-    alert(t('inv.import_done', { added: csvImport.toAdd.length, updated: csvImport.toUpdate.length, total }))
+    setCsvMsg({ type:'success', text: t('inv.import_done', { added, updated, total }) })
   }
 
   function toggleAll(visibleIds, checked) {
@@ -303,6 +309,19 @@ export default function InventoryPage({ store }) {
           <Plus size={15}/>{t('inv.add_product')}
         </button>
       </div>
+
+      {csvMsg && (
+        <div style={{
+          display:'flex', alignItems:'center', justifyContent:'space-between', gap:10,
+          padding:'10px 14px', marginBottom:10, borderRadius:8,
+          background: csvMsg.type==='error' ? 'var(--red-dim)' : 'var(--green-dim)',
+          color: csvMsg.type==='error' ? 'var(--red)' : 'var(--green)',
+          fontSize:13, fontWeight:500,
+        }} className="animate-in">
+          <span>{csvMsg.text}</span>
+          <button className="btn-icon btn-sm" onClick={()=>setCsvMsg(null)} style={{color:'inherit', flexShrink:0}}><X size={14}/></button>
+        </div>
+      )}
 
       <div style={iv.toolbar}>
         <input className="field" value={search} onChange={e=>setSearch(e.target.value)} placeholder={t('inv.search_ph')} style={{flex:1, maxWidth:280, padding:'8px 12px'}}/>
@@ -545,7 +564,7 @@ export default function InventoryPage({ store }) {
                                 <span style={{color:'var(--text-tertiary)', fontSize:11}}>{h.note}</span>
                               </div>
                               <div style={{fontSize:10, color:'var(--text-tertiary)', marginTop:2, fontFamily:'var(--font-mono)'}}>
-                                {new Date(h.time).toLocaleString('zh-TW',{ month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit' })}
+                                {new Date(h.time).toLocaleString('id-ID',{ month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit' })}
                                 {h.unitPrice ? ` · @${fmtMoney(h.unitPrice)}` : ''}
                               </div>
                             </div>
