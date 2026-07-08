@@ -5,6 +5,7 @@ import { DEFAULT_CATEGORIES, CATEGORY_META, groupByCategory } from '../utils/cat
 import { computeSalesVelocity, suggestReorderQty } from '../utils/analytics'
 import useIsMobile from '../hooks/useIsMobile'
 import { t, fmtMoney } from '../i18n'
+import FieldLabel from '../components/FieldLabel'
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
 
 // 狀態值（draft/ordered/...）為儲存值，勿改；label 僅供顯示
@@ -324,14 +325,14 @@ function NewPurchase({ products, suppliers, purchases, orders = [], onSave }) {
     <div style={{maxWidth:780, display:'flex', flexDirection:'column', gap:16, overflowY:'auto', height:'100%'}}>
       <div style={np.topGrid}>
         <div>
-          <FL>{t('purchase.supplier')} *</FL>
+          <FieldLabel>{t('purchase.supplier')} *</FieldLabel>
           <select className="field" value={supplierId} onChange={e=>{setSupplierId(e.target.value);setAddProdId('')}} style={{cursor:'pointer'}}>
             <option value="">{t('purchase.choose_supplier')}</option>
             {suppliers.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <div>
-          <FL>{t('purchase.order_date')}</FL>
+          <FieldLabel>{t('purchase.order_date')}</FieldLabel>
           <input type="date" className="field" value={date} onChange={e=>setDate(e.target.value)}/>
         </div>
       </div>
@@ -353,7 +354,7 @@ function NewPurchase({ products, suppliers, purchases, orders = [], onSave }) {
       {/* 分類篩選 chips（只在選了供應商且有多個分類時顯示）*/}
       {supplierId && availableCategories.length > 0 && (
         <div>
-          <FL>{t('purchase.category_filter')}</FL>
+          <FieldLabel>{t('purchase.category_filter')}</FieldLabel>
           <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
             <button
               onClick={()=>setCatFilter('all')}
@@ -412,7 +413,7 @@ function NewPurchase({ products, suppliers, purchases, orders = [], onSave }) {
       )}
 
       <div>
-        <FL>{t('purchase.add_product')} {supplierId && t('purchase.limited_to', {name: supplier?.name})}</FL>
+        <FieldLabel>{t('purchase.add_product')} {supplierId && t('purchase.limited_to', {name: supplier?.name})}</FieldLabel>
         <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
           <button
             className="btn btn-ghost btn-sm"
@@ -484,7 +485,7 @@ function NewPurchase({ products, suppliers, purchases, orders = [], onSave }) {
       )}
 
       <div>
-        <FL>{t('common.notes')}</FL>
+        <FieldLabel>{t('common.notes')}</FieldLabel>
         <input className="field" value={note} onChange={e=>setNote(e.target.value)} placeholder={t('purchase.optional_ph')}/>
       </div>
 
@@ -733,7 +734,7 @@ function SupplierList({ suppliers, products = [], onAdd, onUpdate, onGoInventory
             </div>
             {[['name',`${t('common.name')} *`],['contact',t('purchase.contact')],['payTerms',t('purchase.pay_terms')],['note',t('common.notes')]].map(([k,l])=>(
               <div key={k} style={{marginBottom:12}}>
-                <FL>{l}</FL>
+                <FieldLabel>{l}</FieldLabel>
                 <input className="field" value={form[k]||''} onChange={e=>setForm(f=>({...f,[k]:e.target.value}))} placeholder={l}/>
               </div>
             ))}
@@ -747,8 +748,6 @@ function SupplierList({ suppliers, products = [], onAdd, onUpdate, onGoInventory
     </div>
   )
 }
-
-function FL({children}){return <div style={{fontSize:11,color:'var(--text-tertiary)',marginBottom:5,letterSpacing:'.03em'}}>{children}</div>}
 
 function PayableTab({ purchases, suppliers, onMarkPaid }) {
   // 已收貨但未付款 = 應付帳款
