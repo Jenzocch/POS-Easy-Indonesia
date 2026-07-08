@@ -16,6 +16,7 @@ import {
   loadPromotions, dbAddPromotion, dbUpdatePromotion, dbDeletePromotion,
   getSetting, setSetting,
 } from '../utils/dataAccess'
+import { loadSoundEnabledCache } from '../utils/sound'
 import { fireWebhook, payloadFromOrder, payloadFromLowStock, payloadFromShift, payloadFromExpiring, getWebhookConfig } from '../utils/webhook'
 import { getReorderList, getExpiringProducts, memberTier } from '../utils/analytics'
 import { needsRestock } from '../utils/stock'
@@ -219,6 +220,8 @@ export function useStore(){
         })
         setBirthdayBonus(parseInt(bday) || 100)
       } catch {}
+      // 音效開關：模組層快取一次載入即可，之後由 SettingsPage 的 onChange 即時更新
+      loadSoundEnabledCache().catch(() => {})
       setReady(true)
     }
     init()

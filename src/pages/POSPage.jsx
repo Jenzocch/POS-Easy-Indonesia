@@ -7,6 +7,7 @@ import { CATEGORY_META } from '../utils/categories'
 import { isLowStock, isOutOfStock } from '../utils/stock'
 import { daysUntilExpiry } from '../utils/analytics'
 import useIsMobile from '../hooks/useIsMobile'
+import { playSuccessBeep, playErrorBeep } from '../utils/sound'
 import { t, fmtMoney } from '../i18n'
 // lazy load html5-qrcode (~340KB) — 只在點相機掃描才載入
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
@@ -53,8 +54,8 @@ export default function POSPage({ store, session }) {
 
   const handleScan = useCallback(code => {
     const p = findByBarcode(code)
-    if (p) { addToCart(p); showFeedback(true, t('pos.added_to_cart', { name: p.name })) }
-    else showFeedback(false, t('pos.barcode_not_found', { code }))
+    if (p) { addToCart(p); showFeedback(true, t('pos.added_to_cart', { name: p.name })); playSuccessBeep() }
+    else { showFeedback(false, t('pos.barcode_not_found', { code })); playErrorBeep() }
   }, [findByBarcode, addToCart])
 
   const handleHold = useCallback(async (label) => {
@@ -296,8 +297,8 @@ export default function POSPage({ store, session }) {
             mode="continuous"
             onScan={(code) => {
               const p = findByBarcode(code)
-              if (p) { addToCart(p); showFeedback(true, t('pos.added_to_cart', { name: p.name })) }
-              else showFeedback(false, t('pos.barcode_not_found', { code }))
+              if (p) { addToCart(p); showFeedback(true, t('pos.added_to_cart', { name: p.name })); playSuccessBeep() }
+              else { showFeedback(false, t('pos.barcode_not_found', { code })); playErrorBeep() }
               return 'keep'
             }}
             onClose={() => setShowCamera(false)}
