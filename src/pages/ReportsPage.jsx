@@ -20,7 +20,12 @@ export default function ReportsPage({ store, session }) {
 
   const now = new Date()
   // 排除完整退貨配對；部分退貨保留兩邊（原訂單 + 負數退貨訂單），總額自動抵銷正確
-  const orders = rawOrders.filter(o => o.status !== 'refunded' && !(o.refundOf && o.fullRefund))
+  // PERF：orders 若每次 render 都重新 filter，會產生新陣列參照，讓下面所有依賴 orders 的
+  // useMemo（filtered/prev/hourly）全部失效重算——用 useMemo 鎖住參照，只在 rawOrders 變動時重算
+  const orders = useMemo(
+    () => rawOrders.filter(o => o.status !== 'refunded' && !(o.refundOf && o.fullRefund)),
+    [rawOrders]
+  )
   const filtered = useMemo(() => orders.filter(o => {
     const d = new Date(o.time)
     if (range === 'today') return d.toDateString() === now.toDateString()

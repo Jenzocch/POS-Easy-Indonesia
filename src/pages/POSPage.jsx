@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense, memo } from 'react'
 import { Search, ScanLine, X, Tag, ShoppingCart, DollarSign, Pause, Eye, Clock, Camera } from 'lucide-react'
 import CartPanel from '../components/CartPanel'
 import HeldOrdersModal from '../components/HeldOrdersModal'
@@ -108,6 +108,14 @@ export default function POSPage({ store, session }) {
   const allCats = ['全部', ...categories]
   const cartCount = cart.reduce((s,i)=>s+i.qty, 0)
 
+  // PERF：category tab 的商品數原本每個 tab 每次 render 都重新 filter 全部商品（O(categories × products)），
+  // 搜尋打字時尤其明顯——改成一次遍歷建計數表
+  const catCounts = useMemo(() => {
+    const map = { '全部': products.length }
+    for (const p of products) map[p.category] = (map[p.category] || 0) + 1
+    return map
+  }, [products])
+
   // 班別檢查
   if (!openShift) {
     return (
@@ -202,7 +210,7 @@ export default function POSPage({ store, session }) {
         <div style={ps.catWrap}>
           {allCats.map(cat => {
             const meta = CATEGORY_META[cat]
-            const count = cat === '全部' ? products.length : products.filter(p => p.category === cat).length
+            const count = catCounts[cat] || 0
             return (
               <button key={cat} onClick={() => setCategory(cat)} style={{
                 ...ps.catTab,
@@ -221,7 +229,7 @@ export default function POSPage({ store, session }) {
 
         <div style={{...ps.grid, gridTemplateColumns: isMobile ? 'repeat(auto-fill, minmax(100px, 1fr))' : 'repeat(auto-fill, minmax(130px, 1fr))'}}>
           {filtered.map((p, idx) => (
-            <ProductCard key={p.id} product={p} idx={idx} onAdd={() => addToCart(p)} isMobile={isMobile}/>
+            <ProductCard key={p.id} product={p} idx={idx} onAdd={addToCart} isMobile={isMobile}/>
           ))}
           {filtered.length === 0 && (
             <div style={ps.empty}>
@@ -300,7 +308,9 @@ export default function POSPage({ store, session }) {
   )
 }
 
-function ProductCard({ product, onAdd, idx, isMobile }) {
+// PERF：搭配 POSPage 傳入的穩定 onAdd（=store.addToCart，非每次 render 新建的 closure）+ memo，
+// 加購物車時只有數量真的變動的商品會重渲染，不會拖動整個商品格網重繪（原本是掉幀主因之一）
+const ProductCard = memo(function ProductCard({ product, onAdd, idx, isMobile }) {
   const { name, category, price, stock, noBarcode, imageUrl, expiryDate } = product
   const low  = isLowStock(product)   // 1..5：顯示低庫存
   const zero = isOutOfStock(product) // <=0：顯示缺貨、禁點
@@ -309,7 +319,7 @@ function ProductCard({ product, onAdd, idx, isMobile }) {
   const expWarn = expSoon != null && expSoon <= 7
 
   return (
-    <button className="animate-up pos-card cv-card" onClick={onAdd} disabled={zero}
+    <button className="animate-up pos-card cv-card" onClick={() => onAdd(product)} disabled={zero}
       style={{
         ...ps.card,
         animationDelay: `${Math.min(idx * 20, 300)}ms`,
@@ -352,7 +362,7 @@ function ProductCard({ product, onAdd, idx, isMobile }) {
       </div>
     </button>
   )
-}
+})
 
 const ps = {
   root:{ display:'flex', height:'100%', background:'var(--bg-base)', outline:'none', position:'relative' },

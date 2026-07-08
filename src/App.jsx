@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { Menu, X, Cloud, AlertTriangle } from 'lucide-react'
 import { useStore } from './store/useStore'
 import { getSession, destroySession, writeAuditLog, startIdleTimer, hasPermission, createBackup } from './utils/security'
@@ -6,20 +6,22 @@ import { getCloudConfig } from './utils/supabaseClient'
 import { pullAll } from './utils/cloudSync'
 import LoginScreen from './pages/LoginScreen'
 import Sidebar from './components/Sidebar'
-import POSPage from './pages/POSPage'
-import InventoryPage from './pages/InventoryPage'
-import MembersPage from './pages/MembersPage'
-import ReportsPage from './pages/ReportsPage'
-import AccountingPage from './pages/AccountingPage'
-import PurchasePage from './pages/PurchasePage'
-import StocktakePage from './pages/StocktakePage'
-import PromotionsPage from './pages/PromotionsPage'
-import SettingsPage from './pages/SettingsPage'
-import OrdersPage from './pages/OrdersPage'
-import DashboardPage from './pages/DashboardPage'
-import ShiftPage from './pages/ShiftPage'
-import WastePage from './pages/WastePage'
-import KastonPage from './pages/KastonPage'
+// PERF：14 個頁面原本全部靜態 import，擠在同一個主 bundle 裡（含 jsbarcode/qrcode/exportXLS 等重依賴），
+// 拖慢首次載入；改成 lazy 讓每頁只在真的切進去時才下載自己的 chunk
+const POSPage        = lazy(() => import('./pages/POSPage'))
+const InventoryPage  = lazy(() => import('./pages/InventoryPage'))
+const MembersPage    = lazy(() => import('./pages/MembersPage'))
+const ReportsPage    = lazy(() => import('./pages/ReportsPage'))
+const AccountingPage = lazy(() => import('./pages/AccountingPage'))
+const PurchasePage   = lazy(() => import('./pages/PurchasePage'))
+const StocktakePage  = lazy(() => import('./pages/StocktakePage'))
+const PromotionsPage = lazy(() => import('./pages/PromotionsPage'))
+const SettingsPage   = lazy(() => import('./pages/SettingsPage'))
+const OrdersPage     = lazy(() => import('./pages/OrdersPage'))
+const DashboardPage  = lazy(() => import('./pages/DashboardPage'))
+const ShiftPage      = lazy(() => import('./pages/ShiftPage'))
+const WastePage      = lazy(() => import('./pages/WastePage'))
+const KastonPage     = lazy(() => import('./pages/KastonPage'))
 import { isElectron } from './utils/dataAccess'
 import useIsMobile from './hooks/useIsMobile'
 import { t } from './i18n'
@@ -162,20 +164,26 @@ export default function App() {
           </div>
         )}
         <main style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
-          {view === 'dashboard'  && can('pos.use')         && <DashboardPage  store={store} session={session}/>}
-          {view === 'pos'        && can('pos.use')         && <POSPage        store={store} session={session}/>}
-          {view === 'shifts'     && can('pos.use')         && <ShiftPage      store={store} session={session}/>}
-          {view === 'inventory'  && can('inventory.view')  && <InventoryPage  store={store} session={session}/>}
-          {view === 'waste'      && can('inventory.view')  && <WastePage      store={store} session={session}/>}
-          {view === 'members'    && can('members.view')    && <MembersPage    store={store} session={session}/>}
-          {view === 'reports'    && can('reports.view')    && <ReportsPage    store={store} session={session}/>}
-          {view === 'accounting' && can('accounting.view') && <AccountingPage store={store} session={session}/>}
-          {view === 'purchase'   && can('purchase.view')   && <PurchasePage   store={store} session={session}/>}
-          {view === 'stocktake'  && can('stocktake.view')  && <StocktakePage  store={store} session={session}/>}
-          {view === 'promotions' && can('promotions.view') && <PromotionsPage store={store} session={session}/>}
-          {view === 'kasbon'     && can('accounting.view') && <KastonPage     store={store} session={session}/>}
-          {view === 'orders'     && can('pos.use')         && <OrdersPage />}
-          {view === 'settings'   && can('settings.view')   && <SettingsPage   session={session} onLogout={handleLogout} store={store}/>}
+          <Suspense fallback={
+            <div style={{display:'flex',alignItems:'center',justifyContent:'center',flex:1,color:'var(--text-secondary)',fontSize:14}}>
+              {t('common.loading')}
+            </div>
+          }>
+            {view === 'dashboard'  && can('pos.use')         && <DashboardPage  store={store} session={session}/>}
+            {view === 'pos'        && can('pos.use')         && <POSPage        store={store} session={session}/>}
+            {view === 'shifts'     && can('pos.use')         && <ShiftPage      store={store} session={session}/>}
+            {view === 'inventory'  && can('inventory.view')  && <InventoryPage  store={store} session={session}/>}
+            {view === 'waste'      && can('inventory.view')  && <WastePage      store={store} session={session}/>}
+            {view === 'members'    && can('members.view')    && <MembersPage    store={store} session={session}/>}
+            {view === 'reports'    && can('reports.view')    && <ReportsPage    store={store} session={session}/>}
+            {view === 'accounting' && can('accounting.view') && <AccountingPage store={store} session={session}/>}
+            {view === 'purchase'   && can('purchase.view')   && <PurchasePage   store={store} session={session}/>}
+            {view === 'stocktake'  && can('stocktake.view')  && <StocktakePage  store={store} session={session}/>}
+            {view === 'promotions' && can('promotions.view') && <PromotionsPage store={store} session={session}/>}
+            {view === 'kasbon'     && can('accounting.view') && <KastonPage     store={store} session={session}/>}
+            {view === 'orders'     && can('pos.use')         && <OrdersPage />}
+            {view === 'settings'   && can('settings.view')   && <SettingsPage   session={session} onLogout={handleLogout} store={store}/>}
+          </Suspense>
         </main>
       </div>
 
