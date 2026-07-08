@@ -53,12 +53,12 @@ export function validateCreateKasbon({ memberId, amount, dueDate, notes }) {
   }
 }
 
-export function validateRecordPayment({ kastonRecordId, amount, paymentDate, paymentMethod, balanceDue }) {
+export function validateRecordPayment({ kasbonRecordId, amount, paymentDate, paymentMethod, balanceDue }) {
   const errors = []
 
   // Required fields
-  if (!kastonRecordId || typeof kastonRecordId !== 'string') {
-    errors.push('kastonRecordId is required and must be string')
+  if (!kasbonRecordId || typeof kasbonRecordId !== 'string') {
+    errors.push('kasbonRecordId is required and must be string')
   }
 
   // Amount validation
@@ -97,7 +97,7 @@ export function validateRecordPayment({ kastonRecordId, amount, paymentDate, pay
 /**
  * Validate Kasbon limits for subscription tier
  */
-export function validateKastonLimit(currentBalance, newAmount, tierLimit) {
+export function validateKasbonLimit(currentBalance, newAmount, tierLimit) {
   if (currentBalance + newAmount > tierLimit) {
     return {
       valid: false,

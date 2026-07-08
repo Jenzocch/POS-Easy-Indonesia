@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Plus, Search, X, AlertCircle } from 'lucide-react'
 import { t, fmtMoney } from '../i18n'
-import { isElectron, loadKastonRecords, createKasbon, recordKastonPayment, getKastonAgingReport } from '../utils/dataAccess'
+import { isElectron, loadKasbonRecords, createKasbon, recordKasbonPayment, getKasbonAgingReport } from '../utils/dataAccess'
 import { friendlyError } from '../utils/friendlyError'
 
 const TABS = [
@@ -10,7 +10,7 @@ const TABS = [
   { id: 'reports', label: 'kasbon.reports' },
 ]
 
-export default function KastonPage({ store, session }) {
+export default function KasbonPage({ store, session }) {
   const [activeTab, setActiveTab] = useState('active')
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(false)
@@ -30,7 +30,7 @@ export default function KastonPage({ store, session }) {
   const loadRecords = async () => {
     try {
       setLoading(true)
-      const data = await loadKastonRecords()
+      const data = await loadKasbonRecords()
       if (data.success) {
         setRecords(data.data || [])
       }
@@ -44,7 +44,7 @@ export default function KastonPage({ store, session }) {
 
   const loadAgingReport = async () => {
     try {
-      const data = await getKastonAgingReport()
+      const data = await getKasbonAgingReport()
       if (data.success) {
         setAgingReport(data.data)
       }
@@ -124,7 +124,7 @@ export default function KastonPage({ store, session }) {
 
   const handleRecordPayment = async (formData) => {
     try {
-      const response = await recordKastonPayment(selectedRecord.id, formData)
+      const response = await recordKasbonPayment(selectedRecord.id, formData)
       if (response.success) {
         // Update record in list
         setRecords(records.map(r =>
@@ -136,7 +136,7 @@ export default function KastonPage({ store, session }) {
         setError(response.error || t('kasbon.payment_failed'))
       }
     } catch (err) {
-      console.error('[Kasbon] recordKastonPayment failed:', err)
+      console.error('[Kasbon] recordKasbonPayment failed:', err)
       setError(friendlyError(err, 'kasbon'))
     }
   }
@@ -205,7 +205,7 @@ export default function KastonPage({ store, session }) {
 
       {/* Modals */}
       {showNewModal && (
-        <NewKastonModal
+        <NewKasbonModal
           members={store.members}
           onClose={() => setShowNewModal(false)}
           onSubmit={handleNewKasbon}
@@ -406,7 +406,7 @@ function ReportsTab({ data, loading }) {
 }
 
 // New Kasbon modal
-function NewKastonModal({ members, onClose, onSubmit }) {
+function NewKasbonModal({ members, onClose, onSubmit }) {
   const [memberId, setMemberId] = useState('')
   const [amount, setAmount] = useState('')
   const [dueDate, setDueDate] = useState('')
@@ -425,7 +425,7 @@ function NewKastonModal({ members, onClose, onSubmit }) {
       await onSubmit({ memberId, amount: parseFloat(amount), dueDate, notes })
       setError(null)
     } catch (err) {
-      console.error('[Kasbon] NewKastonModal submit failed:', err)
+      console.error('[Kasbon] NewKasbonModal submit failed:', err)
       setError(friendlyError(err, 'kasbon'))
     } finally {
       setLoading(false)

@@ -21,7 +21,7 @@ const OrdersPage     = lazy(() => import('./pages/OrdersPage'))
 const DashboardPage  = lazy(() => import('./pages/DashboardPage'))
 const ShiftPage      = lazy(() => import('./pages/ShiftPage'))
 const WastePage      = lazy(() => import('./pages/WastePage'))
-const KastonPage     = lazy(() => import('./pages/KastonPage'))
+const KasbonPage     = lazy(() => import('./pages/KasbonPage'))
 import { isElectron } from './utils/dataAccess'
 import useIsMobile from './hooks/useIsMobile'
 import { t } from './i18n'
@@ -180,7 +180,7 @@ export default function App() {
             {view === 'purchase'   && can('purchase.view')   && <PurchasePage   store={store} session={session}/>}
             {view === 'stocktake'  && can('stocktake.view')  && <StocktakePage  store={store} session={session}/>}
             {view === 'promotions' && can('promotions.view') && <PromotionsPage store={store} session={session}/>}
-            {view === 'kasbon'     && can('accounting.view') && <KastonPage     store={store} session={session}/>}
+            {view === 'kasbon'     && can('accounting.view') && <KasbonPage     store={store} session={session}/>}
             {view === 'orders'     && can('pos.use')         && <OrdersPage />}
             {view === 'settings'   && can('settings.view')   && <SettingsPage   session={session} onLogout={handleLogout} store={store}/>}
           </Suspense>

@@ -9,10 +9,10 @@
 
 ## v2.5.0 新增功能
 
-### Kasbon 賒帳/信用額度（`electron/kasbon-shared.js`、`src/pages/KastonPage.jsx`）
+### Kasbon 賒帳/信用額度（`electron/kasbon-shared.js`、`src/pages/KasbonPage.jsx`）
 - 商業邏輯集中在 `electron/kasbon-shared.js`（純 CJS，供 `main.js` 的 IPC handlers 使用，不 require `src/`；`KASBON_LIMITS` 分級額度定義的 source of truth）。桌面 UI 一律走 IPC，賒帳沒有對外 HTTP 端點
 - 資料表：`kasbon_records`（賒帳主檔）、`kasbon_payments`（還款紀錄，FK CASCADE → kasbon_records）、`member_kasbon_balance`（會員賒帳彙總，含黑名單旗標）
-- 前端：`src/pages/KastonPage.jsx`（Sidebar 新增「賒帳」導航項、`App.jsx` 新增 `kasbon` route）、`src/utils/kasbon-validation.js`（含測試 `kasbon-validation.test.js`）、`src/i18n/keys/kasbon.js`（賒帳專用翻譯字串）
+- 前端：`src/pages/KasbonPage.jsx`（Sidebar 新增「賒帳」導航項、`App.jsx` 新增 `kasbon` route）、`src/utils/kasbon-validation.js`（含測試 `kasbon-validation.test.js`）、`src/i18n/keys/kasbon.js`（賒帳專用翻譯字串）
 - 備份/還原相容：舊備份無 kasbon 鍵時「保留」本機現有賒帳資料不清空，並由存活的 `kasbon_records` 重算 `member_kasbon_balance`
 
 ### 授權金鑰系統（`electron/license.js`、`tools/generate-license.js`）
@@ -159,7 +159,7 @@ pos-system/
 │   │   ├── PurchasePage     ← 進貨 + 應付帳款
 │   │   ├── PromotionsPage   ← 促銷
 │   │   ├── MembersPage      ← 會員（含儲值/退貨）
-│   │   ├── KastonPage       ← Kasbon 賒帳/信用額度（含還款、AR 帳齡報表）
+│   │   ├── KasbonPage       ← Kasbon 賒帳/信用額度（含還款、AR 帳齡報表）
 │   │   ├── ReportsPage      ← 報表 + ABC 分類 + Excel 匯出
 │   │   ├── AccountingPage   ← 會計帳務（複式記帳）
 │   │   ├── OrdersPage       ← 顧客點餐管理

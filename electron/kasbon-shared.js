@@ -54,10 +54,10 @@ function validateCreateKasbon({ memberId, amount, dueDate, notes }) {
   return { valid: errors.length === 0, errors }
 }
 
-function validateRecordPayment({ kastonRecordId, amount, paymentDate, paymentMethod, balanceDue }) {
+function validateRecordPayment({ kasbonRecordId, amount, paymentDate, paymentMethod, balanceDue }) {
   const errors = []
-  if (!kastonRecordId || typeof kastonRecordId !== 'string') {
-    errors.push('kastonRecordId is required and must be string')
+  if (!kasbonRecordId || typeof kasbonRecordId !== 'string') {
+    errors.push('kasbonRecordId is required and must be string')
   }
   if (typeof amount !== 'number' || !isFinite(amount) || amount <= 0) {
     errors.push('amount must be positive number')
@@ -77,7 +77,7 @@ function validateRecordPayment({ kastonRecordId, amount, paymentDate, paymentMet
   return { valid: errors.length === 0, errors }
 }
 
-function validateKastonLimit(currentBalance, newAmount, tierLimit) {
+function validateKasbonLimit(currentBalance, newAmount, tierLimit) {
   if (currentBalance + newAmount > tierLimit) {
     return {
       valid: false,
@@ -110,7 +110,7 @@ function enrichRecord(db, r) {
   let member = null
   let payments = []
   try { member = db.getMemberById(r.memberId) } catch { /* 顯示層資訊，失敗不致命 */ }
-  try { payments = db.getKastonPayments(r.id) || [] } catch { /* 同上 */ }
+  try { payments = db.getKasbonPayments(r.id) || [] } catch { /* 同上 */ }
   return {
     ...r,
     memberName: (member && member.name) || '',
@@ -147,17 +147,17 @@ function createKasbon(db, subscription, body) {
       return { success: false, error: 'Member not found', httpStatus: 404 }
     }
 
-    const memberBalance = db.getMemberKastonBalance(memberId)
+    const memberBalance = db.getMemberKasbonBalance(memberId)
     const currentBalance = (memberBalance && memberBalance.balanceDue) || 0
 
     // 單一會員額度
-    const limitCheck = validateKastonLimit(currentBalance, amount, limits.perMember)
+    const limitCheck = validateKasbonLimit(currentBalance, amount, limits.perMember)
     if (!limitCheck.valid) {
       return { success: false, error: limitCheck.error, exceeded: limitCheck.difference, httpStatus: 422 }
     }
 
     // 全店應收帳款總額（透過 database.js 的包裝方法，不直接 db.prepare）
-    const storeTotal = db.getKastonStoreTotal()
+    const storeTotal = db.getKasbonStoreTotal()
     if (storeTotal + amount > limits.perStore) {
       return {
         success: false,
@@ -169,7 +169,7 @@ function createKasbon(db, subscription, body) {
       }
     }
 
-    const result = db.addKastonRecord({
+    const result = db.addKasbonRecord({
       memberId,
       principalAmount: amount,
       transactionType: 'credit_sale',
@@ -182,7 +182,7 @@ function createKasbon(db, subscription, body) {
       return { success: false, error: (result && result.error) || 'Failed to create kasbon record', httpStatus: 500 }
     }
 
-    const record = enrichRecord(db, db.getKastonRecord(result.id))
+    const record = enrichRecord(db, db.getKasbonRecord(result.id))
     return {
       success: true,
       data: record,
@@ -197,17 +197,17 @@ function createKasbon(db, subscription, body) {
 function recordPayment(db, body) {
   try {
     const input = body || {}
-    const kastonRecordId = input.kastonRecordId
+    const kasbonRecordId = input.kasbonRecordId
     const amount = Math.round(Number(input.amount) || 0)
     const paymentDate = input.paymentDate || new Date().toISOString()
 
     // Idempotency：UI 每次開付款視窗產生一次性 id。同 id 重送（連點）在「驗證之前」
     // 就回報成功 — 若先跑驗證，第一筆已入帳會讓餘額變小，重送反而撞
     // 'amount exceeds balance due'，收銀員誤以為沒收到款而再收一次。
-    if (input.id && typeof db.getKastonPaymentById === 'function') {
-      const existingPayment = db.getKastonPaymentById(input.id)
+    if (input.id && typeof db.getKasbonPaymentById === 'function') {
+      const existingPayment = db.getKasbonPaymentById(input.id)
       if (existingPayment) {
-        const replayRecord = enrichRecord(db, db.getKastonRecord(existingPayment.kasbon_record_id))
+        const replayRecord = enrichRecord(db, db.getKasbonRecord(existingPayment.kasbon_record_id))
         return {
           success: true,
           duplicate: true,
@@ -220,13 +220,13 @@ function recordPayment(db, body) {
       }
     }
 
-    const record = kastonRecordId ? db.getKastonRecord(kastonRecordId) : null
+    const record = kasbonRecordId ? db.getKasbonRecord(kasbonRecordId) : null
     if (!record) {
       return { success: false, error: 'Kasbon record not found', httpStatus: 404 }
     }
 
     const validation = validateRecordPayment({
-      kastonRecordId,
+      kasbonRecordId,
       amount,
       paymentDate,
       paymentMethod: input.paymentMethod,
@@ -237,9 +237,9 @@ function recordPayment(db, body) {
       return { success: false, error: 'Validation failed', errors: validation.errors, httpStatus: 400 }
     }
 
-    const result = db.recordKastonPayment({
+    const result = db.recordKasbonPayment({
       id: input.id || undefined,
-      kastonRecordId,
+      kasbonRecordId,
       amount,
       paymentDate,
       paymentMethod: input.paymentMethod || 'cash',
@@ -251,7 +251,7 @@ function recordPayment(db, body) {
       return { success: false, error: (result && result.error) || 'Failed to record payment', httpStatus: 400 }
     }
 
-    const updatedRecord = enrichRecord(db, db.getKastonRecord(kastonRecordId))
+    const updatedRecord = enrichRecord(db, db.getKasbonRecord(kasbonRecordId))
     return {
       success: true,
       data: { payment: result, record: updatedRecord },
@@ -269,7 +269,7 @@ function listKasbonRecords(db, query) {
     const skip = parseInt(q.skip, 10) || 0
     const limit = parseInt(q.limit, 10) || 50
 
-    let records = db.getKastonRecords(q.memberId || null)
+    let records = db.getKasbonRecords(q.memberId || null)
     if (q.status) {
       records = records.filter(r => r.status === q.status)
     }
@@ -298,12 +298,12 @@ function listKasbonRecords(db, query) {
 /** 單筆賒帳明細（含會員、還款紀錄、摘要） */
 function getKasbonRecordDetail(db, id) {
   try {
-    const record = db.getKastonRecord(id)
+    const record = db.getKasbonRecord(id)
     if (!record) {
       return { success: false, error: 'Kasbon record not found', httpStatus: 404 }
     }
     const member = db.getMemberById(record.memberId)
-    const payments = db.getKastonPayments(record.id) || []
+    const payments = db.getKasbonPayments(record.id) || []
     return {
       success: true,
       data: {
@@ -330,8 +330,8 @@ function getMemberKasbonSummary(db, memberId) {
     if (!member) {
       return { success: false, error: 'Member not found', httpStatus: 404 }
     }
-    const balance = db.getMemberKastonBalance(memberId)
-    const records = db.getKastonRecords(memberId) || []
+    const balance = db.getMemberKasbonBalance(memberId)
+    const records = db.getKasbonRecords(memberId) || []
     return {
       success: true,
       data: {
@@ -356,7 +356,7 @@ function getMemberKasbonSummary(db, memberId) {
 function getAgingReport(db) {
   try {
     const today = new Date()
-    const allRecords = db.getKastonRecords(null) || []
+    const allRecords = db.getKasbonRecords(null) || []
 
     // 補上 memberName 供報表顯示（原路由回傳裸 record，UI 的 memberName 會是空白）
     const withNames = allRecords.map(r => {
@@ -400,7 +400,7 @@ function getAgingReport(db) {
 /** 某筆賒帳的還款紀錄 */
 function listPayments(db, recordId) {
   try {
-    return { success: true, data: db.getKastonPayments(recordId) || [] }
+    return { success: true, data: db.getKasbonPayments(recordId) || [] }
   } catch (err) {
     return { success: false, error: err.message, data: [], httpStatus: 500 }
   }
@@ -409,7 +409,7 @@ function listPayments(db, recordId) {
 /** 全店未清賒帳總額 */
 function getStoreTotal(db) {
   try {
-    return { success: true, total: db.getKastonStoreTotal() }
+    return { success: true, total: db.getKasbonStoreTotal() }
   } catch (err) {
     return { success: false, error: err.message, httpStatus: 500 }
   }
@@ -419,7 +419,7 @@ module.exports = {
   KASBON_LIMITS,
   validateCreateKasbon,
   validateRecordPayment,
-  validateKastonLimit,
+  validateKasbonLimit,
   getSubscription,
   createKasbon,
   recordPayment,

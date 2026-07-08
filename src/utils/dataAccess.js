@@ -323,40 +323,40 @@ export async function addTopup(data) {
 // 與其他功能一樣走 IPC（window.electronAPI.db.*）——production 用 loadFile 載入（file:// origin），
 // 相對路徑的 HTTP 呼叫根本打不到動態 port 的 Express server，故不可用 fetch。
 // 商業規則（tier 閘門、額度、驗證）在 main process 的 electron/kasbon-shared.js 統一執行。
-export async function loadKastonRecords(memberId) {
+export async function loadKasbonRecords(memberId) {
   if (!isElectron) return { success: false, data: [] }
-  return window.electronAPI.db.getKastonRecords(memberId || null)
+  return window.electronAPI.db.getKasbonRecords(memberId || null)
 }
 
-export async function getKastonRecord(recordId) {
+export async function getKasbonRecord(recordId) {
   if (!isElectron) return null
-  const res = await window.electronAPI.db.getKastonRecord(recordId)
+  const res = await window.electronAPI.db.getKasbonRecord(recordId)
   return res?.success ? res.data : null
 }
 
 export async function createKasbon(formData) {
   if (!isElectron) return { success: false, error: 'Desktop only' }
-  return window.electronAPI.db.addKastonRecord(formData)
+  return window.electronAPI.db.addKasbonRecord(formData)
 }
 
-export async function recordKastonPayment(recordId, formData) {
+export async function recordKasbonPayment(recordId, formData) {
   if (!isElectron) return { success: false, error: 'Desktop only' }
-  return window.electronAPI.db.recordKastonPayment({ ...formData, kastonRecordId: recordId })
+  return window.electronAPI.db.recordKasbonPayment({ ...formData, kasbonRecordId: recordId })
 }
 
-export async function getMemberKastonBalance(memberId) {
+export async function getMemberKasbonBalance(memberId) {
   if (!isElectron) return null
-  const res = await window.electronAPI.db.getMemberKastonBalance(memberId)
+  const res = await window.electronAPI.db.getMemberKasbonBalance(memberId)
   return res?.success ? res.data : null
 }
 
-export async function loadKastonPayments(recordId) {
+export async function loadKasbonPayments(recordId) {
   if (!isElectron) return []
-  const res = await window.electronAPI.db.getKastonPayments(recordId)
+  const res = await window.electronAPI.db.getKasbonPayments(recordId)
   return res?.success ? res.data : []
 }
 
-export async function getKastonAgingReport() {
+export async function getKasbonAgingReport() {
   if (!isElectron) return { success: false, data: null }
-  return window.electronAPI.db.getKastonAgingReport()
+  return window.electronAPI.db.getKasbonAgingReport()
 }
