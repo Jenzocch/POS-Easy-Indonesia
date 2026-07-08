@@ -763,10 +763,36 @@ function HardwareTab({ session }) {
                   {serverInfo.running ? '運行中' : '未啟動'}
                 </span>
               </div>
+
+              {/* 外網穿透開關：預設關閉，店家需明確開啟才會對外曝露點餐伺服器 */}
+              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom:12, padding:'8px 10px', background:'var(--bg-overlay)', borderRadius:6}}>
+                <div>
+                  <div style={{fontSize:12, fontWeight:600}}>外網穿透（公開網址）</div>
+                  <div style={{fontSize:10, color:'var(--text-tertiary)', marginTop:2}}>開啟後任何知道網址的人都能點餐，請謹慎使用</div>
+                </div>
+                <label style={{position:'relative', display:'inline-block', width:38, height:22, flexShrink:0}}>
+                  <input type="checkbox" checked={!!serverInfo.tunnelEnabled} style={{opacity:0, width:0, height:0}}
+                    onChange={async (e) => {
+                      const enabled = e.target.checked
+                      setServerInfo(s => ({ ...s, tunnelEnabled: enabled }))
+                      await window.electronAPI.server.setTunnelEnabled(enabled)
+                      window.electronAPI.server.getStatus().then(setServerInfo)
+                    }}/>
+                  <span style={{
+                    position:'absolute', inset:0, borderRadius:11, transition:'.15s',
+                    background: serverInfo.tunnelEnabled ? 'var(--green)' : 'var(--border-dim)',
+                  }}/>
+                  <span style={{
+                    position:'absolute', top:2, left: serverInfo.tunnelEnabled ? 18 : 2, width:18, height:18,
+                    borderRadius:'50%', background:'#fff', transition:'.15s', boxShadow:'0 1px 3px rgba(0,0,0,0.3)',
+                  }}/>
+                </label>
+              </div>
+
               {serverInfo.running && (
                 <>
                   {/* 外網 QR Code */}
-                  {serverInfo.tunnelUrl ? (
+                  {!serverInfo.tunnelEnabled ? null : serverInfo.tunnelUrl ? (
                     <div style={{marginBottom:12, padding:'12px', background:'var(--green-dim)', borderRadius:8, border:'1px solid rgba(90,158,111,0.2)', textAlign:'center'}}>
                       <div style={{fontSize:11, color:'var(--green)', fontWeight:600, marginBottom:8}}>外網點餐 QR Code（任何網路皆可掃）</div>
                       {tunnelQr && (

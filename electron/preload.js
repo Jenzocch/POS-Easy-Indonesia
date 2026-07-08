@@ -127,6 +127,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // DEAD-13: server:getLocalIP IPC 通道渲染端零呼叫已移除；getLocalIP() 這個 plain function
     // 仍保留在 main.js，getStatus handler 內部照樣呼叫它組出 ip 欄位，不受影響。
     getStatus: () => ipcRenderer.invoke('server:getStatus'),
+    setTunnelEnabled: (enabled) => ipcRenderer.invoke('server:setTunnelEnabled', enabled),
   },
 
   // ----- Events -----

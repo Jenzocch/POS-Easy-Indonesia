@@ -319,5 +319,17 @@ function registerIpcHandlers() {
     ip: getLocalIP(),
     port: orderServer?.getActualPort?.() || db.getSetting('serverPort') || '3080',
     tunnelUrl: orderServer?.getTunnelUrl?.() || null,
+    tunnelEnabled: db.getSetting('enablePublicTunnel') === 'true',
   }))
+
+  // 外網穿透（Cloudflare Tunnel）為 opt-in，店家在設定頁切換時即時生效，
+  // 不需要重啟 App；設定值同時寫入 DB，讓下次開機時 electron/server.js 的 boot() 讀得到。
+  ipcMain.handle('server:setTunnelEnabled', (_e, enabled) => {
+    db.setSetting('enablePublicTunnel', enabled ? 'true' : 'false')
+    if (orderServer) {
+      if (enabled) orderServer.startTunnel?.()
+      else orderServer.stopTunnel?.()
+    }
+    return { success: true, enabled: !!enabled }
+  })
 }
