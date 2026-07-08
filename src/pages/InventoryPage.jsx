@@ -5,7 +5,8 @@ import { DEFAULT_CATEGORIES, CATEGORY_META, mergeCategories } from '../utils/cat
 import { getExpiringProducts, getProductHistory } from '../utils/analytics'
 import { parseCSV, stringifyCSV, downloadCSV, readFileAsText, PRODUCT_CSV_HEADERS, productToCSVRow, csvRowToProduct } from '../utils/csv'
 import { isLowStock, isOutOfStock } from '../utils/stock'
-import { t, fmtMoney } from '../i18n'
+import { friendlyError } from '../utils/friendlyError'
+import { t, fmtMoney, parseCurrencyInput } from '../i18n'
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
 
 function BarcodeDisplay({ value }) {
@@ -103,7 +104,8 @@ export default function InventoryPage({ store }) {
       setCsvImport({ records, toAdd, toUpdate, errors })
       setCsvMsg(null)
     } catch (err) {
-      setCsvMsg({ type:'error', text: t('inv.csv_read_fail', { msg: err.message || err }) })
+      console.error('[Inventory] CSV import failed:', err)
+      setCsvMsg({ type:'error', text: t('inv.csv_read_fail', { msg: friendlyError(err, 'csv') }) })
     }
     if (csvFileRef.current) csvFileRef.current.value = ''
   }
@@ -468,7 +470,29 @@ export default function InventoryPage({ store }) {
               </div>
               <div>
                 <FieldLabel>{t('inv.price_label')} *</FieldLabel>
-                <input className="field" type="number" inputMode="numeric" value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} placeholder="0"/>
+                {/* C1（"ribu" 千位簡寫）：印尼店員習慣口說「15」代表 Rp 15.000。parseCurrencyInput
+                    在數字 <1000 時自動 ×1000——但單價 500~999 的品項（例如一顆 Chiki Balls、
+                    Kerupuk）也是合法真實價格，光看數字無法分辨意圖，門檻本身無法做到完全正確。
+                    折衷做法：onChange 只存原始輸入（不在打字過程中轉換，避免 1→15→150 被級聯
+                    放大），失焦（onBlur）才真正提交轉換後的數字；轉換前先在下方即時顯示「將變成
+                    Rp xxx」的提示，讓店員在移開游標前就能看到並修正——這個提示本身就是確認機制，
+                    所以 onBlur 直接提交是安全的。 */}
+                <input className="field" type="number" inputMode="numeric" value={form.price}
+                  onChange={e=>setForm(f=>({...f,price:e.target.value}))}
+                  onBlur={()=>setForm(f=>{
+                    if (f.price === '' || f.price === null || f.price === undefined) return f
+                    return {...f, price: String(parseCurrencyInput(f.price))}
+                  })}
+                  placeholder="0"/>
+                {(() => {
+                  const raw = parseFloat(form.price)
+                  if (!(raw > 0 && raw < 1000)) return null
+                  return (
+                    <div style={{fontSize:11, color:'var(--gold)', marginTop:3}}>
+                      = {fmtMoney(parseCurrencyInput(form.price))}
+                    </div>
+                  )
+                })()}
               </div>
               <div>
                 <FieldLabel>{t('inv.cost_label')}</FieldLabel>

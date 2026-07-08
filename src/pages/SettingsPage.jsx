@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Shield, Users, Database, FileText, Download, Upload, Trash2, Plus, X, Check, RefreshCw, Printer, Wifi, Sun, Moon, Settings as Cog, Gift, Cloud, ArrowUp, ArrowDown, AlertTriangle, KeyRound } from 'lucide-react'
+import { Shield, Users, Database, FileText, Download, Upload, Trash2, Plus, X, Check, RefreshCw, Printer, Wifi, Sun, Moon, Settings as Cog, Gift, Cloud, ArrowUp, ArrowDown, AlertTriangle, KeyRound, Volume2 } from 'lucide-react'
 import QRCode from 'qrcode'
 import {
   ROLES, hashPassword, verifyPassword, writeAuditLog,
@@ -14,6 +14,8 @@ import { getTheme, applyTheme } from '../utils/theme'
 import { getCloudConfig, saveCloudConfig, clearCloudConfig, testConnection, isCloudEnabled } from '../utils/supabaseClient'
 import { pushAll, pullAll, SYNC_TABLES } from '../utils/cloudSync'
 import { getWebhookConfig, saveWebhookConfig, fireWebhook, WEBHOOK_EVENTS } from '../utils/webhook'
+import { friendlyError } from '../utils/friendlyError'
+import { setSoundEnabledCache } from '../utils/sound'
 import { t, fmtMoney, formatDateTime, LanguageSwitcher } from '../i18n'
 
 const TABS = [
@@ -86,9 +88,11 @@ function GeneralTab({ session }) {
   const [theme, setTheme] = useState(getTheme())
   const [salesGoal, setSalesGoal] = useState('')
   const [savedMsg, setSavedMsg] = useState('')
+  const [soundEnabled, setSoundEnabledState] = useState(true)
 
   useEffect(() => {
     getSetting('dailySalesGoal').then(v => setSalesGoal(v || ''))
+    getSetting('soundEnabled').then(v => setSoundEnabledState(v === null || v === undefined ? true : v !== 'false'))
   }, [])
 
   function changeTheme(t) {
@@ -100,6 +104,12 @@ function GeneralTab({ session }) {
     await setSetting('dailySalesGoal', salesGoal || '0')
     setSavedMsg(t('settings.saved'))
     setTimeout(() => setSavedMsg(''), 2000)
+  }
+
+  async function toggleSound(enabled) {
+    setSoundEnabledState(enabled)
+    setSoundEnabledCache(enabled) // 立即更新音效模組的記憶體快取，不用等下次載入
+    await setSetting('soundEnabled', String(enabled))
   }
 
   return (
@@ -134,6 +144,30 @@ function GeneralTab({ session }) {
               <div style={{fontSize:11, color:'var(--text-tertiary)'}}>{t('settings.theme_dark_desc')}</div>
             </div>
           </button>
+        </div>
+      </Section>
+
+      <Section title={t('settings.sound_feedback')}>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, padding:'10px 12px', background:'var(--bg-overlay)', borderRadius:8}}>
+          <div style={{display:'flex', alignItems:'center', gap:10}}>
+            <Volume2 size={16} color="var(--text-secondary)"/>
+            <div>
+              <div style={{fontSize:13, fontWeight:600}}>{t('settings.sound_feedback')}</div>
+              <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:2}}>{t('settings.sound_feedback_desc')}</div>
+            </div>
+          </div>
+          <label style={{position:'relative', display:'inline-block', width:38, height:22, flexShrink:0}}>
+            <input type="checkbox" checked={soundEnabled} style={{opacity:0, width:0, height:0}}
+              onChange={(e) => toggleSound(e.target.checked)}/>
+            <span style={{
+              position:'absolute', inset:0, borderRadius:11, transition:'.15s',
+              background: soundEnabled ? 'var(--green)' : 'var(--border-dim)',
+            }}/>
+            <span style={{
+              position:'absolute', top:2, left: soundEnabled ? 18 : 2, width:18, height:18,
+              borderRadius:'50%', background:'#fff', transition:'.15s', boxShadow:'0 1px 3px rgba(0,0,0,0.3)',
+            }}/>
+          </label>
         </div>
       </Section>
 
@@ -1295,7 +1329,8 @@ function CloudSyncTab({ session }) {
       writeAuditLog('CLOUD_PUSH', session, { total, tables: report.length })
       showMsg('✓ ' + t('settings.push_done', { total, tables: report.length }), 5000)
     } catch (e) {
-      showMsg('✗ ' + t('settings.push_failed', { error: e.message }), 8000)
+      // 給店員看得懂的訊息 + 下一步；原始例外仍寫入稽核日誌供除錯
+      showMsg('✗ ' + t('settings.push_failed', { error: friendlyError(e, 'cloud') }), 8000)
       writeAuditLog('CLOUD_PUSH_FAIL', session, { error: e.message })
     }
     setBusy(null)
@@ -1316,7 +1351,7 @@ function CloudSyncTab({ session }) {
       showMsg('✓ ' + t('settings.pull_done', { total }), 3000)
       setTimeout(() => location.reload(), 1500)
     } catch (e) {
-      showMsg('✗ ' + t('settings.pull_failed', { error: e.message }), 8000)
+      showMsg('✗ ' + t('settings.pull_failed', { error: friendlyError(e, 'cloud') }), 8000)
       writeAuditLog('CLOUD_PULL_FAIL', session, { error: e.message })
     }
     setBusy(null)

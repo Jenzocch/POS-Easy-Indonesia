@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react'
 import { Trash2, Plus, Minus, User, X, CreditCard, Banknote, Check, ChevronRight, Gift, Printer, Pause, Percent, Wallet, Receipt, ShoppingCart, Tag } from 'lucide-react'
 import { maskPhone } from '../utils/security'
 import { applyPromotions } from '../utils/promotions'
-import { t, fmtMoney } from '../i18n'
+import { playSuccessBeep } from '../utils/sound'
+import { t, fmtMoney, parseCurrencyInput } from '../i18n'
 
 export default function CartPanel({
   cart, cartSubtotal, activeMember,
@@ -72,7 +73,7 @@ export default function CartPanel({
         balanceUsed,
       })
       if (order) {
-        setLastOrder(order); setStage('done')
+        setLastOrder(order); setStage('done'); playSuccessBeep()
         setPointsUsed(0); setPaidInput(''); setBalanceUsed(0)
         setSplitMode(false); setSplitCash(''); setSplitCard(''); setTaxId('')
       }
@@ -86,7 +87,7 @@ export default function CartPanel({
       balanceUsed,
     })
     if (order) {
-      setLastOrder(order); setStage('done')
+      setLastOrder(order); setStage('done'); playSuccessBeep()
       setPointsUsed(0); setPaidInput(''); setBalanceUsed(0); setTaxId('')
     }
   }
@@ -301,7 +302,24 @@ export default function CartPanel({
         {!splitMode && payMethod === 'cash' && (
           <>
             <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:6}}>{t('pos.amount_received')}</div>
-            <input className="field" type="number" inputMode="numeric" value={paidInput} onChange={e=>setPaidInput(e.target.value)} placeholder={t('pos.enter_amount')} style={{fontSize:22, fontFamily:'var(--font-mono)', marginBottom:10, width:'100%'}}/>
+            {/* C1（"ribu" 千位簡寫）：收銀時客人/店員常口說「15」代表 Rp 15.000。與商品定價不同，
+                現金收款金額低於 Rp 1.000 在實務上幾乎不存在（沒有千元以下的現金交易），所以這裡
+                套用 parseCurrencyInput 的風險遠低於商品單價欄位。同樣只在 onChange 存原始輸入
+                （避免打字中被級聯放大成 1→15→150→1500），失焦（onBlur）才提交轉換後的數字；
+                轉換前先顯示「將變成 Rp xxx」提示供店員確認。 */}
+            <input className="field" type="number" inputMode="numeric" value={paidInput}
+              onChange={e=>setPaidInput(e.target.value)}
+              onBlur={()=>setPaidInput(p => (p === '' || p === null || p === undefined) ? p : String(parseCurrencyInput(p)))}
+              placeholder={t('pos.enter_amount')} style={{fontSize:22, fontFamily:'var(--font-mono)', marginBottom:4, width:'100%'}}/>
+            {(() => {
+              const raw = parseFloat(paidInput)
+              if (!(raw > 0 && raw < 1000)) return null
+              return (
+                <div style={{fontSize:11, color:'var(--gold)', marginBottom:8}}>
+                  = {fmtMoney(parseCurrencyInput(paidInput))}
+                </div>
+              )
+            })()}
             <div style={{display:'flex', gap:6, flexWrap:'wrap', marginBottom:12}}>
               {quickAmounts.map(a => (
                 <button key={a} onClick={()=>setPaidInput(String(a))} style={{...cs.quickBtn,
