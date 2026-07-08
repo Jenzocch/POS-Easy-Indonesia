@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Plus, Pencil, Trash2, X, Check, Gift, TrendingUp, Phone, Wallet, RotateCcw, Cake } from 'lucide-react'
 import RefundModal from '../components/RefundModal'
 import { computeAllRFM } from '../utils/analytics'
+import { maskPhone } from '../utils/security'
 import { t, fmtMoney } from '../i18n'
 
 // label 是 i18n key；tier 儲存值（normal/silver/gold）不變，顯示時才翻譯
@@ -157,7 +158,7 @@ export default function MembersPage({ store, session }) {
                     )}
                   </div>
                   <div style={{fontSize:11, color:'var(--text-tertiary)', marginBottom:6, fontFamily:'var(--font-mono)'}}>
-                    {m.phone}
+                    {maskPhone(m.phone)}
                   </div>
                   <div style={{display:'flex', gap:14, flexWrap:'wrap'}}>
                     <span style={{fontSize:11, color:'var(--text-secondary)'}}>
@@ -211,7 +212,7 @@ export default function MembersPage({ store, session }) {
                 {isBirthdayMonth(selectedLive) && <Cake size={14} color="var(--red)" title={t('members.birthday_month')}/>}
               </div>
               <div style={{fontSize:12, color:'var(--text-tertiary)', display:'flex', alignItems:'center', gap:4, marginTop:3}}>
-                <Phone size={11}/>{selectedLive.phone}
+                <Phone size={11}/>{maskPhone(selectedLive.phone)}
               </div>
               <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:2}}>
                 {t('members.joined', { date: selectedLive.joinDate })}

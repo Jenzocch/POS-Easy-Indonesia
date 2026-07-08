@@ -4,7 +4,6 @@ import QRCode from 'qrcode'
 import {
   ROLES, hashPassword, verifyPassword, writeAuditLog,
   createBackup, getBackupList, restoreBackup, exportBackupFile, importBackupFile,
-  maskPhone, maskName,
 } from '../utils/security'
 import {
   isElectron, loadUsers, saveUsers as dbSaveUsers, getSetting, setSetting, loadAuditLogs,
@@ -853,9 +852,9 @@ function SecurityTab({ session }) {
     // DEAD-14：原文案宣稱「所有輸入資料」都清洗，但 sanitizeObject 實際只接在促銷/進貨兩個表單，
     // 商品/會員/結帳輸入未套用——降級文案為「部分套用」，不再誇大涵蓋範圍。
     { icon:'🧹', title:'XSS / Injection 防護', desc:'促銷、進貨等表單輸入在儲存前清洗，過濾 script 標籤等惡意字串；尚未涵蓋商品/會員/結帳輸入', status:'部分套用', ok:false },
-    // DEAD-14：maskPhone/maskName 函數已寫好但從未在會員列表等畫面實際呼叫，顧客電話目前是明碼顯示——
-    // 降級為「尚未套用」，避免使用者誤以為已有遮罩保護。
-    { icon:'👁', title:'個資遮罩', desc:'遮罩函數已備妥（09xx****xxx），但目前尚未接到會員列表等顯示畫面，顧客資料仍為明碼顯示', status:'尚未套用', ok:false },
+    // DEAD-14 修復：電話號碼已接上 maskPhone，會員列表/詳情/POS 結帳的會員卡片皆顯示遮罩後號碼
+    // （09xx****xxx）；姓名維持明碼顯示（員工仍需辨識顧客本人），故標記為部分套用而非全面。
+    { icon:'👁', title:'個資遮罩', desc:'會員列表、詳情、結帳畫面的電話號碼已套用遮罩（09xx****xxx）；姓名維持明碼顯示以利員工辨識顧客', status:'部分套用', ok:true },
     // DEAD-14：自動備份實際觸發時機是登出時 + 每日第一次登入時，並非「每次重要操作前」，修正描述避免誇大。
     { icon:'💾', title:'自動備份', desc:'登出時與每日首次登入時自動快照，最多保留 10 份，可匯出 JSON 檔案離線保存', status:'已啟用', ok:true },
     { icon:'🔒', title:'Session 管理', desc:'登入 Token 存於 sessionStorage（關閉分頁即失效），包含到期時間，不存密碼', status:'8小時', ok:true },

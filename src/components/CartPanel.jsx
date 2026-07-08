@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Trash2, Plus, Minus, User, X, CreditCard, Banknote, Check, ChevronRight, Gift, Printer, Pause, Percent, Wallet, Receipt, ShoppingCart } from 'lucide-react'
+import { maskPhone } from '../utils/security'
 import { t, fmtMoney } from '../i18n'
 
 export default function CartPanel({
@@ -344,7 +345,7 @@ export default function CartPanel({
             <div style={cs.memberAvatar}>{activeMember.name[0]}</div>
             <div style={{flex:1, minWidth:0}}>
               <div style={{fontWeight:600, fontSize:14, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{activeMember.name}</div>
-              <div style={{fontSize:12, color:'var(--text-secondary)'}}>{activeMember.phone}</div>
+              <div style={{fontSize:12, color:'var(--text-secondary)'}}>{maskPhone(activeMember.phone)}</div>
               <div style={{fontSize:12, color:'var(--gold)', marginTop:2}}>
                 {t('pos.points_count', { n: activeMember.points })} · {t(TIER_LABEL_KEY[activeMember.tier])}
                 {memberBalance > 0 && <span style={{color:'var(--teal)'}}> · {t('pos.balance_short')} {fmtMoney(memberBalance)}</span>}
