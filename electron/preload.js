@@ -7,7 +7,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     addProduct: (data) => ipcRenderer.invoke('db:addProduct', data),
     updateProduct: (id, data) => ipcRenderer.invoke('db:updateProduct', id, data),
     deleteProduct: (id) => ipcRenderer.invoke('db:deleteProduct', id),
-    findByBarcode: (code) => ipcRenderer.invoke('db:findByBarcode', code),
 
     getMembers: () => ipcRenderer.invoke('db:getMembers'),
     addMember: (data) => ipcRenderer.invoke('db:addMember', data),
@@ -31,7 +30,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getPurchases: () => ipcRenderer.invoke('db:getPurchases'),
     addPurchase: (data) => ipcRenderer.invoke('db:addPurchase', data),
     updatePurchase: (id, data) => ipcRenderer.invoke('db:updatePurchase', id, data),
-    deletePurchase: (id) => ipcRenderer.invoke('db:deletePurchase', id),
 
     getPromotions: () => ipcRenderer.invoke('db:getPromotions'),
     addPromotion: (data) => ipcRenderer.invoke('db:addPromotion', data),

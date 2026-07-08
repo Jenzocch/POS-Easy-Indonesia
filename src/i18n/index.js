@@ -7,13 +7,11 @@
 export { t, getCurrentLanguage, setLanguage, LANGUAGES, translations } from './translations.js';
 export {
   fmtMoney,
-  formatCurrency,
   formatRupiah,
   parseCurrencyInput,
   formatDate,
   formatDateTime,
   formatTime,
   formatWhatsAppLink,
-  formatPercentage,
 } from './formatting.js';
 export { default as LanguageSwitcher } from './LanguageSwitcher.jsx';

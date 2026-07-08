@@ -28,27 +28,6 @@ export function fmtMoney(value) {
 }
 
 /**
- * Format currency based on current language
- * @param {number} value - Amount
- * @param {string} lang - Optional language override ('id', 'zh', 'en')
- * @returns {string} Formatted currency string
- */
-export function formatCurrency(value, lang = null) {
-  const language = lang || getCurrentLanguage();
-  
-  switch(language) {
-    case 'id': // Indonesian Rupiah
-      return formatRupiah(value);
-    case 'zh': // Traditional Chinese (NT$ for Taiwan)
-      return `NT$ ${Math.floor(value).toLocaleString('zh-TW')}`;
-    case 'en': // English (USD)
-      return `$ ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    default:
-      return formatRupiah(value);
-  }
-}
-
-/**
  * Parse currency input — handles "15" → 15000 for Indonesian pricing
  * @param {string|number} input - User input
  * @param {boolean} autoMultiply - Auto-multiply by 1000 for Indonesian (default true)
@@ -144,12 +123,3 @@ export function formatWhatsAppLink(phone, message = '') {
   return `https://wa.me/${cleaned}?text=${encodedMsg}`;
 }
 
-/**
- * Format percentage
- * @param {number} value - Decimal (0.15 = 15%)
- * @param {number} decimals - Decimal places (default 1)
- * @returns {string} Formatted percentage like "15.0%"
- */
-export function formatPercentage(value, decimals = 1) {
-  return `${(value * 100).toFixed(decimals)}%`;
-}

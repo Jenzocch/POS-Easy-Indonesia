@@ -327,12 +327,6 @@ function removeFromCart(productId) {
   renderProducts()
 }
 
-function deleteFromCart(productId) {
-  cart = cart.filter(c => c.id !== productId)
-  updateCartUI()
-  renderProducts()
-}
-
 function getCartTotal() {
   return cart.reduce((sum, item) => sum + item.price * item.qty, 0)
 }

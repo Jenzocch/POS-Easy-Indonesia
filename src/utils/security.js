@@ -114,7 +114,7 @@ export function destroySession() {
   sessionStorage.removeItem(SESSION_KEY)
 }
 
-export function extendSession() {
+function extendSession() {
   const s = getSession()
   if (!s) return
   s.expiresAt = Date.now() + SESSION_TTL
@@ -128,17 +128,11 @@ export function hasPermission(session, permission) {
   return rolePerms.includes(permission)
 }
 
-export function requirePermission(session, permission) {
-  if (!hasPermission(session, permission)) {
-    throw new Error(`權限不足：需要 ${permission}`)
-  }
-}
-
 // ── 5. 稽核日誌 ──────────────────────────────────────────────────────
 const AUDIT_KEY     = 'pos_audit_log'
 const AUDIT_MAX     = 2000
 
-export const AUDIT_ACTIONS = {
+const AUDIT_ACTIONS = {
   LOGIN:           { label: '登入',         level: 'info'    },
   LOGOUT:          { label: '登出',         level: 'info'    },
   LOGIN_FAIL:      { label: '登入失敗',     level: 'warning' },
@@ -190,7 +184,7 @@ export function writeAuditLog(action, session, detail = {}) {
   } catch { return null }
 }
 
-export function readAuditLogs() {
+function readAuditLogs() {
   try {
     if (isElectron) return [] // Electron 由 IPC 非同步取得
     const raw = localStorage.getItem(AUDIT_KEY)
@@ -201,17 +195,6 @@ export function readAuditLogs() {
 // ── 6. 輸入清洗 ──────────────────────────────────────────────────────
 const DANGEROUS = /<script|javascript:|on\w+\s*=|<iframe|<object|<embed|data:text/gi
 
-export function sanitize(str) {
-  if (typeof str !== 'string') return str
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;')
-}
-
 export function sanitizeObject(obj) {
   if (typeof obj !== 'object' || obj === null) return obj
   const result = {}
@@ -221,18 +204,6 @@ export function sanitizeObject(obj) {
     else result[key] = val
   }
   return result
-}
-
-export function validatePrice(val) {
-  const n = parseFloat(val)
-  if (isNaN(n) || n < 0 || n > 999999) throw new Error('價格格式錯誤')
-  return Math.round(n * 100) / 100
-}
-
-export function validateStock(val) {
-  const n = parseInt(val)
-  if (isNaN(n) || n < 0 || n > 999999) throw new Error('庫存格式錯誤')
-  return n
 }
 
 // ── 7. 個資遮罩 ──────────────────────────────────────────────────────
@@ -402,6 +373,6 @@ export function startIdleTimer(onLock) {
   }
 }
 
-export function clearIdleTimer() {
+function clearIdleTimer() {
   if (idleTimer) { clearTimeout(idleTimer); idleTimer = null }
 }

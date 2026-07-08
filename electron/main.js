@@ -148,7 +148,6 @@ function registerIpcHandlers() {
   ipcMain.handle('db:addProduct', (_e, data) => db.addProduct(data))
   ipcMain.handle('db:updateProduct', (_e, id, data) => db.updateProduct(id, data))
   ipcMain.handle('db:deleteProduct', (_e, id) => db.deleteProduct(id))
-  ipcMain.handle('db:findByBarcode', (_e, code) => db.findByBarcode(code))
 
   // ----- Members -----
   ipcMain.handle('db:getMembers', () => db.getMembers())
@@ -187,7 +186,6 @@ function registerIpcHandlers() {
   ipcMain.handle('db:getPurchases', () => db.getPurchases())
   ipcMain.handle('db:addPurchase', (_e, data) => db.addPurchase(data))
   ipcMain.handle('db:updatePurchase', (_e, id, data) => db.updatePurchase(id, data))
-  ipcMain.handle('db:deletePurchase', (_e, id) => db.deletePurchase(id))
 
   // ----- Promotions -----
   ipcMain.handle('db:getPromotions', () => db.getPromotions())
@@ -304,10 +302,6 @@ function registerIpcHandlers() {
   })
 
   // ----- Barcode -----
-  ipcMain.handle('barcode:generate', async (_e, text, options) => {
-    const barcode = require('./barcode')
-    return barcode.generateBarcode(text, options)
-  })
   ipcMain.handle('barcode:generateLabel', async (_e, product) => {
     const barcode = require('./barcode')
     return barcode.generateLabel(product)
