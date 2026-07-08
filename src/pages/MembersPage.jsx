@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, Pencil, Trash2, X, Check, Gift, TrendingUp, Phone, Wallet, RotateCcw, Cake } from 'lucide-react'
 import RefundModal from '../components/RefundModal'
+import Modal from '../components/Modal'
 import { computeAllRFM } from '../utils/analytics'
 import { maskPhone } from '../utils/security'
 import { t, fmtMoney } from '../i18n'
@@ -285,8 +286,7 @@ export default function MembersPage({ store, session }) {
       )}
 
       {showTopup && selectedLive && (
-        <div style={ms.overlay} onClick={()=>setShowTopup(false)}>
-          <div style={ms.drawer} className="animate-scale" onClick={e=>e.stopPropagation()}>
+        <Modal maxWidth={420} onClose={()=>setShowTopup(false)}>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16}}>
               <span style={{fontWeight:600, fontSize:15, display:'flex', alignItems:'center', gap:8}}>
                 <Wallet size={16}/> {t('members.topup_title')}
@@ -320,14 +320,12 @@ export default function MembersPage({ store, session }) {
               <button className="btn btn-primary" style={{flex:1}} disabled={!topupAmt} onClick={handleTopup}>{t('members.topup_confirm')}</button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setShowTopup(false)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Edit drawer */}
       {editing && (
-        <div style={ms.overlay}>
-          <div style={ms.drawer} className="animate-scale">
+        <Modal maxWidth={420}>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20}}>
               <span style={{fontWeight:600, fontSize:15}}>{editing==='new'?t('members.add'):t('members.edit')}</span>
               <button className="btn-icon" onClick={()=>setEditing(null)}><X size={16}/></button>
@@ -344,13 +342,11 @@ export default function MembersPage({ store, session }) {
               <button className="btn btn-primary" style={{flex:1}} onClick={save}><Check size={15}/>{t('common.save')}</button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setEditing(null)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {confirmDel && (
-        <div style={ms.overlay}>
-          <div style={{...ms.drawer, maxWidth:340}} className="animate-scale">
+        <Modal maxWidth={340}>
             <div style={{textAlign:'center', padding:'8px 0 20px'}}>
               <div style={{fontSize:32, marginBottom:12}}>⚠️</div>
               <div style={{fontWeight:600, marginBottom:6}}>{t('members.delete_confirm')}</div>
@@ -360,8 +356,7 @@ export default function MembersPage({ store, session }) {
               <button className="btn btn-danger" style={{flex:1}} onClick={()=>{deleteMember(confirmDel);setConfirmDel(null);setSelected(null)}}>{t('members.delete_yes')}</button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setConfirmDel(null)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   )
@@ -399,7 +394,4 @@ const ms = {
   statsGrid:{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, flexShrink:0 },
   sectionTitle:{ fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.08em', textTransform:'uppercase', flexShrink:0 },
   orderRow:{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom:'1px solid var(--border-dim)' },
-  overlay:{ position:'fixed', inset:0, background:'rgba(44,42,38,0.25)',backdropFilter:'blur(2px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100 },
-  // RWD-01：maxHeight + overflowY，手機上表單長於視窗時可捲動
-  drawer:{ background:'var(--bg-raised)', border:'1px solid var(--border-mid)', borderRadius:'var(--r4)', padding:24, width:'90%', maxWidth:420, maxHeight:'88vh', overflowY:'auto' },
 }

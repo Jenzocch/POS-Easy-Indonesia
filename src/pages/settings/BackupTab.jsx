@@ -8,7 +8,7 @@ import {
 } from '../../utils/dataAccess'
 import { downloadBlob } from '../../utils/csv'
 import { t } from '../../i18n'
-import { ss } from './shared'
+import Modal from '../../components/Modal'
 
 // ── 備份還原 ──────────────────────────────────────────────────
 // Electron：清單 / 還原 / 匯入 / 匯出全走 IPC（SQLite backups 表 + backups/ JSON 檔）。
@@ -141,8 +141,7 @@ export default function BackupTab({ session }) {
       </div>
 
       {restoring && (
-        <div style={ss.overlay}>
-          <div style={{...ss.modal,maxWidth:360}} className="animate-scale">
+        <Modal maxWidth={360}>
             <div style={{textAlign:'center',padding:'8px 0 20px'}}>
               <div style={{fontSize:36,marginBottom:12}}>⚠️</div>
               <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>{t('settings.confirm_restore')}</div>
@@ -152,13 +151,11 @@ export default function BackupTab({ session }) {
               <button className="btn btn-danger" style={{flex:1}} onClick={()=>doRestore(restoring)}>{t('settings.confirm_restore_btn')}</button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setRestoring(null)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {importing && (
-        <div style={ss.overlay}>
-          <div style={{...ss.modal,maxWidth:360}} className="animate-scale">
+        <Modal maxWidth={360}>
             <div style={{textAlign:'center',padding:'8px 0 20px'}}>
               <div style={{fontSize:36,marginBottom:12}}>⚠️</div>
               <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>{t('settings.confirm_import')}</div>
@@ -168,8 +165,7 @@ export default function BackupTab({ session }) {
               <button className="btn btn-danger" style={{flex:1}} onClick={doImport}>{t('settings.confirm_import_btn')}</button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setImporting(null)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

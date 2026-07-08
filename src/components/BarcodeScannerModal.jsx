@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { X, Camera, RefreshCw, AlertTriangle } from 'lucide-react'
+import Modal from './Modal'
 import { t } from '../i18n'
 
 // 模組層級序號：React 18 StrictMode 會把 effect 掛載兩次，用遞增序號當容器 id，
@@ -71,8 +72,11 @@ export default function BarcodeScannerModal({ onScan, onClose, title, mode = 'si
   }, [])
 
   return (
-    <div style={styles.overlay}>
-      <div style={styles.modal}>
+    <Modal
+      maxWidth={420}
+      overlayStyle={{ background:'rgba(20,18,15,0.85)', backdropFilter:'none' }}
+      panelStyle={{ padding:0, maxHeight:'none', overflowY:'hidden' }}
+    >
         <div style={styles.header}>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             <Camera size={16} style={{color:'var(--gold)'}}/>
@@ -112,22 +116,11 @@ export default function BarcodeScannerModal({ onScan, onClose, title, mode = 'si
         <div style={{padding:'12px 16px', display:'flex', gap:8}}>
           <button className="btn btn-ghost" style={{flex:1}} onClick={onClose}>{t('common.close')}</button>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
 
 const styles = {
-  overlay: {
-    position:'fixed', inset:0, zIndex:500,
-    background:'rgba(20,18,15,0.85)',
-    display:'flex', alignItems:'center', justifyContent:'center',
-  },
-  modal: {
-    background:'var(--bg-raised)', borderRadius:'var(--r4)',
-    width:'90%', maxWidth:420, overflow:'hidden',
-    border:'1px solid var(--border-dim)',
-  },
   header: {
     display:'flex', justifyContent:'space-between', alignItems:'center',
     padding:'14px 16px', borderBottom:'1px solid var(--border-dim)',

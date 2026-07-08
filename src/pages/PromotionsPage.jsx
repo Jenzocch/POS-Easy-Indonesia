@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, X, Check, Tag, Clock, Percent, Gift } from 'lucide-react'
 import { writeAuditLog, sanitizeObject } from '../utils/security'
+import Modal from '../components/Modal'
 import { t, fmtMoney } from '../i18n'
 import FieldLabel from '../components/FieldLabel'
 
@@ -136,8 +137,7 @@ export default function PromotionsPage({ store, session }) {
 
       {/* Edit modal */}
       {editing && form && (
-        <div style={pm.overlay}>
-          <div style={pm.modal} className="animate-scale">
+        <Modal maxWidth={480}>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18}}>
               <span style={{fontWeight:700, fontSize:15}}>{editing==='new'?t('promo.new_titled', {type: PROMO_TYPES[form.type].label}):t('promo.edit_title')}</span>
               <button className="btn-icon" onClick={()=>{setEditing(null);setForm(null)}}><X size={16}/></button>
@@ -181,8 +181,7 @@ export default function PromotionsPage({ store, session }) {
               <button className="btn btn-primary" style={{flex:1}} onClick={saveForm}><Check size={15}/>{t('common.save')}</button>
               <button className="btn btn-ghost"   style={{flex:1}} onClick={()=>{setEditing(null);setForm(null)}}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   )
@@ -202,6 +201,4 @@ const pm = {
   root:{display:'flex',flexDirection:'column',height:'100%',padding:'16px',gap:14,overflow:'hidden'},
   header:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexShrink:0,flexWrap:'wrap',gap:10},
   title:{fontFamily:'var(--font-serif)',fontSize:20,fontWeight:600},
-  overlay:{position:'fixed',inset:0,background:'rgba(44,42,38,0.25)',backdropFilter:'blur(2px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200},
-  modal:{background:'var(--bg-raised)',border:'1px solid var(--border-dim)',borderRadius:'var(--r4)',padding:24,width:'90%',maxWidth:480},
 }

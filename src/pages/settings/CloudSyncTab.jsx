@@ -5,7 +5,9 @@ import { pushAll, pullAll, SYNC_TABLES } from '../../utils/cloudSync'
 import { writeAuditLog } from '../../utils/security'
 import { friendlyError } from '../../utils/friendlyError'
 import { t } from '../../i18n'
-import { Section, FL, ss } from './shared'
+import { Section, FL } from './shared'
+import Modal from '../../components/Modal'
+import { Z } from '../../utils/zIndex'
 
 // ── 雲端同步 ──────────────────────────────────────────────────
 export default function CloudSyncTab({ session }) {
@@ -213,13 +215,12 @@ export default function CloudSyncTab({ session }) {
           background: msg.startsWith('✗') ? 'var(--red-dim)' : 'var(--green-dim)',
           color: msg.startsWith('✗') ? 'var(--red)' : 'var(--green)',
           border: `1px solid ${msg.startsWith('✗') ? 'var(--red)' : 'var(--green)'}`,
-          fontSize:13, zIndex:300, boxShadow:'var(--shadow-md)',
+          fontSize:13, zIndex:Z.TOAST, boxShadow:'var(--shadow-md)',
         }}>{msg}</div>
       )}
 
       {confirmPull && (
-        <div style={ss.overlay}>
-          <div style={{...ss.modal, maxWidth:400}} className="animate-scale">
+        <Modal maxWidth={400}>
             <div style={{textAlign:'center', padding:'8px 0 18px'}}>
               <AlertTriangle size={36} style={{color:'var(--amber)', marginBottom:12}}/>
               <div style={{fontWeight:700, fontSize:15, marginBottom:8}}>{t('settings.confirm_pull_title')}</div>
@@ -232,8 +233,7 @@ export default function CloudSyncTab({ session }) {
               <button className="btn btn-danger" style={{flex:1}} onClick={handlePull}>{t('settings.confirm_pull_btn')}</button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setConfirmPull(false)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

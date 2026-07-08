@@ -24,6 +24,8 @@ const WastePage      = lazy(() => import('./pages/WastePage'))
 const KasbonPage     = lazy(() => import('./pages/KasbonPage'))
 import { isElectron } from './utils/dataAccess'
 import useIsMobile from './hooks/useIsMobile'
+import Modal from './components/Modal'
+import { Z } from './utils/zIndex'
 import { t } from './i18n'
 
 const AUTO_SYNC_INTERVAL_MS = 10 * 60 * 1000 // 上次同步超過 10 分鐘才自動 pull
@@ -188,8 +190,11 @@ export default function App() {
       </div>
 
       {autoSync && (
-        <div style={syncOverlay.root}>
-          <div style={syncOverlay.box}>
+        <Modal
+          maxWidth={360}
+          overlayStyle={{ zIndex:Z.SYSTEM_OVERLAY, background:'rgba(44,42,38,0.4)', backdropFilter:'blur(4px)' }}
+          panelStyle={{ padding:'28px 36px', display:'flex', flexDirection:'column', alignItems:'center', gap:14, minWidth:260 }}
+        >
             <Cloud size={28} style={{
               color: autoSync === 'failed' ? 'var(--red)' : 'var(--blue)',
               animation: autoSync === 'syncing' ? 'spin 1.4s linear infinite' : 'none',
@@ -205,8 +210,7 @@ export default function App() {
                 {autoSync === 'failed' && t('login.sync_check_network')}
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   )
@@ -214,7 +218,7 @@ export default function App() {
 
 const storageBanner = {
   root: {
-    position:'fixed', top:0, left:0, right:0, zIndex:10000,
+    position:'fixed', top:0, left:0, right:0, zIndex:Z.SYSTEM_BANNER,
     display:'flex', alignItems:'center', gap:10,
     padding:'10px 16px',
     background:'var(--red)', color:'#fff',
@@ -223,29 +227,14 @@ const storageBanner = {
   },
 }
 
-const syncOverlay = {
-  root: {
-    position:'fixed', inset:0, zIndex:9999,
-    background:'rgba(44,42,38,0.4)', backdropFilter:'blur(4px)',
-    display:'flex', alignItems:'center', justifyContent:'center',
-  },
-  box: {
-    background:'var(--bg-raised)', borderRadius:'var(--r4)',
-    padding:'28px 36px', display:'flex', flexDirection:'column',
-    alignItems:'center', gap:14,
-    boxShadow:'var(--shadow-lg)', border:'1px solid var(--border-dim)',
-    minWidth:260, maxWidth:360,
-  },
-}
-
 const mob = {
   overlay: {
-    position:'fixed', inset:0, zIndex:998,
+    position:'fixed', inset:0, zIndex:Z.DRAWER_OVERLAY,
     background:'rgba(44,42,38,0.2)', backdropFilter:'blur(2px)',
   },
   drawer: {
     position:'fixed', top:0, left:0, bottom:0,
-    width:260, zIndex:999,
+    width:260, zIndex:Z.DRAWER,
     transition:'transform 0.3s cubic-bezier(0.16,1,0.3,1)',
   },
   topBar: {

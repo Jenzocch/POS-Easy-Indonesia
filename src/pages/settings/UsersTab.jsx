@@ -3,7 +3,8 @@ import { Plus, Trash2, X } from 'lucide-react'
 import { ROLES, hashPassword, verifyPassword, writeAuditLog } from '../../utils/security'
 import { isElectron, loadUsers } from '../../utils/dataAccess'
 import { t } from '../../i18n'
-import { ss, FL } from './shared'
+import { FL } from './shared'
+import Modal from '../../components/Modal'
 
 export default function UsersTab({ session }) {
   const [users,    setUsers]    = useState([])
@@ -137,8 +138,7 @@ export default function UsersTab({ session }) {
 
       {/* ── 新增帳號 Modal ── */}
       {adding && (
-        <div style={ss.overlay}>
-          <div style={ss.modal} className="animate-scale">
+        <Modal maxWidth={420}>
             <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}>
               <span style={{fontWeight:700}}>{t('settings.add_staff_account')}</span>
               <button className="btn-icon" onClick={()=>setAdding(false)}><X size={16}/></button>
@@ -159,14 +159,12 @@ export default function UsersTab({ session }) {
               <button className="btn btn-primary" style={{flex:1}} onClick={handleAdd} disabled={saving}>{saving?t('settings.saving'):t('common.save')}</button>
               <button className="btn btn-ghost"   style={{flex:1}} onClick={()=>setAdding(false)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* ── 變更密碼 Modal ── */}
       {changePw && (
-        <div style={ss.overlay}>
-          <div style={ss.modal} className="animate-scale">
+        <Modal maxWidth={420}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <div>
                 <div style={{fontWeight:700,fontSize:15}}>
@@ -242,8 +240,7 @@ export default function UsersTab({ session }) {
               </button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setChangePw(null)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

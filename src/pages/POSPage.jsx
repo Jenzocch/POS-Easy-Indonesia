@@ -8,6 +8,7 @@ import { isLowStock, isOutOfStock } from '../utils/stock'
 import { daysUntilExpiry } from '../utils/analytics'
 import useIsMobile from '../hooks/useIsMobile'
 import { playSuccessBeep, playErrorBeep } from '../utils/sound'
+import { Z } from '../utils/zIndex'
 import { t, fmtMoney } from '../i18n'
 // lazy load html5-qrcode (~340KB) — 只在點相機掃描才載入
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
@@ -448,7 +449,7 @@ const ps = {
   },
   cartWrap:{ width:340, flexShrink:0 },
   fab:{
-    position:'fixed', bottom:'calc(20px + env(safe-area-inset-bottom))', right:20, zIndex:100,
+    position:'fixed', bottom:'calc(20px + env(safe-area-inset-bottom))', right:20, zIndex:Z.FLOATING,
     width:60, height:60, borderRadius:'50%',
     background:'var(--accent-grad)',
     boxShadow:'0 8px 24px rgba(184,137,90,0.4), inset 0 1px 0 rgba(255,255,255,0.2)',
@@ -464,11 +465,11 @@ const ps = {
     boxShadow:'var(--shadow-sm)',
   },
   mobileOverlay:{
-    position:'fixed', inset:0, zIndex:200,
+    position:'fixed', inset:0, zIndex:Z.DRAWER_OVERLAY,
     background:'rgba(31,29,26,0.4)', backdropFilter:'blur(8px)',
   },
   mobileCart:{
-    position:'fixed', bottom:0, left:0, right:0, zIndex:201,
+    position:'fixed', bottom:0, left:0, right:0, zIndex:Z.DRAWER,
     maxHeight:'82vh', background:'var(--bg-raised)',
     borderRadius:'var(--r5) var(--r5) 0 0',
     boxShadow:'var(--shadow-xl)',

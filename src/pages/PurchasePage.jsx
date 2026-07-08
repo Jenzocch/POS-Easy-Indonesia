@@ -4,6 +4,8 @@ import { writeAuditLog, sanitizeObject } from '../utils/security'
 import { DEFAULT_CATEGORIES, CATEGORY_META, groupByCategory } from '../utils/categories'
 import { computeSalesVelocity, suggestReorderQty } from '../utils/analytics'
 import useIsMobile from '../hooks/useIsMobile'
+import Modal from '../components/Modal'
+import { Z } from '../utils/zIndex'
 import { t, fmtMoney } from '../i18n'
 import FieldLabel from '../components/FieldLabel'
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
@@ -499,7 +501,7 @@ function NewPurchase({ products, suppliers, purchases, orders = [], onSave }) {
           background: camMsg.startsWith('✗') ? 'var(--red-dim)' : 'var(--green-dim)',
           color: camMsg.startsWith('✗') ? 'var(--red)' : 'var(--green)',
           border:`1px solid ${camMsg.startsWith('✗') ? 'var(--red)' : 'var(--green)'}`,
-          padding:'8px 14px', borderRadius:8, fontSize:13, zIndex:600,
+          padding:'8px 14px', borderRadius:8, fontSize:13, zIndex:Z.TOAST,
         }}>{camMsg}</div>
       )}
 
@@ -553,8 +555,7 @@ function ReceiveModal({ po, products, onConfirm, onClose }) {
   })
 
   return (
-    <div style={ps.overlay}>
-      <div style={ps.modal} className="animate-scale">
+    <Modal maxWidth={560}>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18}}>
           <div>
             <div style={{fontWeight:700, fontSize:15, fontFamily:'var(--font-serif)'}}>{t('purchase.confirm_receive')}</div>
@@ -591,8 +592,7 @@ function ReceiveModal({ po, products, onConfirm, onClose }) {
           </button>
           <button className="btn btn-ghost" style={{flex:1}} onClick={onClose}>{t('common.cancel')}</button>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -726,8 +726,7 @@ function SupplierList({ suppliers, products = [], onAdd, onUpdate, onGoInventory
       </div>
 
       {editing && (
-        <div style={ps.overlay}>
-          <div style={{...ps.modal, maxWidth:400}} className="animate-scale">
+        <Modal maxWidth={400}>
             <div style={{display:'flex', justifyContent:'space-between', marginBottom:18}}>
               <span style={{fontWeight:700}}>{editing==='new'?t('purchase.add_supplier'):t('purchase.edit_supplier')}</span>
               <button className="btn-icon" onClick={()=>setEditing(null)}><X size={16}/></button>
@@ -742,8 +741,7 @@ function SupplierList({ suppliers, products = [], onAdd, onUpdate, onGoInventory
               <button className="btn btn-primary" style={{flex:1}} onClick={save}><Check size={15}/>{t('common.save')}</button>
               <button className="btn btn-ghost"   style={{flex:1}} onClick={()=>setEditing(null)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   )
@@ -853,6 +851,4 @@ const ps = {
   statusBadge:{fontSize:10,padding:'2px 8px',borderRadius:20,fontWeight:500},
   detail:{flex:1,overflowY:'auto'},
   emptyDetail:{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'},
-  overlay:{position:'fixed',inset:0,background:'rgba(44,42,38,0.25)',backdropFilter:'blur(2px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200},
-  modal:{background:'var(--bg-raised)',border:'1px solid var(--border-dim)',borderRadius:'var(--r4)',padding:24,width:'90%',maxWidth:560},
 }
