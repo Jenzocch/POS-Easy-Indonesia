@@ -111,7 +111,7 @@ export default function KastonPage({ store, session }) {
         setRecords([...records, response.data])
         setShowNewModal(false)
       } else {
-        setError(response.error || 'Failed to create kasbon')
+        setError(response.error || t('kasbon.create_failed'))
       }
     } catch (err) {
       setError(err.message)
@@ -129,7 +129,7 @@ export default function KastonPage({ store, session }) {
         setShowPaymentModal(false)
         setSelectedRecord(null)
       } else {
-        setError(response.error || 'Failed to record payment')
+        setError(response.error || t('kasbon.payment_failed'))
       }
     } catch (err) {
       setError(err.message)
@@ -143,7 +143,7 @@ export default function KastonPage({ store, session }) {
         <div style={s.titleSection}>
           <h1 style={s.title}>{t('kasbon.title')}</h1>
           {activeTab !== 'reports' && (
-            <button onClick={() => setShowNewModal(true)} style={s.newBtn}>
+            <button onClick={() => setShowNewModal(true)} className="btn btn-primary btn-sm">
               <Plus size={16}/>
               {t('kasbon.new_kasbon')}
             </button>
@@ -270,45 +270,49 @@ function RecordsTab({ records, loading, searchMember, onSearchChange, selectedSt
         <div style={s.noRecords}>{t('kasbon.no_records')}</div>
       ) : (
         <div style={s.table}>
-          <div style={s.tableHeader}>
-            <div style={{flex:1}}>{t('kasbon.member')}</div>
-            <div style={{width:120}}>{t('kasbon.amount')}</div>
-            <div style={{width:100}}>{t('kasbon.balance')}</div>
-            <div style={{width:100}}>{t('kasbon.date')}</div>
-            <div style={{width:80}}>{t('kasbon.status')}</div>
-            <div style={{width:100}}>{t('kasbon.actions')}</div>
-          </div>
-          <div style={s.tableBody}>
-            {records.map(r => (
-              <div key={r.id} style={s.tableRow}>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:500}}>{r.memberName || r.memberId}</div>
-                  <div style={{fontSize:12, color:'var(--text-tertiary)'}}>{r.memberPhone}</div>
+          {/* TABLE-01：欄寬總和（500px 固定欄 + 200px 會員欄）超出窄視窗時，外層 overflowX:auto
+              取代原本 s.table 的 overflow:hidden，確保「記錄付款」欄位一律可捲動到達，不被裁切 */}
+          <div style={s.tableScroll}>
+            <div style={s.tableHeader}>
+              <div style={{flex:1, minWidth:200}}>{t('kasbon.member')}</div>
+              <div style={{width:120, flexShrink:0}}>{t('kasbon.amount')}</div>
+              <div style={{width:100, flexShrink:0}}>{t('kasbon.balance')}</div>
+              <div style={{width:100, flexShrink:0}}>{t('kasbon.date')}</div>
+              <div style={{width:80, flexShrink:0}}>{t('kasbon.status')}</div>
+              <div style={{width:150, flexShrink:0}}>{t('kasbon.actions')}</div>
+            </div>
+            <div style={s.tableBody}>
+              {records.map(r => (
+                <div key={r.id} style={s.tableRow}>
+                  <div style={{flex:1, minWidth:200}}>
+                    <div style={{fontWeight:500}}>{r.memberName || r.memberId}</div>
+                    <div style={{fontSize:12, color:'var(--text-tertiary)'}}>{r.memberPhone}</div>
+                  </div>
+                  <div style={{width:120, flexShrink:0, textAlign:'right', fontFamily:'var(--font-mono)', fontSize:13}}>
+                    {fmtMoney(r.principalAmount)}
+                  </div>
+                  <div style={{width:100, flexShrink:0, textAlign:'right', fontFamily:'var(--font-mono)', fontSize:13, color:r.balanceDue > 0 ? 'var(--red)' : 'var(--text-secondary)'}}>
+                    {fmtMoney(r.balanceDue)}
+                  </div>
+                  <div style={{width:100, flexShrink:0, fontSize:12, color:'var(--text-secondary)'}}>
+                    {new Date(r.transactionDate).toLocaleDateString('id-ID')}
+                  </div>
+                  <div style={{width:80, flexShrink:0, fontSize:12}}>
+                    <span style={{...s.statusBadge(r.status)}}>{t(`kasbon.${r.status}`)}</span>
+                  </div>
+                  <div style={{width:150, flexShrink:0}}>
+                    {r.status !== 'closed' && (
+                      <button
+                        onClick={() => onPaymentClick(r)}
+                        className="btn btn-primary btn-sm"
+                      >
+                        {t('kasbon.record_payment')}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div style={{width:120, textAlign:'right', fontFamily:'var(--font-mono)', fontSize:13}}>
-                  {fmtMoney(r.principalAmount)}
-                </div>
-                <div style={{width:100, textAlign:'right', fontFamily:'var(--font-mono)', fontSize:13, color:r.balanceDue > 0 ? 'var(--red)' : 'var(--text-secondary)'}}>
-                  {fmtMoney(r.balanceDue)}
-                </div>
-                <div style={{width:100, fontSize:12, color:'var(--text-secondary)'}}>
-                  {new Date(r.transactionDate).toLocaleDateString('id-ID')}
-                </div>
-                <div style={{width:80, fontSize:12}}>
-                  <span style={{...s.statusBadge(r.status)}}>{t(`kasbon.${r.status}`)}</span>
-                </div>
-                <div style={{width:100}}>
-                  {r.status !== 'closed' && (
-                    <button
-                      onClick={() => onPaymentClick(r)}
-                      style={s.actionBtn}
-                    >
-                      {t('kasbon.record_payment')}
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -407,7 +411,7 @@ function NewKastonModal({ members, onClose, onSubmit }) {
 
   const handleSubmit = async () => {
     if (!memberId || !amount) {
-      setError('Required fields missing')
+      setError(t('kasbon.required_fields'))
       return
     }
 
@@ -438,7 +442,7 @@ function NewKastonModal({ members, onClose, onSubmit }) {
           <div style={s.formGroup}>
             <label style={s.label}>{t('kasbon.member')} *</label>
             <select value={memberId} onChange={(e) => setMemberId(e.target.value)} style={s.input}>
-              <option value="">Select...</option>
+              <option value="">{t('kasbon.select_placeholder')}</option>
               {members.map(m => (
                 <option key={m.id} value={m.id}>{m.name}</option>
               ))}
@@ -479,7 +483,7 @@ function NewKastonModal({ members, onClose, onSubmit }) {
           <button onClick={onClose} style={s.secondaryBtn}>
             {t('kasbon.cancel')}
           </button>
-          <button onClick={handleSubmit} disabled={loading} style={s.primaryBtn}>
+          <button onClick={handleSubmit} disabled={loading} className="btn btn-primary" style={{flex:1}}>
             {loading ? t('common.saving') : t('kasbon.save')}
           </button>
         </div>
@@ -503,7 +507,7 @@ function PaymentModal({ record, onClose, onSubmit }) {
   const handleSubmit = async () => {
     const amt = parseFloat(amount)
     if (!amt || amt > record.balanceDue) {
-      setError('Invalid amount')
+      setError(t('kasbon.invalid_amount'))
       return
     }
 
@@ -578,7 +582,7 @@ function PaymentModal({ record, onClose, onSubmit }) {
               type="text"
               value={referenceNumber}
               onChange={(e) => setReferenceNumber(e.target.value)}
-              placeholder="e.g. CHK-001, TRF-123"
+              placeholder={t('kasbon.reference_placeholder')}
               style={s.input}
             />
           </div>
@@ -597,7 +601,7 @@ function PaymentModal({ record, onClose, onSubmit }) {
           <button onClick={onClose} style={s.secondaryBtn}>
             {t('kasbon.cancel')}
           </button>
-          <button onClick={handleSubmit} disabled={loading} style={s.primaryBtn}>
+          <button onClick={handleSubmit} disabled={loading} className="btn btn-primary" style={{flex:1}}>
             {loading ? t('common.saving') : t('kasbon.save')}
           </button>
         </div>
@@ -622,14 +626,9 @@ const s = {
   title: {
     fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0,
   },
-  newBtn: {
-    display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px',
-    background: 'var(--blue)', color: '#fff', border: 'none',
-    borderRadius: 'var(--r2)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-  },
   errorBanner: {
     display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
-    background: 'rgba(239,68,68,0.1)', color: 'var(--red)', borderRadius: 'var(--r2)',
+    background: 'var(--red-dim)', color: 'var(--red)', borderRadius: 'var(--r2)',
     marginTop: 12, fontSize: 13,
   },
   tabs: {
@@ -672,32 +671,30 @@ const s = {
   },
   table: {
     background: 'var(--bg-raised)', borderRadius: 'var(--r3)',
-    border: '1px solid var(--border-dim)', overflow: 'hidden',
+    border: '1px solid var(--border-dim)',
+  },
+  tableScroll: {
+    overflowX: 'auto',
   },
   tableHeader: {
     display: 'flex', padding: '12px 16px', background: 'var(--bg-base)',
     borderBottom: '1px solid var(--border-dim)', fontSize: 12, fontWeight: 600,
-    color: 'var(--text-tertiary)', gap: 12,
+    color: 'var(--text-tertiary)', gap: 12, minWidth: 750, borderRadius: 'var(--r3) var(--r3) 0 0',
   },
   tableBody: {
     display: 'flex', flexDirection: 'column',
   },
   tableRow: {
     display: 'flex', padding: '12px 16px', borderBottom: '1px solid var(--border-dim)',
-    alignItems: 'center', gap: 12, fontSize: 13, color: 'var(--text-primary)',
+    alignItems: 'center', gap: 12, fontSize: 13, color: 'var(--text-primary)', minWidth: 750,
     '&:last-child': { borderBottom: 'none' },
   },
   statusBadge: (status) => ({
     display: 'inline-block', padding: '4px 8px', borderRadius: 'var(--r1)',
     fontSize: 11, fontWeight: 600,
-    background: status === 'open' ? 'rgba(239,68,68,0.1)' : status === 'partial' ? 'rgba(251,146,60,0.1)' : 'rgba(34,197,94,0.1)',
+    background: status === 'open' ? 'var(--red-dim)' : status === 'partial' ? 'var(--amber-dim)' : 'var(--green-dim)',
     color: status === 'open' ? 'var(--red)' : status === 'partial' ? 'var(--amber)' : 'var(--green)',
   }),
-  actionBtn: {
-    padding: '4px 8px', background: 'var(--blue)', color: '#fff',
-    border: 'none', borderRadius: 'var(--r1)', fontSize: 11, fontWeight: 600,
-    cursor: 'pointer',
-  },
   noRecords: {
     padding: '40px 24px', textAlign: 'center', color: 'var(--text-tertiary)',
     fontSize: 13,
@@ -765,7 +762,7 @@ const s = {
     flex: 1, padding: '20px', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 16,
   },
   formError: {
-    padding: '8px 12px', background: 'rgba(239,68,68,0.1)', color: 'var(--red)',
+    padding: '8px 12px', background: 'var(--red-dim)', color: 'var(--red)',
     borderRadius: 'var(--r2)', fontSize: 12,
   },
   formGroup: {
@@ -787,11 +784,6 @@ const s = {
   modalFooter: {
     display: 'flex', gap: 8, padding: '16px 20px',
     borderTop: '1px solid var(--border-dim)', flexShrink: 0,
-  },
-  primaryBtn: {
-    flex: 1, padding: '8px 12px', background: 'var(--blue)', color: '#fff',
-    border: 'none', borderRadius: 'var(--r2)', fontSize: 13, fontWeight: 600,
-    cursor: 'pointer',
   },
   secondaryBtn: {
     flex: 1, padding: '8px 12px', background: 'var(--bg-base)', color: 'var(--text-primary)',
