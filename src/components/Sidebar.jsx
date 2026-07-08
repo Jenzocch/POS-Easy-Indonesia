@@ -120,7 +120,9 @@ export default function Sidebar({ view, setView, session, lowStockCount, todayRe
           <div style={s.avatar}>{session?.username?.[0]}</div>
           <div style={{flex:1, minWidth:0}}>
             <div style={{fontSize:13, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:'var(--text-primary)'}}>{session?.username}</div>
-            <div style={{fontSize:10, color: role?.color || 'var(--text-tertiary)', fontWeight:600, letterSpacing:'.05em'}}>{role?.label}</div>
+            {/* role?.label 是 ROLES 常數裡的中文 fallback 標籤；使用者實際會看到的角色名稱一律
+                走 i18n（settings.role_owner/role_staff），跟 SettingsPage 顯示方式一致 */}
+            <div style={{fontSize:10, color: role?.color || 'var(--text-tertiary)', fontWeight:600, letterSpacing:'.05em'}}>{session?.role ? t(`settings.role_${session.role}`) : ''}</div>
           </div>
           <button className="btn-icon" onClick={onLogout} title={t('nav.logout')}
             style={{color:'var(--text-tertiary)'}}>

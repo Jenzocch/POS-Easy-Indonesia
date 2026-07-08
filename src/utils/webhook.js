@@ -177,7 +177,7 @@ export function payloadFromShift(shift, action, summary = {}) {
     _title: action === 'open' ? '🟢 開班' : '🔴 關班',
     _description: `收銀員：${shift.cashier || '—'}`,
     _fields: action === 'open' ? [
-      { name: '開班時間', value: new Date(shift.openTime).toLocaleString('zh-TW') },
+      { name: '開班時間', value: new Date(shift.openTime).toLocaleString('id-ID') },
       { name: '零用金', value: `NT$ ${(shift.openCash || 0).toLocaleString()}` },
     ] : [
       { name: '營業額（現金）', value: `NT$ ${(summary.cashSales || 0).toLocaleString()}` },

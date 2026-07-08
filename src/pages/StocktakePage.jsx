@@ -207,7 +207,7 @@ export default function StocktakePage({ store, session }) {
         <div>
           <h2 style={st.title}>{t('stocktake.title')}</h2>
           <div style={{fontSize:12, color:'var(--text-tertiary)', marginTop:2}}>
-            {new Date().toLocaleDateString('zh-TW', {year:'numeric',month:'long',day:'numeric',weekday:'long'})}
+            {new Date().toLocaleDateString(DATE_LOCALE[getCurrentLanguage()] || 'id-ID', {year:'numeric',month:'long',day:'numeric',weekday:'long'})}
           </div>
         </div>
         <div style={{display:'flex', gap:8, alignItems:'center'}}>

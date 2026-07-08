@@ -6,10 +6,12 @@ import { maskPhone } from '../utils/security'
 import { t, fmtMoney } from '../i18n'
 
 // label 是 i18n key；tier 儲存值（normal/silver/gold）不變，顯示時才翻譯
+// min/max 門檻需跟 utils/analytics.js 的 memberTier() 保持一致（單一事實來源在那邊算 tier，
+// 這裡的 min/max 只負責畫升級進度條，數字要對得上才不會出現「已經是 silver 但進度條顯示 0%」）。
 const TIER = {
-  normal: { label:'members.tier_normal', color:'var(--text-secondary)', bg:'var(--bg-active)', min:0,     max:10000 },
-  silver: { label:'members.tier_silver', color:'#aab8cc',               bg:'rgba(170,184,204,0.12)', min:10000, max:30000 },
-  gold:   { label:'members.tier_gold',   color:'var(--gold-bright)',    bg:'var(--gold-dim)',     min:30000, max:Infinity },
+  normal: { label:'members.tier_normal', color:'var(--text-secondary)', bg:'var(--bg-active)', min:0,       max:1000000 },
+  silver: { label:'members.tier_silver', color:'#aab8cc',               bg:'rgba(170,184,204,0.12)', min:1000000, max:3000000 },
+  gold:   { label:'members.tier_gold',   color:'var(--gold-bright)',    bg:'var(--gold-dim)',     min:3000000, max:Infinity },
 }
 // RFM tag 是 analytics 計算出的中文字串（同時作為篩選比對 key），只在顯示時翻譯
 const RFM_TAG_KEYS = {
@@ -253,7 +255,7 @@ export default function MembersPage({ store, session }) {
                       </span>
                     </div>
                     <div style={{fontSize:11, color:'var(--text-tertiary)', marginTop:2}}>
-                      {new Date(o.time).toLocaleString('zh-TW', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+                      {new Date(o.time).toLocaleString('id-ID', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}
                       {o.pointsEarned>0 && <span style={{color:'var(--gold)', marginLeft:8}}>+{t('members.points_n', { n: o.pointsEarned })}</span>}
                     </div>
                   </div>

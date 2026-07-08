@@ -17,107 +17,108 @@ import {
   getSetting, setSetting,
 } from '../utils/dataAccess'
 import { fireWebhook, payloadFromOrder, payloadFromLowStock, payloadFromShift, payloadFromExpiring, getWebhookConfig } from '../utils/webhook'
-import { getReorderList, getExpiringProducts } from '../utils/analytics'
+import { getReorderList, getExpiringProducts, memberTier } from '../utils/analytics'
 import { needsRestock } from '../utils/stock'
 
+// 種子商品改成印尼傳統雜貨店（warung）常見品項 + 合理的印尼盾（Rp）售價，
+// 分類簡化為 Makanan/Minuman/Sembako/Kebutuhan 四類（見 utils/categories.js CATEGORY_META）。
+// 條碼：少數品項用真實包裝品會有的 EAN-13（899 開頭＝印尼 GS1 前綴），其餘散裝/秤重品項
+// 維持 noBarcode:true（原本設計就是如此，只是換成印尼場景）。
 const SEED_PRODUCTS = [
-  { id:'p001', name:'花生糖',    category:'自包裝糖果', price:30,  cost:15,  stock:50, barcode:'',             unit:'包',  noBarcode:true  },
-  { id:'p002', name:'芝麻糖',    category:'自包裝糖果', price:25,  cost:12,  stock:40, barcode:'',             unit:'包',  noBarcode:true  },
-  { id:'p003', name:'牛軋糖',    category:'自包裝糖果', price:45,  cost:20,  stock:30, barcode:'',             unit:'包',  noBarcode:true  },
-  { id:'p004', name:'紫菜',      category:'乾貨',       price:35,  cost:18,  stock:80, barcode:'4710265870234', unit:'包',  noBarcode:false },
-  { id:'p005', name:'冬粉',      category:'乾貨',       price:20,  cost:9,   stock:60, barcode:'4714821300018', unit:'包',  noBarcode:false },
-  { id:'p006', name:'醬油',      category:'醬料',       price:55,  cost:28,  stock:3,  barcode:'4719015100013', unit:'瓶',  noBarcode:false },
-  { id:'p007', name:'花生油',    category:'醬料',       price:120, cost:65,  stock:15, barcode:'4710077070027', unit:'瓶',  noBarcode:false },
-  { id:'p008', name:'米粉',      category:'乾貨',       price:30,  cost:14,  stock:45, barcode:'4714821200011', unit:'包',  noBarcode:false },
-  { id:'p009', name:'糯米',      category:'米糧',       price:80,  cost:45,  stock:20, barcode:'',             unit:'kg',  noBarcode:true  },
-  { id:'p010', name:'黑糯米',    category:'米糧',       price:90,  cost:50,  stock:4,  barcode:'',             unit:'kg',  noBarcode:true  },
-  { id:'p011', name:'綠豆',      category:'豆類',       price:40,  cost:22,  stock:35, barcode:'',             unit:'包',  noBarcode:true  },
-  { id:'p012', name:'紅豆',      category:'豆類',       price:45,  cost:24,  stock:30, barcode:'',             unit:'包',  noBarcode:true  },
-  { id:'p013', name:'十穀米',    category:'米糧',       price:70,  cost:35,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p014', name:'小米',      category:'米糧',       price:50,  cost:25,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p015', name:'黑糯米',    category:'米糧',       price:60,  cost:30,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p016', name:'鷹嘴豆',    category:'豆類',       price:65,  cost:33,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p017', name:'綠豆',      category:'豆類',       price:60,  cost:30,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p018', name:'紅豆',      category:'豆類',       price:100, cost:50,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p019', name:'麥片',      category:'米糧',       price:40,  cost:20,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p020', name:'燕麥',      category:'米糧',       price:40,  cost:20,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p021', name:'蕎麥',      category:'米糧',       price:55,  cost:28,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p022', name:'小麥',      category:'米糧',       price:40,  cost:20,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p023', name:'蓮子',      category:'乾貨',       price:400, cost:200, stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p024', name:'芡實',      category:'乾貨',       price:220, cost:110, stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p025', name:'綠豆仁',    category:'豆類',       price:60,  cost:30,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p026', name:'黃豆',      category:'豆類',       price:45,  cost:23,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p027', name:'黑豆',      category:'豆類',       price:60,  cost:30,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p028', name:'花豆',      category:'豆類',       price:65,  cost:33,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p029', name:'花生',      category:'乾貨',       price:150, cost:75,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p030', name:'生花生',    category:'乾貨',       price:150, cost:75,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p031', name:'西谷米',    category:'米糧',       price:45,  cost:23,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p032', name:'紫駱駝麵粉',category:'粉類',       price:25,  cost:13,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p033', name:'風車太白粉',category:'粉類',       price:45,  cost:23,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
-  { id:'p034', name:'地瓜粉',    category:'粉類',       price:40,  cost:20,  stock:30, barcode:'',             unit:'斤',  noBarcode:true  },
+  // Makanan 🍜
+  { id:'p001', name:'Indomie Goreng',           category:'Makanan', price:3500,  cost:2450,  stock:100, barcode:'8991011000016', unit:'bungkus', noBarcode:false },
+  { id:'p002', name:'Mie Sedaap Goreng',         category:'Makanan', price:3000,  cost:2100,  stock:80,  barcode:'',              unit:'bungkus', noBarcode:true  },
+  { id:'p003', name:'Roti Tawar',                category:'Makanan', price:14000, cost:9800,  stock:20,  barcode:'',              unit:'bungkus', noBarcode:true  },
+  { id:'p004', name:'Biskuit Roma Kelapa',       category:'Makanan', price:8000,  cost:5600,  stock:40,  barcode:'',              unit:'bungkus', noBarcode:true  },
+  { id:'p005', name:'Chiki Balls',               category:'Makanan', price:2000,  cost:1300,  stock:60,  barcode:'',              unit:'bungkus', noBarcode:true  },
+  { id:'p006', name:'Kerupuk Udang',             category:'Makanan', price:5000,  cost:3250,  stock:30,  barcode:'',              unit:'bungkus', noBarcode:true  },
+  // Minuman 🥤
+  { id:'p007', name:'Teh Botol Sosro',           category:'Minuman', price:5000,  cost:3500,  stock:48,  barcode:'8991022000012', unit:'botol',   noBarcode:false },
+  { id:'p008', name:'Aqua 600ml',                category:'Minuman', price:4000,  cost:2800,  stock:60,  barcode:'8991011000023', unit:'botol',   noBarcode:false },
+  { id:'p009', name:'Kopi Kapal Api Sachet',     category:'Minuman', price:2000,  cost:1300,  stock:100, barcode:'8991033000018', unit:'sachet',  noBarcode:false },
+  { id:'p010', name:'Susu Ultra 250ml',          category:'Minuman', price:7000,  cost:4900,  stock:36,  barcode:'8991022000029', unit:'kotak',   noBarcode:false },
+  { id:'p011', name:'Fanta Kaleng',              category:'Minuman', price:6000,  cost:4200,  stock:24,  barcode:'',              unit:'kaleng',  noBarcode:true  },
+  { id:'p012', name:'Pop Ice Sachet',            category:'Minuman', price:1500,  cost:1000,  stock:90,  barcode:'',              unit:'sachet',  noBarcode:true  },
+  // Sembako 🍚
+  { id:'p013', name:'Beras 1kg',                 category:'Sembako', price:14000, cost:9800,  stock:50,  barcode:'',              unit:'kg',      noBarcode:true  },
+  { id:'p014', name:'Minyak Goreng 1L',          category:'Sembako', price:18000, cost:12600, stock:30,  barcode:'',              unit:'botol',   noBarcode:true  },
+  { id:'p015', name:'Gula Pasir 1kg',            category:'Sembako', price:17500, cost:12250, stock:40,  barcode:'',              unit:'kg',      noBarcode:true  },
+  { id:'p016', name:'Telur 1kg',                 category:'Sembako', price:28000, cost:19600, stock:20,  barcode:'',              unit:'kg',      noBarcode:true  },
+  { id:'p017', name:'Tepung Terigu 1kg',         category:'Sembako', price:12000, cost:8400,  stock:25,  barcode:'',              unit:'kg',      noBarcode:true  },
+  { id:'p018', name:'Garam Dapur 500g',          category:'Sembako', price:3000,  cost:1800,  stock:40,  barcode:'',              unit:'bungkus', noBarcode:true  },
+  // Kebutuhan 🧼
+  { id:'p019', name:'Sabun Mandi Lifebuoy',      category:'Kebutuhan', price:5000,  cost:3500, stock:30,  barcode:'8991044000014', unit:'pcs',     noBarcode:false },
+  { id:'p020', name:'Shampo Sachet Clear',       category:'Kebutuhan', price:1000,  cost:650,  stock:100, barcode:'',              unit:'sachet',  noBarcode:true  },
+  { id:'p021', name:'Baterai AA Alkaline',       category:'Kebutuhan', price:10000, cost:7000, stock:3,   barcode:'',              unit:'pcs',     noBarcode:true  },
+  { id:'p022', name:'Sabun Cuci Piring Sunlight',category:'Kebutuhan', price:9000,  cost:6300, stock:15,  barcode:'',              unit:'botol',   noBarcode:true  },
+  { id:'p023', name:'Pasta Gigi Pepsodent',      category:'Kebutuhan', price:8500,  cost:5950, stock:20,  barcode:'8991044000021', unit:'pcs',     noBarcode:false },
+  { id:'p024', name:'Deterjen Rinso 1kg',        category:'Kebutuhan', price:16000, cost:11200,stock:25,  barcode:'8991055000010', unit:'bungkus', noBarcode:false },
 ]
+// 會員名稱改印尼常見姓名 + 08xx 印尼手機格式；totalSpent 依新的等級門檻（見 utils/analytics.js
+// memberTier：silver >= Rp1.000.000、gold >= Rp3.000.000）分散在三個級距，讓 MembersPage 的
+// 升級進度條一開始就有意義（不是每個人都卡在 0% 或 100%）。
 const SEED_MEMBERS = [
-  { id:'m001', name:'陳小明', phone:'0912-345-678', points:380, tier:'silver', totalSpent:12400, joinDate:'2024-06-01' },
-  { id:'m002', name:'林美華', phone:'0923-456-789', points:920, tier:'gold',   totalSpent:38600, joinDate:'2024-02-15' },
-  { id:'m003', name:'王大同', phone:'0934-567-890', points:120, tier:'normal', totalSpent:4200,  joinDate:'2025-01-10' },
+  { id:'m001', name:'Budi Santoso', phone:'0812-3456-7890', points:320,  tier:'normal', totalSpent:420000,  joinDate:'2024-06-01' },
+  { id:'m002', name:'Siti Rahayu',  phone:'0813-4567-8901', points:980,  tier:'silver', totalSpent:1650000, joinDate:'2024-02-15' },
+  { id:'m003', name:'Agus Wijaya',  phone:'0821-5678-9012', points:2450, tier:'gold',   totalSpent:4200000, joinDate:'2025-01-10' },
 ]
 const SEED_ORDERS = [
-  { id:'O1700000001', items:[{id:'p001',name:'花生糖',price:30,qty:2},{id:'p006',name:'醬油',price:55,qty:1}], subtotal:115, discount:0, total:115, payMethod:'cash', paid:200, change:85, memberId:'m001', pointsUsed:0, pointsEarned:11, time: new Date(Date.now()-3600000).toISOString() },
-  { id:'O1700000002', items:[{id:'p004',name:'紫菜',price:35,qty:3}], subtotal:105, discount:20, total:85, payMethod:'card', paid:85, change:0, memberId:'m002', pointsUsed:20, pointsEarned:8, time: new Date(Date.now()-7200000).toISOString() },
-  { id:'O1700000003', items:[{id:'p009',name:'糯米',price:80,qty:1},{id:'p012',name:'紅豆',price:45,qty:2}], subtotal:170, discount:0, total:170, payMethod:'cash', paid:200, change:30, memberId:null, pointsUsed:0, pointsEarned:0, time: new Date(Date.now()-86400000).toISOString() },
+  { id:'O1700000001', items:[{id:'p001',name:'Indomie Goreng',price:3500,qty:2},{id:'p019',name:'Sabun Mandi Lifebuoy',price:5000,qty:1}], subtotal:12000, discount:0, total:12000, payMethod:'cash', paid:20000, change:8000, memberId:'m001', pointsUsed:0, pointsEarned:12, time: new Date(Date.now()-3600000).toISOString() },
+  { id:'O1700000002', items:[{id:'p008',name:'Aqua 600ml',price:4000,qty:3}], subtotal:12000, discount:2000, total:10000, payMethod:'card', paid:10000, change:0, memberId:'m002', pointsUsed:20, pointsEarned:10, time: new Date(Date.now()-7200000).toISOString() },
+  { id:'O1700000003', items:[{id:'p013',name:'Beras 1kg',price:14000,qty:1},{id:'p017',name:'Tepung Terigu 1kg',price:12000,qty:2}], subtotal:38000, discount:0, total:38000, payMethod:'cash', paid:40000, change:2000, memberId:null, pointsUsed:0, pointsEarned:0, time: new Date(Date.now()-86400000).toISOString() },
 ]
 const thisMonth = new Date().toISOString().slice(0,7)
 const SEED_MANUAL = [
-  { id:'JM001', orderId:null, date:thisMonth+'-01', description:'三月份租金',    type:'manual', lines:[{account:'5202',debit:12000,credit:0,note:'店面租金'},{account:'1101',debit:0,credit:12000,note:'現金'}] },
-  { id:'JM002', orderId:null, date:thisMonth+'-05', description:'三月份水電費',  type:'manual', lines:[{account:'5203',debit:2400,credit:0,note:'台電+台水'},{account:'1101',debit:0,credit:2400,note:'現金'}] },
-  { id:'JM003', orderId:null, date:thisMonth+'-10', description:'進貨 乾貨批發', type:'manual', lines:[{account:'1211',debit:8500,credit:0,note:'入庫'},{account:'1101',debit:0,credit:8500,note:'現金'}] },
+  { id:'JM001', orderId:null, date:thisMonth+'-01', description:'Sewa toko bulan ini', type:'manual', lines:[{account:'5202',debit:1200000,credit:0,note:'Sewa toko'},{account:'1101',debit:0,credit:1200000,note:'Kas'}] },
+  { id:'JM002', orderId:null, date:thisMonth+'-05', description:'Listrik & air',       type:'manual', lines:[{account:'5203',debit:350000,credit:0,note:'PLN + PDAM'},{account:'1101',debit:0,credit:350000,note:'Kas'}] },
+  { id:'JM003', orderId:null, date:thisMonth+'-10', description:'Belanja stok grosir', type:'manual', lines:[{account:'1211',debit:850000,credit:0,note:'Masuk gudang'},{account:'1101',debit:0,credit:850000,note:'Kas'}] },
 ]
 // PERF-06：suppliers/purchases/promotions 原本分別在 InventoryPage/PurchasePage/PromotionsPage
 // 各自 mount 時呼叫 loadX()（每次切頁都重打一次 IPC/SQLite）。搬進 store 統一載入一次，
 // 種子資料一併搬過來（原本分散在各頁面檔案內）。
 const SEED_SUPPLIERS = [
-  { id:'s001', name:'台北乾貨行', contact:'02-2345-6789', payTerms:'月結30天', note:'每週二、五到貨' },
-  { id:'s002', name:'統一糖果批發', contact:'0912-111-222', payTerms:'現金', note:'最低叫貨 2000元' },
-  { id:'s003', name:'全台醬料行', contact:'04-2345-0001', payTerms:'月結60天', note:'' },
+  { id:'s001', name:'Toko Grosir Makmur Jaya', contact:'021-5678-1234', payTerms:'Jatuh tempo 30 hari', note:'Kirim tiap Selasa & Jumat' },
+  { id:'s002', name:'Distributor Snack Sentosa', contact:'0812-1111-2222', payTerms:'Tunai', note:'Minimal order Rp 200.000' },
+  { id:'s003', name:'Grosir Sembako Barokah', contact:'031-2345-0001', payTerms:'Jatuh tempo 60 hari', note:'' },
 ]
 const SEED_PURCHASES = [
   {
-    id:'PO001', supplierId:'s001', supplierName:'台北乾貨行',
+    id:'PO001', supplierId:'s001', supplierName:'Toko Grosir Makmur Jaya',
     status:'received', date:'2025-03-10', receivedDate:'2025-03-12',
     items:[
-      { productId:'p004', name:'紫菜',  qty:50, unitCost:18, received:50 },
-      { productId:'p005', name:'冬粉',  qty:100,unitCost:9,  received:100 },
+      { productId:'p002', name:'Mie Sedaap Goreng', qty:200, unitCost:2100, received:200 },
+      { productId:'p006', name:'Kerupuk Udang',      qty:100,unitCost:3250, received:100 },
     ],
-    note:'正常補貨', total:2700,
+    note:'Belanja rutin', total:745000,
   },
   {
-    id:'PO002', supplierId:'s002', supplierName:'統一糖果批發',
+    id:'PO002', supplierId:'s002', supplierName:'Distributor Snack Sentosa',
     status:'ordered', date:'2025-03-15', receivedDate:null,
     items:[
-      { productId:'p001', name:'花生糖', qty:200, unitCost:15, received:0 },
-      { productId:'p003', name:'牛軋糖', qty:100, unitCost:20, received:0 },
+      { productId:'p005', name:'Chiki Balls',         qty:300, unitCost:1300, received:0 },
+      { productId:'p004', name:'Biskuit Roma Kelapa', qty:150, unitCost:5600, received:0 },
     ],
-    note:'', total:5000,
+    note:'', total:1230000,
   },
 ]
 const SEED_PROMOTIONS = [
   {
-    id:'pr001', name:'滿500折50', type:'threshold', enabled:true,
+    id:'pr001', name:'Belanja 50rb Diskon 5rb', type:'threshold', enabled:true,
     startAt:'2025-01-01T00:00:00', endAt:'2025-12-31T23:59:59',
-    condition:{ threshold:500, discount:50 },
-    note:'全館適用',
+    condition:{ threshold:50000, discount:5000 },
+    note:'Berlaku semua produk',
   },
   {
-    id:'pr002', name:'週末九折', type:'percent', enabled:false,
+    id:'pr002', name:'Diskon Akhir Pekan 10%', type:'percent', enabled:false,
     startAt:'2025-03-01T00:00:00', endAt:'2025-03-31T23:59:59',
     condition:{ rate:0.9 },
     note:'',
   },
   {
-    id:'pr003', name:'買三送一', type:'buyget', enabled:true,
+    id:'pr003', name:'Beli 3 Gratis 1', type:'buyget', enabled:true,
     startAt:'2025-01-01T00:00:00', endAt:'2025-06-30T23:59:59',
     condition:{ buy:3, get:1 },
-    note:'最低價商品免費',
+    note:'Produk termurah gratis',
   },
 ]
 
@@ -353,7 +354,7 @@ export function useStore(){
         const newPoints = Math.max(0, m.points - usePoints + pointsEarned)
         const newSpent = (m.totalSpent || 0) + total
         const newBalance = Math.max(0, (m.balance || 0) - useBalance)
-        const tier = newSpent >= 30000 ? 'gold' : newSpent >= 10000 ? 'silver' : 'normal'
+        const tier = memberTier(newSpent)
         const updated = { ...m, points: newPoints, totalSpent: newSpent, tier, balance: newBalance }
         if (birthdayBonusGiven > 0) updated.lastBirthdayBonus = new Date().toISOString().slice(0,10)
         return updated
@@ -371,8 +372,7 @@ export function useStore(){
         pointsDelta: -usePoints + pointsEarned,
         spentDelta: total,
         balanceDelta: -useBalance,
-        tier: (activeMember.totalSpent + total) >= 30000 ? 'gold'
-            : (activeMember.totalSpent + total) >= 10000 ? 'silver' : 'normal',
+        tier: memberTier(activeMember.totalSpent + total),
         // 生日贈點：把發放月份一起寫回 DB（見 checkoutTx），否則重開後本月會重複贈點
         ...(birthdayBonusGiven > 0 ? { lastBirthdayBonus: new Date().toISOString().slice(0,10) } : {}),
       } : null
@@ -474,7 +474,7 @@ export function useStore(){
         if (m.id !== origOrder.memberId) return m
         const newPoints = Math.max(0, (m.points || 0) + refundPointsEarned - refundPointsUsed)
         const newSpent = Math.max(0, (m.totalSpent || 0) - refundTotal)
-        const tier = newSpent >= 30000 ? 'gold' : newSpent >= 10000 ? 'silver' : 'normal'
+        const tier = memberTier(newSpent)
         return { ...m, points: newPoints, totalSpent: newSpent, tier, balance: Math.max(0, (m.balance || 0) + restoredBalance) }
       }))
     }
@@ -500,7 +500,7 @@ export function useStore(){
     if (!cart.length) return null
     const held = {
       id: 'H' + Date.now(),
-      label: label || `掛單 ${new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})}`,
+      label: label || `掛單 ${new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}`,
       cart: [...cart],
       memberId: activeMember?.id || '',
       manualDiscount,

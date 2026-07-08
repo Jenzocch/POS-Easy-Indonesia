@@ -295,6 +295,18 @@ export function getProductHistory(productId, { orders = [], wasteLog = [], purch
   return events
 }
 
+// ===== 會員等級門檻 =====
+// 單一事實來源：原本 useStore.js 結帳/退貨各算一次、MembersPage 進度條又算一次，
+// 三處各自硬編 30000/10000 這種台幣尺度的門檻，換算成印尼盾（Rp）後完全失去意義
+// （一包泡麵就能升級）。抽成這支 pure function，門檻改成符合印尼雜貨店常客規模：
+// 銀卡 ≥ Rp 1.000.000、金卡 ≥ Rp 3.000.000 累積消費。
+export function memberTier(totalSpent) {
+  const spent = Number(totalSpent) || 0
+  if (spent >= 3000000) return 'gold'
+  if (spent >= 1000000) return 'silver'
+  return 'normal'
+}
+
 // ===== 會員消費結構分析 =====
 // 散客 vs 會員、各層級會員的銷售貢獻
 export function customerSegmentation(orders = [], members = []) {

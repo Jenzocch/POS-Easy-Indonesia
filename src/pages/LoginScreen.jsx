@@ -5,10 +5,12 @@ import { isElectron } from '../utils/dataAccess'
 import useIsMobile from '../hooks/useIsMobile'
 import { t, getCurrentLanguage, LanguageSwitcher } from '../i18n'
 
-// 簡化：只有老闆和員工
+// 簡化：只有老闆(Bos)和員工(Karyawan)
+// 注意：這是「新安裝」才會種的帳號；已存在的舊安裝（帳號叫 老闆/員工）靠下面 initUsers()
+// 的版本號機制繼續沿用舊資料，不會被這次改名影響——見 initUsers() 內的版本檢查註解。
 const SEED_USERS = [
-  { id:'u001', username:'老闆', password:'1234', role:'owner' },
-  { id:'u002', username:'員工', password:'0000', role:'staff'  },
+  { id:'u001', username:'Bos', password:'1234', role:'owner' },
+  { id:'u002', username:'Karyawan', password:'0000', role:'staff'  },
 ]
 
 const USERS_KEY = 'pos_users'
@@ -274,7 +276,7 @@ export default function LoginScreen({ onLogin }) {
 
           <div style={ls.secNote}>
             <Shield size={12} style={{flexShrink:0}}/>
-            <span>{t('login.default_pw_prefix')}老闆 <code style={ls.code}>1234</code> · 員工 <code style={ls.code}>0000</code></span>
+            <span>{t('login.default_pw_prefix')}Bos <code style={ls.code}>1234</code> · Karyawan <code style={ls.code}>0000</code></span>
           </div>
         </div>
       </div>

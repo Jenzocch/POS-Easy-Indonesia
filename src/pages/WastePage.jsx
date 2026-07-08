@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { Trash2, Plus, AlertTriangle, Calendar, Package } from 'lucide-react'
 import { exportXLS } from '../utils/exportXLS'
 import { getExpiringProducts } from '../utils/analytics'
-import { t, fmtMoney } from '../i18n'
+import { t, fmtMoney, formatDate, formatTime } from '../i18n'
 
 // REASONS 是「儲存值」（wasteLog.reason 存進資料層）— 不可翻譯，維持中文原值。
 // 顯示時透過 REASON_KEYS 對應翻譯；查不到的（舊自訂資料）原樣顯示。
@@ -72,8 +72,8 @@ export default function WastePage({ store, session }) {
     filtered.forEach(w => {
       const tm = new Date(w.time)
       rows.push([
-        tm.toLocaleDateString('zh-TW'),
-        tm.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'}),
+        formatDate(tm),
+        formatTime(tm),
         w.productName,
         Math.abs(w.qty),
         w.cost || 0,
@@ -173,7 +173,7 @@ export default function WastePage({ store, session }) {
             <tbody>
               {filtered.map(w => (
                 <tr key={w.id} style={{borderBottom:'1px solid var(--border-dim)'}}>
-                  <td style={ws.td}>{new Date(w.time).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+                  <td style={ws.td}>{new Date(w.time).toLocaleString('id-ID',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
                   <td style={ws.td}>{w.productName}</td>
                   <td style={{...ws.td, textAlign:'right', fontFamily:'var(--font-mono)'}}>{Math.abs(w.qty)}</td>
                   <td style={{...ws.td, textAlign:'right', fontFamily:'var(--font-mono)', color:'var(--text-secondary)'}}>{(w.cost||0).toLocaleString()}</td>

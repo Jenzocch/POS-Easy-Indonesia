@@ -21,24 +21,16 @@ export const DEFAULT_CATEGORIES = [
 ]
 
 // 每個分類的 icon emoji + 顯示色（給 UI 用）
+// 重建為印尼雜貨店（warung）種子商品實際使用的四大分類（見 store/useStore.js SEED_PRODUCTS）。
+// 舊版 CATEGORY_META 是台灣雜貨店細分類（生鮮/冷凍/蔬果/肉品/海鮮...），跟種子商品原本用的
+// 自包裝糖果/醬料等分類本來就對不上（那兩個分類原本就沒有對應的 icon）。DEFAULT_CATEGORIES
+// 下面那份預設分類清單維持原樣、供 InventoryPage/PurchasePage 的「快速選分類」使用；使用者
+// 仍可自由輸入任何分類字串（含這四個新分類），不受此清單限制。
 export const CATEGORY_META = {
-  '雜貨':     { icon: '🛒', color: 'var(--text-secondary)' },
-  '生鮮':     { icon: '🐟', color: 'var(--blue)' },
-  '冷凍':     { icon: '❄️',  color: 'var(--blue)' },
-  '蔬果':     { icon: '🥬', color: 'var(--green)' },
-  '調味料':   { icon: '🧂', color: 'var(--amber)' },
-  '米糧':     { icon: '🌾', color: 'var(--gold)' },
-  '乾貨':     { icon: '🥜', color: 'var(--gold)' },
-  '豆類':     { icon: '🫘', color: 'var(--gold)' },
-  '粉類':     { icon: '🌾', color: 'var(--gold)' },
-  '飲料':     { icon: '🥤', color: 'var(--teal)' },
-  '零食':     { icon: '🍪', color: 'var(--purple)' },
-  '糖果':     { icon: '🍬', color: 'var(--pink)' },
-  '肉品':     { icon: '🥩', color: 'var(--red)' },
-  '海鮮':     { icon: '🦐', color: 'var(--blue)' },
-  '日用品':   { icon: '🧴', color: 'var(--text-secondary)' },
-  '清潔用品': { icon: '🧼', color: 'var(--teal)' },
-  '紙類':     { icon: '🧻', color: 'var(--text-secondary)' },
+  'Makanan':   { icon: '🍜', color: 'var(--amber)' },
+  'Minuman':   { icon: '🥤', color: 'var(--teal)' },
+  'Sembako':   { icon: '🍚', color: 'var(--gold)' },
+  'Kebutuhan': { icon: '🧼', color: 'var(--blue)' },
 }
 
 // 合併 preset + 使用者已建立的分類，去重後回傳完整清單
