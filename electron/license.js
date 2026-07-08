@@ -18,8 +18,8 @@
 
 const crypto = require('crypto')
 
-// 訂閱層級——複製自 src/types/kasbon.ts KASBON_LIMITS（同 kasbon-shared.js 的作法，
-// 修改時請與 src/types/kasbon.ts 及 electron/kasbon-shared.js 同步）。
+// 訂閱層級——複製自 electron/kasbon-shared.js 的 KASBON_LIMITS（source of truth），
+// 修改時請與 kasbon-shared.js 及 tools/generate-license.js 同步。
 const KASBON_LIMITS = {
   free: { perMember: 0, perStore: 0 },
   warung: { perMember: 50e6, perStore: 500e6 },

@@ -9,10 +9,10 @@
 
 ## v2.5.0 新增功能
 
-### Kasbon 賒帳/信用額度（`electron/kasbon-routes.js`、`electron/kasbon-shared.js`、`src/pages/KastonPage.jsx`）
-- 商業邏輯集中在 `electron/kasbon-shared.js`（純 CJS，IPC 與 HTTP 路徑共用，不 require `src/`）；`kasbon-routes.js` 只負責 Express 路由與狀態碼對應，且限定本機呼叫（loopback only，含 cloudflared tunnel header 偵測拒絕）
+### Kasbon 賒帳/信用額度（`electron/kasbon-shared.js`、`src/pages/KastonPage.jsx`）
+- 商業邏輯集中在 `electron/kasbon-shared.js`（純 CJS，供 `main.js` 的 IPC handlers 使用，不 require `src/`；`KASBON_LIMITS` 分級額度定義的 source of truth）。桌面 UI 一律走 IPC，賒帳沒有對外 HTTP 端點
 - 資料表：`kasbon_records`（賒帳主檔）、`kasbon_payments`（還款紀錄，FK CASCADE → kasbon_records）、`member_kasbon_balance`（會員賒帳彙總，含黑名單旗標）
-- 前端：`src/pages/KastonPage.jsx`（Sidebar 新增「賒帳」導航項、`App.jsx` 新增 `kasbon` route）、`src/utils/kasbon-validation.js`（含測試 `kasbon-validation.test.js`）、`src/types/kasbon.ts`（`KASBON_LIMITS` 分級額度定義）、`src/i18n/keys/kasbon.js`（賒帳專用翻譯字串）
+- 前端：`src/pages/KastonPage.jsx`（Sidebar 新增「賒帳」導航項、`App.jsx` 新增 `kasbon` route）、`src/utils/kasbon-validation.js`（含測試 `kasbon-validation.test.js`）、`src/i18n/keys/kasbon.js`（賒帳專用翻譯字串）
 - 備份/還原相容：舊備份無 kasbon 鍵時「保留」本機現有賒帳資料不清空，並由存活的 `kasbon_records` 重算 `member_kasbon_balance`
 
 ### 授權金鑰系統（`electron/license.js`、`tools/generate-license.js`）
@@ -130,9 +130,8 @@ pos-system/
 │   ├── database.js    ← better-sqlite3 schema + CRUD（核心！）
 │   ├── printer.js     ← ESC/POS 熱感印表機 + 錢箱
 │   ├── barcode.js     ← JsBarcode 條碼產生
-│   ├── server.js      ← Express + WebSocket（顧客點餐用，含 cloudflared tunnel）
-│   ├── kasbon-routes.js  ← Kasbon 賒帳 HTTP 路由（限本機呼叫，loopback only）
-│   ├── kasbon-shared.js  ← Kasbon 商業邏輯（IPC + HTTP 共用，純 CJS）
+│   ├── server.js      ← Express + WebSocket（顧客點餐用，含 cloudflared tunnel，opt-in）
+│   ├── kasbon-shared.js  ← Kasbon 商業邏輯（供 main.js 的 IPC handlers 使用，純 CJS）
 │   └── license.js        ← 授權金鑰驗證（Ed25519 簽章，只內嵌公鑰）
 │
 ├── tools/             ← 開發者/店家專用離線 CLI（不隨安裝包出貨）

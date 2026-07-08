@@ -176,12 +176,6 @@ module.exports = function startOrderServer(port, db, getMainWindow) {
     res.json({ storeName: db.getSetting('storeName') || '雜貨店', version: '2.0.0' })
   })
 
-  // ===== Kasbon Routes (Credit Ledger) =====
-  // 訂閱層級解析與商業邏輯統一放在 kasbon-shared.js，與 main.js 的 IPC 路徑共用
-  const registerKastonRoutes = require('./kasbon-routes')
-  const { getSubscription } = require('./kasbon-shared')
-  registerKastonRoutes(app, db, () => getSubscription(db))
-
   // ===== Server 啟動 =====
   const clients = new Set()
   let server = null

@@ -27,8 +27,8 @@ const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
 
-// Mirrors src/types/kasbon.ts KASBON_LIMITS keys — keep in sync, see electron/kasbon-shared.js
-// header comment for why this repo keeps parallel CJS copies of shared constants.
+// Mirrors electron/kasbon-shared.js KASBON_LIMITS (source of truth) — keep in sync, see
+// kasbon-shared.js header comment for why this repo keeps parallel CJS copies of shared constants.
 const KASBON_LIMITS = {
   free: { perMember: 0, perStore: 0 },
   warung: { perMember: 50e6, perStore: 500e6 },

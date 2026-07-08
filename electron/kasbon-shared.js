@@ -1,23 +1,24 @@
 /**
  * Kasbon (賒帳 Credit Ledger) — 共用商業邏輯 (CommonJS)
  *
- * 同時供兩條路徑使用：
- *   1. electron/main.js 的 IPC handlers（POS 桌面 UI 走這條）
- *   2. electron/kasbon-routes.js 的 Express routes（點餐伺服器仍註冊這些端點）
+ * 供 electron/main.js 的 IPC handlers 使用（POS 桌面 UI 走這條；賒帳沒有 HTTP 端點，
+ * 桌面 UI 一律走 IPC，見 src/utils/dataAccess.js 開頭註解）。
  *
  * 為什麼不 require('../src/...')：
  *   - electron-builder 的 files 只打包 dist/、electron/、public/menu/，src/ 不在安裝包內。
  *   - src/utils/kasbon-validation.js 是 ESM（export function），main process 的 CJS require 會直接
- *     SyntaxError；src/types/kasbon.ts 是 TypeScript，require 會 MODULE_NOT_FOUND。
- *   因此驗證與額度表在此各留一份 CJS 版；修改時請與下列來源同步：
- *   - KASBON_LIMITS  → source of truth: src/types/kasbon.ts
+ *     SyntaxError。
+ *   因此驗證邏輯在此留一份 CJS 版；修改時請與下列來源同步：
  *   - validate*      → source of truth: src/utils/kasbon-validation.js（有 vitest 測試）
+ *
+ * KASBON_LIMITS 是本檔案的 source of truth（electron/license.js、tools/generate-license.js
+ * 各留一份 CJS 鏡像，修改時三處一起改）。
  *
  * 所有對外函式一律回傳 { success, ... } 結構化結果，內部 try/catch，絕不 throw——
  * 避免錯誤跨 IPC 拋出讓遠端店家的 renderer 收到 unhandled rejection。
  */
 
-// 訂閱層級額度上限（IDR）— 複製自 src/types/kasbon.ts KASBON_LIMITS
+// 訂閱層級額度上限（IDR）
 const KASBON_LIMITS = {
   free: { perMember: 0, perStore: 0 },           // Kasbon disabled
   warung: { perMember: 50e6, perStore: 500e6 },  // 50M per member, 500M total
