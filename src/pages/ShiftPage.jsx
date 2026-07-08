@@ -1,12 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { Clock, Plus, Minus, LogIn, LogOut, FileText, AlertCircle } from 'lucide-react'
-import { loadShifts, loadCashLog } from '../utils/dataAccess'
 import { t, fmtMoney } from '../i18n'
 
 export default function ShiftPage({ store, session }) {
-  const { openShift, startShift, endShift, logCash, orders } = store
-  const [shifts, setShifts] = useState([])
-  const [cashLog, setCashLog] = useState([])
+  const { openShift, startShift, endShift, logCash, orders, shifts = [], cashLog: allCashLog = [] } = store
+  // PERF-06：shifts/cashLog 現在集中在 store（開班/關班/記現金時才整包重讀，見 useStore.js 的
+  // refreshShiftData），這裡只保留「只看這班的現金流水」這個 page-local 篩選，跟舊版行為一致。
+  const cashLog = useMemo(
+    () => allCashLog.filter(x => !openShift || x.shiftId === openShift.id),
+    [allCashLog, openShift]
+  )
   const [showOpen, setShowOpen] = useState(false)
   const [showClose, setShowClose] = useState(false)
   const [showCash, setShowCash] = useState(false)
@@ -16,17 +19,6 @@ export default function ShiftPage({ store, session }) {
   const [cashAmount, setCashAmount] = useState('')
   const [cashType, setCashType] = useState('in')
   const [cashReason, setCashReason] = useState('')
-
-  useEffect(() => { reload() }, [openShift?.id])
-
-  async function reload() {
-    const [s, c] = await Promise.all([
-      loadShifts().catch(()=>[]),
-      loadCashLog(openShift?.id).catch(()=>[]),
-    ])
-    setShifts(s || [])
-    setCashLog((c || []).filter(x => !openShift || x.shiftId === openShift.id))
-  }
 
   // 即時統計這班
   const shiftStats = (() => {
@@ -76,7 +68,6 @@ export default function ShiftPage({ store, session }) {
         diff: `${diff >= 0 ? '+' : ''}${fmtMoney(diff)}`,
       }))
     }
-    reload()
   }
 
   async function handleCash() {
@@ -84,7 +75,6 @@ export default function ShiftPage({ store, session }) {
     if (!amt || !cashReason) return
     await logCash(cashType, amt, cashReason, session?.username || '')
     setShowCash(false); setCashAmount(''); setCashReason(''); setCashType('in')
-    reload()
   }
 
   return (

@@ -8,8 +8,12 @@ import {
   loadManualJournal, saveManualJournal, dbAddManualEntry, dbDeleteManualEntry,
   loadHeldOrders, addHeldOrder, deleteHeldOrder,
   getOpenShift, openShift as apiOpenShift, closeShift as apiCloseShift, addCashLog,
+  loadShifts, loadCashLog,
   loadWasteLog, addWaste, deleteWaste,
   addTopup, loadTopups,
+  loadSuppliers, dbAddSupplier, dbUpdateSupplier, dbDeleteSupplier,
+  loadPurchases, dbAddPurchase, dbUpdatePurchase, dbDeletePurchase,
+  loadPromotions, dbAddPromotion, dbUpdatePromotion, dbDeletePromotion,
   getSetting, setSetting,
 } from '../utils/dataAccess'
 import { fireWebhook, payloadFromOrder, payloadFromLowStock, payloadFromShift, payloadFromExpiring, getWebhookConfig } from '../utils/webhook'
@@ -68,6 +72,54 @@ const SEED_MANUAL = [
   { id:'JM002', orderId:null, date:thisMonth+'-05', description:'三月份水電費',  type:'manual', lines:[{account:'5203',debit:2400,credit:0,note:'台電+台水'},{account:'1101',debit:0,credit:2400,note:'現金'}] },
   { id:'JM003', orderId:null, date:thisMonth+'-10', description:'進貨 乾貨批發', type:'manual', lines:[{account:'1211',debit:8500,credit:0,note:'入庫'},{account:'1101',debit:0,credit:8500,note:'現金'}] },
 ]
+// PERF-06：suppliers/purchases/promotions 原本分別在 InventoryPage/PurchasePage/PromotionsPage
+// 各自 mount 時呼叫 loadX()（每次切頁都重打一次 IPC/SQLite）。搬進 store 統一載入一次，
+// 種子資料一併搬過來（原本分散在各頁面檔案內）。
+const SEED_SUPPLIERS = [
+  { id:'s001', name:'台北乾貨行', contact:'02-2345-6789', payTerms:'月結30天', note:'每週二、五到貨' },
+  { id:'s002', name:'統一糖果批發', contact:'0912-111-222', payTerms:'現金', note:'最低叫貨 2000元' },
+  { id:'s003', name:'全台醬料行', contact:'04-2345-0001', payTerms:'月結60天', note:'' },
+]
+const SEED_PURCHASES = [
+  {
+    id:'PO001', supplierId:'s001', supplierName:'台北乾貨行',
+    status:'received', date:'2025-03-10', receivedDate:'2025-03-12',
+    items:[
+      { productId:'p004', name:'紫菜',  qty:50, unitCost:18, received:50 },
+      { productId:'p005', name:'冬粉',  qty:100,unitCost:9,  received:100 },
+    ],
+    note:'正常補貨', total:2700,
+  },
+  {
+    id:'PO002', supplierId:'s002', supplierName:'統一糖果批發',
+    status:'ordered', date:'2025-03-15', receivedDate:null,
+    items:[
+      { productId:'p001', name:'花生糖', qty:200, unitCost:15, received:0 },
+      { productId:'p003', name:'牛軋糖', qty:100, unitCost:20, received:0 },
+    ],
+    note:'', total:5000,
+  },
+]
+const SEED_PROMOTIONS = [
+  {
+    id:'pr001', name:'滿500折50', type:'threshold', enabled:true,
+    startAt:'2025-01-01T00:00:00', endAt:'2025-12-31T23:59:59',
+    condition:{ threshold:500, discount:50 },
+    note:'全館適用',
+  },
+  {
+    id:'pr002', name:'週末九折', type:'percent', enabled:false,
+    startAt:'2025-03-01T00:00:00', endAt:'2025-03-31T23:59:59',
+    condition:{ rate:0.9 },
+    note:'',
+  },
+  {
+    id:'pr003', name:'買三送一', type:'buyget', enabled:true,
+    startAt:'2025-01-01T00:00:00', endAt:'2025-06-30T23:59:59',
+    condition:{ buy:3, get:1 },
+    note:'最低價商品免費',
+  },
+]
 
 function loadLS(k,fb){try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb}catch{return fb}}
 // LOAD-6 止血：寫入失敗（最常見是 5MB quota 滿 → 新訂單默默不落盤）不可再靜默吞掉，
@@ -95,6 +147,11 @@ export function useStore(){
   const [wasteLog,      setWasteLog]      = useState([])
   const [topups,        setTopups]        = useState([])   // 會員儲值紀錄（給會計自動分錄用）
   const [openShift,     setOpenShiftState] = useState(null)
+  const [suppliers,     setSuppliers]     = useState([])
+  const [purchases,     setPurchases]     = useState([])
+  const [promotions,    setPromotions]    = useState([])
+  const [shifts,        setShifts]        = useState([])
+  const [cashLog,       setCashLog]       = useState([])
   const [manualDiscount,setManualDiscount] = useState(0)
   const [pointsRule,    setPointsRule]    = useState({ earn: 10, redeem: 1 }) // 消費 X 元 1 點；1 點折抵 X 元
   const [birthdayBonus, setBirthdayBonus] = useState(100)
@@ -115,9 +172,14 @@ export function useStore(){
         loadWasteLog(),
         loadTopups(),
         getOpenShift(),
+        loadSuppliers(SEED_SUPPLIERS),
+        loadPurchases(SEED_PURCHASES),
+        loadPromotions(SEED_PROMOTIONS),
+        loadShifts(),
+        loadCashLog(),
       ])
-      const fallbacks = [SEED_PRODUCTS, SEED_MEMBERS, SEED_ORDERS, SEED_MANUAL, [], [], [], null]
-      const [p, m, o, j, held, waste, tps, shift] = results.map((r, i) => {
+      const fallbacks = [SEED_PRODUCTS, SEED_MEMBERS, SEED_ORDERS, SEED_MANUAL, [], [], [], null, SEED_SUPPLIERS, SEED_PURCHASES, SEED_PROMOTIONS, [], []]
+      const [p, m, o, j, held, waste, tps, shift, sup, purch, promo, shiftsList, cashLogList] = results.map((r, i) => {
         if (r.status === 'fulfilled') return r.value
         console.error('[POS] init load failed:', i, r.reason)
         return fallbacks[i]
@@ -130,6 +192,19 @@ export function useStore(){
       setWasteLog(Array.isArray(waste) ? waste : [])
       setTopups(Array.isArray(tps) ? tps : [])
       setOpenShiftState(shift || null)
+      setSuppliers(Array.isArray(sup) ? sup : [])
+      // PurchasePage 舊版一次性資料修復：舊「標記付款」曾寫入 STATUS map 查無的 status:'paid'，
+      // 會讓 PurchaseList 渲染 crash（全站白屏）。修回 'received'（付款狀態改以 paidDate 區分）。
+      const purchArr = Array.isArray(purch) ? purch : []
+      const repairedPurchases = purchArr.map(x => x.status === 'paid' ? { ...x, status: 'received' } : x)
+      const fixedPurchases = repairedPurchases.filter((x, i) => x !== purchArr[i])
+      setPurchases(repairedPurchases)
+      if (fixedPurchases.length > 0 && isElectron) {
+        fixedPurchases.forEach(x => dbUpdatePurchase(x.id, x).catch(logDbErr('repairPurchase')))
+      }
+      setPromotions(Array.isArray(promo) ? promo : [])
+      setShifts(Array.isArray(shiftsList) ? shiftsList : [])
+      setCashLog(Array.isArray(cashLogList) ? cashLogList : [])
       // 載入點數規則 / 生日贈點
       try {
         const [earn, redeem, bday] = await Promise.all([
@@ -172,6 +247,12 @@ export function useStore(){
   useEffect(() => { if (!isElectron && ready) saveLS('pos2_members', members) }, [members, ready])
   useEffect(() => { if (!isElectron && ready) saveLS('pos2_orders', orders) }, [orders, ready])
   useEffect(() => { if (!isElectron && ready) saveLS('pos2_manual_j', manualEntries) }, [manualEntries, ready])
+  useEffect(() => { if (!isElectron && ready) saveLS('pos_suppliers', suppliers) }, [suppliers, ready])
+  useEffect(() => { if (!isElectron && ready) saveLS('pos_purchases', purchases) }, [purchases, ready])
+  // promotions 搬進 store 前，PromotionsPage 自己的 save() 會在瀏覽器模式手動寫 localStorage；
+  // 現在 mutator 統一走 addPromotion/updatePromotion/deletePromotion（只在 isElectron 時寫 DB，
+  // 跟 addProduct 等其他實體一致），少了這條 effect 瀏覽器模式編輯促銷會在重整後消失。
+  useEffect(() => { if (!isElectron && ready) saveLS('pos_promotions', promotions) }, [promotions, ready])
 
   const autoJournal = useMemo(()=>[
     ...orders.flatMap(o=>orderToJournalEntries(o,products)),
@@ -450,6 +531,19 @@ export function useStore(){
   }, [])
 
   // 班別
+  // PERF-06：shifts/cashLog 原本是 ShiftPage 自己的 state，靠 useEffect(reload, [openShift?.id])
+  // 在每次進頁 + 每次開班/關班/記現金時整包重打 IPC。搬進 store 後改成：
+  // 初始化只載入一次，開班/關班/記現金這幾個低頻動作才重新整包讀回（因為 closeShift 在後端算出
+  // cashSales/cardSales/diff 等衍生欄位，前端沒有對應資料可以樂觀更新，重讀比在這裡重算安全）。
+  const refreshShiftData = useCallback(async () => {
+    const [s, c] = await Promise.all([
+      loadShifts().catch(()=>[]),
+      loadCashLog().catch(()=>[]),
+    ])
+    setShifts(Array.isArray(s) ? s : [])
+    setCashLog(Array.isArray(c) ? c : [])
+  }, [])
+
   const startShift = useCallback(async (cashier, openCash, cashierId='') => {
     const data = {
       id: 'S' + Date.now(),
@@ -458,9 +552,10 @@ export function useStore(){
     }
     if (isElectron) await apiOpenShift(data)
     setOpenShiftState({ ...data, status: 'open' })
+    await refreshShiftData()
     fireWebhook('shift_open', payloadFromShift(data, 'open')).catch(()=>{})
     return data
-  }, [])
+  }, [refreshShiftData])
 
   const endShift = useCallback(async (closeCash, note='') => {
     if (!openShift) return null
@@ -469,8 +564,9 @@ export function useStore(){
       : { success: true }
     fireWebhook('shift_close', payloadFromShift(openShift, 'close', { ...r, closeCash })).catch(()=>{})
     setOpenShiftState(null)
+    await refreshShiftData()
     return r
-  }, [openShift])
+  }, [openShift, refreshShiftData])
 
   const logCash = useCallback(async (type, amount, reason, cashier='') => {
     const data = {
@@ -480,7 +576,8 @@ export function useStore(){
       type, amount, reason, cashier,
     }
     if (isElectron) await addCashLog(data)
-  }, [openShift])
+    await refreshShiftData()
+  }, [openShift, refreshShiftData])
 
   // 損耗
   // opts.skipStockDeduct：FLOW-03 盤點盤虧走此路徑——庫存已被盤點的絕對值更新修正，
@@ -570,6 +667,53 @@ export function useStore(){
   // audit #25: m.phone 可能為 null（舊資料），用 (m.phone||'').replace 防呆
   const findMember = useCallback(q=>members.find(m=>(m.phone||'').replace(/-/g,'').includes(q.replace(/-/g,''))||(m.name||'').includes(q)),[members])
 
+  // PERF-06：suppliers/purchases/promotions 原本各自在 InventoryPage/PurchasePage/PromotionsPage
+  // 自己的 useState + mount useEffect 裡讀寫，搬進 store 統一管理（載入已併入上面的 init）。
+  const addSupplier = useCallback(s=>{
+    const n={...s,id:'s'+Date.now()}
+    setSuppliers(x=>[...x,n])
+    if (isElectron) dbAddSupplier(n).catch(logDbErr('addSupplier'))
+    return n
+  },[])
+  const updateSupplier = useCallback((id,u)=>{
+    setSuppliers(p=>p.map(x=>x.id===id?{...x,...u}:x))
+    if (isElectron) dbUpdateSupplier(id, u).catch(logDbErr('updateSupplier'))
+  },[])
+  const deleteSupplier = useCallback(id=>{
+    setSuppliers(p=>p.filter(x=>x.id!==id))
+    if (isElectron) dbDeleteSupplier(id).catch(logDbErr('deleteSupplier'))
+  },[])
+
+  // 進貨單 id / 完整內容都由呼叫端組好（NewPurchase 已含 AI 建議量等邏輯），這裡只負責存放 + 落盤
+  const addPurchase = useCallback(po=>{
+    setPurchases(p=>[po,...p])
+    if (isElectron) dbAddPurchase(po).catch(logDbErr('addPurchase'))
+    return po
+  },[])
+  const updatePurchase = useCallback((id,data)=>{
+    setPurchases(p=>p.map(x=>x.id===id?data:x))
+    if (isElectron) dbUpdatePurchase(id, data).catch(logDbErr('updatePurchase'))
+  },[])
+  const deletePurchase = useCallback(id=>{
+    setPurchases(p=>p.filter(x=>x.id!==id))
+    if (isElectron) dbDeletePurchase(id).catch(logDbErr('deletePurchase'))
+  },[])
+
+  const addPromotion = useCallback(promo=>{
+    const n={...promo,id:'pr'+Date.now()}
+    setPromotions(x=>[...x,n])
+    if (isElectron) dbAddPromotion(n).catch(logDbErr('addPromotion'))
+    return n
+  },[])
+  const updatePromotion = useCallback((id,u)=>{
+    setPromotions(p=>p.map(x=>x.id===id?{...x,...u}:x))
+    if (isElectron) dbUpdatePromotion(id, u).catch(logDbErr('updatePromotion'))
+  },[])
+  const deletePromotion = useCallback(id=>{
+    setPromotions(p=>p.filter(x=>x.id!==id))
+    if (isElectron) dbDeletePromotion(id).catch(logDbErr('deletePromotion'))
+  },[])
+
   // PERF-05 步驟1：衍生值 memo 化——useStore 掛在 App 根部，任何 state 變動都重渲染整個 App 樹，
   // 這四個值先前每 render 裸算（todayProfit 內還有 O(P) 的 products.find），是加購物車掉幀的主因之一。
   const categories    = useMemo(()=>[...new Set(products.map(p=>p.category))],[products])
@@ -599,9 +743,14 @@ export function useStore(){
     heldOrders, holdCart, recallHeld, removeHeld,
     wasteLog, recordWaste, removeWaste,
     openShift, startShift, endShift, logCash,
+    shifts, cashLog,
     topupMember,
     pointsRule, updatePointsRule,
     birthdayBonus, updateBirthdayBonus,
     manualDiscount, setManualDiscount,
+    // PERF-06: suppliers/purchases/promotions（原本各頁面自己 loadX()，現在集中在 store）
+    suppliers, addSupplier, updateSupplier, deleteSupplier,
+    purchases, addPurchase, updatePurchase, deletePurchase,
+    promotions, addPromotion, updatePromotion, deletePromotion,
   }
 }

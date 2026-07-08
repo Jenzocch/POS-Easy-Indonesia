@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Plus, X, Check, Tag, Clock, Percent, Gift } from 'lucide-react'
 import { writeAuditLog, sanitizeObject } from '../utils/security'
-import { isElectron, loadPromotions, dbAddPromotion, dbUpdatePromotion, dbDeletePromotion } from '../utils/dataAccess'
 import { t, fmtMoney } from '../i18n'
 
 // 型別鍵值（threshold/percent/...）為儲存值，勿改；label/desc 僅供顯示
@@ -55,56 +54,15 @@ export function applyPromotions(cart, promotions, subtotal) {
   return { totalDiscount: Math.min(totalDiscount, subtotal), applied }
 }
 
-const SEED_PROMOTIONS = [
-  {
-    id:'pr001', name:'滿500折50', type:'threshold', enabled:true,
-    startAt:'2025-01-01T00:00:00', endAt:'2025-12-31T23:59:59',
-    condition:{ threshold:500, discount:50 },
-    note:'全館適用',
-  },
-  {
-    id:'pr002', name:'週末九折', type:'percent', enabled:false,
-    startAt:'2025-03-01T00:00:00', endAt:'2025-03-31T23:59:59',
-    condition:{ rate:0.9 },
-    note:'',
-  },
-  {
-    id:'pr003', name:'買三送一', type:'buyget', enabled:true,
-    startAt:'2025-01-01T00:00:00', endAt:'2025-06-30T23:59:59',
-    condition:{ buy:3, get:1 },
-    note:'最低價商品免費',
-  },
-]
-
 export default function PromotionsPage({ store, session }) {
-  const [promotions, setPromotions] = useState([])
+  const { promotions, addPromotion, updatePromotion, deletePromotion } = store
   const [editing,  setEditing]  = useState(null)
   const [form,     setForm]     = useState(null)
 
-  useEffect(() => { loadPromotions(SEED_PROMOTIONS).then(setPromotions) }, [])
-
-  function save(ps) {
-    setPromotions(ps)
-    if (!isElectron) localStorage.setItem('pos_promotions', JSON.stringify(ps))
-  }
-
-  // DEAD-06: dbAddPromotion/dbUpdatePromotion/dbDeletePromotion 已在 dataAccess.js 寫好卻從未被呼叫——
-  // Electron 模式下促銷編輯只改到 React state（save() 的 else 分支只在瀏覽器模式寫 localStorage），
-  // 從未寫回 SQLite，導致「促銷編輯不落地」：重啟後 loadPromotions() 讀回的是舊 DB 資料，改動消失。
-  // 這裡補上單筆同步到 SQLite，瀏覽器模式沿用原本的 save() 行為不受影響。
-  async function persistPromotion(promo, isNew=false) {
-    if (!isElectron) return
-    try {
-      if (isNew) await dbAddPromotion(promo)
-      else await dbUpdatePromotion(promo.id, promo)
-    } catch (e) { console.error('persistPromotion failed:', e) }
-  }
-
   function toggle(id) {
-    const updated = promotions.map(p => p.id===id ? {...p, enabled:!p.enabled} : p)
-    save(updated)
-    const target = updated.find(p => p.id === id)
-    if (target) persistPromotion(target)
+    const target = promotions.find(p => p.id === id)
+    if (!target) return
+    updatePromotion(id, { enabled: !target.enabled })
   }
 
   function startNew(type) {
@@ -132,14 +90,10 @@ export default function PromotionsPage({ store, session }) {
     if (!form.name) return
     const clean = { ...sanitizeObject(form), startAt:form.startAt+':00', endAt:form.endAt+':00' }
     if (editing==='new') {
-      const n = { ...clean, id:'pr'+Date.now() }
-      save([...promotions, n])
+      const n = addPromotion(clean)
       writeAuditLog('PROMO_CREATE', session, { promoName:n.name, type:n.type })
-      persistPromotion(n, true)
     } else {
-      const updated = { ...clean, id: editing }
-      save(promotions.map(p=>p.id===editing?updated:p))
-      persistPromotion(updated)
+      updatePromotion(editing, clean)
     }
     setEditing(null); setForm(null)
   }
@@ -212,10 +166,7 @@ export default function PromotionsPage({ store, session }) {
                     }}/>
                   </button>
                   <button className="btn-icon btn-sm" onClick={()=>startEdit(p)}>✏️</button>
-                  <button className="btn-icon btn-sm" style={{color:'var(--red)'}} onClick={()=>{
-                    save(promotions.filter(x=>x.id!==p.id))
-                    if (isElectron) dbDeletePromotion(p.id).catch(e => console.error('persistPromotion delete failed:', e))
-                  }}>
+                  <button className="btn-icon btn-sm" style={{color:'var(--red)'}} onClick={()=>deletePromotion(p.id)}>
                     <X size={14}/>
                   </button>
                 </div>

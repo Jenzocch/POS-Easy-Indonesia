@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useMemo, lazy, Suspense } from 'react'
 import { Plus, Pencil, Trash2, X, Check, AlertTriangle, ChevronUp, ChevronDown, Barcode, Printer, Tag, Truck, Camera, Upload, Download, FileText } from 'lucide-react'
 import JsBarcode from 'jsbarcode'
-import { loadSuppliers, loadPurchases } from '../utils/dataAccess'
 import { DEFAULT_CATEGORIES, CATEGORY_META, mergeCategories } from '../utils/categories'
 import { getExpiringProducts, getProductHistory } from '../utils/analytics'
 import { parseCSV, stringifyCSV, downloadCSV, readFileAsText, PRODUCT_CSV_HEADERS, productToCSVRow, csvRowToProduct } from '../utils/csv'
@@ -33,7 +32,7 @@ function BarcodeDisplay({ value }) {
 const EMPTY = { name:'', category:'', price:'', cost:'', stock:'', barcode:'', unit:'個', noBarcode:false, imageUrl:'', expiryDate:'', supplierId:'', reorderLevel:'' }
 
 export default function InventoryPage({ store }) {
-  const { products, addProduct, updateProduct, deleteProduct, categories, orders = [], wasteLog = [] } = store
+  const { products, addProduct, updateProduct, deleteProduct, categories, orders = [], wasteLog = [], suppliers = [], purchases = [] } = store
   const [editing,   setEditing]   = useState(null)
   const [form,      setForm]      = useState(EMPTY)
   const [search,    setSearch]    = useState('')
@@ -43,17 +42,12 @@ export default function InventoryPage({ store }) {
   const [confirmDel, setConfirmDel] = useState(null)
   const [barcodePreview, setBarcodePreview] = useState(null)
   const [selectedIds, setSelectedIds] = useState(new Set())
-  const [suppliers, setSuppliers] = useState([])
   const [showCamera, setShowCamera] = useState(false)
   const [showBatch, setShowBatch] = useState(false)
   const [batchForm, setBatchForm] = useState({ action: 'price', value: '', supplierId: '', category: '' })
   const [csvImport, setCsvImport] = useState(null) // { records, toAdd, toUpdate, errors }
-  const [purchases, setPurchases] = useState([])
   const [showHistory, setShowHistory] = useState(false)
   const csvFileRef = useRef(null)
-
-  useEffect(() => { loadSuppliers([]).then(s => setSuppliers(Array.isArray(s) ? s : [])) }, [])
-  useEffect(() => { loadPurchases([]).then(p => setPurchases(Array.isArray(p) ? p : [])) }, [])
 
   function handleExportCSV() {
     const supplierMap = new Map(suppliers.map(s => [s.id, s]))

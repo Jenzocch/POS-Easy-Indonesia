@@ -1,7 +1,6 @@
-import { useState, useMemo, useEffect, lazy, Suspense } from 'react'
+import { useState, useMemo, lazy, Suspense } from 'react'
 import { Plus, Check, X, Truck, Package, ChevronRight, ChevronLeft, ChevronDown, Clock, CheckCircle, Zap, AlertTriangle, Pencil, Camera } from 'lucide-react'
 import { writeAuditLog, sanitizeObject } from '../utils/security'
-import { isElectron, loadSuppliers, saveSuppliers as dbSaveSuppliers, dbAddSupplier, dbUpdateSupplier, dbDeleteSupplier, loadPurchases, savePurchases as dbSavePurchases, dbAddPurchase, dbUpdatePurchase } from '../utils/dataAccess'
 import { DEFAULT_CATEGORIES, CATEGORY_META, groupByCategory } from '../utils/categories'
 import { computeSalesVelocity, suggestReorderQty } from '../utils/analytics'
 import useIsMobile from '../hooks/useIsMobile'
@@ -16,74 +15,11 @@ const STATUS = {
   partial:  { label:t('purchase.status_partial'),  color:'var(--amber)',          bg:'var(--amber-dim)' },
 }
 
-const SEED_SUPPLIERS = [
-  { id:'s001', name:'台北乾貨行', contact:'02-2345-6789', payTerms:'月結30天', note:'每週二、五到貨' },
-  { id:'s002', name:'統一糖果批發', contact:'0912-111-222', payTerms:'現金', note:'最低叫貨 2000元' },
-  { id:'s003', name:'全台醬料行', contact:'04-2345-0001', payTerms:'月結60天', note:'' },
-]
-
-const SEED_PURCHASES = [
-  {
-    id:'PO001', supplierId:'s001', supplierName:'台北乾貨行',
-    status:'received', date:'2025-03-10', receivedDate:'2025-03-12',
-    items:[
-      { productId:'p004', name:'紫菜',  qty:50, unitCost:18, received:50 },
-      { productId:'p005', name:'冬粉',  qty:100,unitCost:9,  received:100 },
-    ],
-    note:'正常補貨', total:2700,
-  },
-  {
-    id:'PO002', supplierId:'s002', supplierName:'統一糖果批發',
-    status:'ordered', date:'2025-03-15', receivedDate:null,
-    items:[
-      { productId:'p001', name:'花生糖', qty:200, unitCost:15, received:0 },
-      { productId:'p003', name:'牛軋糖', qty:100, unitCost:20, received:0 },
-    ],
-    note:'', total:5000,
-  },
-]
-
 export default function PurchasePage({ store, session }) {
-  const { products, updateProduct, orders = [] } = store
-  const [suppliers,  setSuppliers]  = useState([])
-  const [purchases,  setPurchases]  = useState([])
+  const { products, updateProduct, orders = [], suppliers = [], purchases = [], addSupplier, updateSupplier, addPurchase, updatePurchase } = store
   const [tab,        setTab]        = useState('list')
   const [selected,   setSelected]   = useState(null)
   const [receiving,  setReceiving]  = useState(null)
-
-  useEffect(() => {
-    loadSuppliers(SEED_SUPPLIERS).then(setSuppliers)
-    loadPurchases(SEED_PURCHASES).then(list => {
-      const arr = Array.isArray(list) ? list : []
-      // 一次性資料修復：舊版「標記付款」曾寫入 STATUS map 查無的 status:'paid'，
-      // 造成 PurchaseList 渲染 crash（全站白屏）。修回 'received'（付款狀態以 paidDate 區分）。
-      const repaired = arr.map(p => p.status === 'paid' ? { ...p, status: 'received' } : p)
-      const fixed = repaired.filter((p, i) => p !== arr[i])
-      setPurchases(repaired)
-      if (fixed.length > 0) {
-        if (!isElectron) localStorage.setItem('pos_purchases', JSON.stringify(repaired))
-        else fixed.forEach(p => dbUpdatePurchase(p.id, p).catch(e => console.error('repair purchase failed:', e)))
-      }
-    })
-  }, [])
-
-  function saveSuppliers(s) {
-    setSuppliers(s)
-    if (!isElectron) localStorage.setItem('pos_suppliers', JSON.stringify(s))
-  }
-  function savePurchases(p) {
-    setPurchases(p)
-    if (!isElectron) localStorage.setItem('pos_purchases', JSON.stringify(p))
-  }
-
-  // 在 Electron 模式同步單筆異動到 SQLite
-  async function persistPurchase(po, isNew=false) {
-    if (!isElectron) return
-    try {
-      if (isNew) await dbAddPurchase(po)
-      else await dbUpdatePurchase(po.id, po)
-    } catch (e) { console.error('persistPurchase failed:', e) }
-  }
 
   function handleReceive(po, receivedQtys) {
     // Update stock for each item
@@ -107,8 +43,7 @@ export default function PurchasePage({ store, session }) {
       status: allReceived ? 'received' : anyReceived ? 'partial' : 'ordered',
       receivedDate: new Date().toISOString().slice(0,10),
     }
-    savePurchases(purchases.map(p => p.id===po.id ? updated : p))
-    persistPurchase(updated)
+    updatePurchase(po.id, updated)
     writeAuditLog('PURCHASE_APPROVE', session, { poId: po.id, supplier: po.supplierName })
     setReceiving(null)
     setSelected(updated)
@@ -135,17 +70,15 @@ export default function PurchasePage({ store, session }) {
       </div>
 
       {tab === 'list'      && <PurchaseList purchases={purchases} selected={selected} onSelect={setSelected} onReceive={setReceiving}/>}
-      {tab === 'new'       && <NewPurchase  products={products} suppliers={suppliers} purchases={purchases} orders={orders} onSave={po=>{savePurchases([po,...purchases]);persistPurchase(po,true);setTab('list');writeAuditLog('PURCHASE_CREATE',session,{id:po.id})}}/>}
-      {tab === 'suppliers' && <SupplierList suppliers={suppliers} products={products} onSave={saveSuppliers} onGoInventory={()=>store.setView?.('inventory')}/>}
+      {tab === 'new'       && <NewPurchase  products={products} suppliers={suppliers} purchases={purchases} orders={orders} onSave={po=>{addPurchase(po);setTab('list');writeAuditLog('PURCHASE_CREATE',session,{id:po.id})}}/>}
+      {tab === 'suppliers' && <SupplierList suppliers={suppliers} products={products} onAdd={addSupplier} onUpdate={updateSupplier} onGoInventory={()=>store.setView?.('inventory')}/>}
       {tab === 'payable'   && <PayableTab   purchases={purchases} suppliers={suppliers} onMarkPaid={(id)=>{
         const target = purchases.find(p => p.id === id)
         if (!target) return
         // 只寫 paidDate、不改 status：付款與收貨是兩個維度（PayableTab 以 paidDate 區分已付/未付）；
         // 寫入 STATUS map 查無的 status 會讓 PurchaseList 渲染 crash
         const updatedPo = { ...target, paidDate: new Date().toISOString().slice(0,10) }
-        const updated = purchases.map(p => p.id === id ? updatedPo : p)
-        savePurchases(updated)
-        persistPurchase(updatedPo)
+        updatePurchase(id, updatedPo)
         writeAuditLog('PURCHASE_PAY', session, { poId:id })
       }}/>}
 
@@ -663,7 +596,7 @@ function ReceiveModal({ po, products, onConfirm, onClose }) {
 }
 
 // ── 供應商管理（含商品清單展開）──────────────────────────────
-function SupplierList({ suppliers, products = [], onSave, onGoInventory }) {
+function SupplierList({ suppliers, products = [], onAdd, onUpdate, onGoInventory }) {
   const [editing, setEditing] = useState(null)
   const [form,    setForm]    = useState({ name:'', contact:'', payTerms:'', note:'' })
   const [expanded, setExpanded] = useState(null) // 展開哪一家看商品
@@ -671,8 +604,8 @@ function SupplierList({ suppliers, products = [], onSave, onGoInventory }) {
   function save() {
     if (!form.name) return
     const clean = sanitizeObject(form)
-    if (editing === 'new') onSave([...suppliers, { ...clean, id:'s'+Date.now() }])
-    else onSave(suppliers.map(s=>s.id===editing?{...s,...clean}:s))
+    if (editing === 'new') onAdd(clean)
+    else onUpdate(editing, clean)
     setEditing(null)
   }
 
