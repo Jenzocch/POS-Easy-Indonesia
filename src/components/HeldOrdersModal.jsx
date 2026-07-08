@@ -1,11 +1,15 @@
 import { Pause, Trash2, X, ShoppingCart } from 'lucide-react'
+import Modal from './Modal'
 import { t, fmtMoney, formatDateTime } from '../i18n'
 
 export default function HeldOrdersModal({ heldOrders, members, onRecall, onRemove, onClose }) {
   return (
-    <>
-      <div style={ho.overlay} onClick={onClose}/>
-      <div style={ho.box}>
+    <Modal
+      onClose={onClose}
+      maxWidth={520}
+      overlayStyle={{ background:'rgba(0,0,0,0.5)', backdropFilter:'none' }}
+      panelStyle={{ padding:0, display:'flex', flexDirection:'column', maxHeight:'85vh', overflowY:'hidden' }}
+    >
         <div style={ho.head}>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             <Pause size={16}/>
@@ -49,19 +53,11 @@ export default function HeldOrdersModal({ heldOrders, members, onRecall, onRemov
             )
           })}
         </div>
-      </div>
-    </>
+    </Modal>
   )
 }
 
 const ho = {
-  overlay:{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:998},
-  box:{
-    position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
-    background:'var(--bg-raised)', borderRadius:12, width:520, maxWidth:'92vw',
-    maxHeight:'85vh', overflow:'hidden', display:'flex', flexDirection:'column',
-    boxShadow:'var(--shadow-lg)', zIndex:999,
-  },
   head:{
     display:'flex', justifyContent:'space-between', alignItems:'center',
     padding:'14px 18px', borderBottom:'1px solid var(--border-dim)',

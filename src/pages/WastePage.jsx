@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Trash2, Plus, AlertTriangle, Calendar, Package } from 'lucide-react'
 import { exportXLS } from '../utils/exportXLS'
 import { getExpiringProducts } from '../utils/analytics'
+import Modal from '../components/Modal'
 import { t, fmtMoney, formatDate, formatTime } from '../i18n'
 
 // REASONS 是「儲存值」（wasteLog.reason 存進資料層）— 不可翻譯，維持中文原值。
@@ -193,10 +194,7 @@ export default function WastePage({ store, session }) {
       </div>
 
       {showAdd && (
-        <>
-          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:998}} onClick={()=>setShowAdd(false)}/>
-          {/* RWD-01：maxHeight + overflowY，手機上表單長於視窗時可捲動 */}
-          <div style={{position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', background:'var(--bg-raised)', borderRadius:12, width:420, maxWidth:'90vw', maxHeight:'88vh', overflowY:'auto', boxShadow:'var(--shadow-lg)', zIndex:999}}>
+        <Modal maxWidth={420} onClose={()=>setShowAdd(false)} overlayStyle={{ background:'rgba(0,0,0,0.4)', backdropFilter:'none' }} panelStyle={{padding:0}}>
             <div style={{padding:'14px 18px', borderBottom:'1px solid var(--border-dim)', fontSize:15, fontWeight:600}}>{t('waste.record_title')}</div>
             <div style={{padding:18}}>
               <div style={{marginBottom:10}}>
@@ -225,8 +223,7 @@ export default function WastePage({ store, session }) {
               </div>
               <button className="btn btn-primary" style={{width:'100%', padding:12, marginTop:8}} disabled={!productId || !qty} onClick={handleAdd}>{t('waste.record_btn')}</button>
             </div>
-          </div>
-        </>
+        </Modal>
       )}
     </div>
   )

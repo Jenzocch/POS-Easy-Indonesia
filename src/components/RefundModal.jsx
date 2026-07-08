@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { X, RotateCcw } from 'lucide-react'
+import Modal from './Modal'
 import { t, fmtMoney, formatDateTime } from '../i18n'
 
 export default function RefundModal({ order, onClose, onRefund, session, priorRefunds = [] }) {
@@ -54,9 +55,12 @@ export default function RefundModal({ order, onClose, onRefund, session, priorRe
   }
 
   return (
-    <>
-      <div style={rm.overlay} onClick={onClose}/>
-      <div style={rm.box}>
+    <Modal
+      onClose={onClose}
+      maxWidth={480}
+      overlayStyle={{ background:'rgba(0,0,0,0.5)', backdropFilter:'none' }}
+      panelStyle={{ padding:0, display:'flex', flexDirection:'column', maxHeight:'88vh', overflowY:'hidden' }}
+    >
         <div style={rm.head}>
           <div style={{display:'flex', alignItems:'center', gap:8}}>
             <RotateCcw size={16}/>
@@ -148,19 +152,11 @@ export default function RefundModal({ order, onClose, onRefund, session, priorRe
             {submitting ? t('pos.processing') : t('pos.confirm_refund')}
           </button>
         </div>
-      </div>
-    </>
+    </Modal>
   )
 }
 
 const rm = {
-  overlay:{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:998},
-  box:{
-    position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
-    background:'var(--bg-raised)', borderRadius:12, width:480, maxWidth:'92vw',
-    maxHeight:'88vh', overflow:'hidden', display:'flex', flexDirection:'column',
-    boxShadow:'var(--shadow-lg)', zIndex:999,
-  },
   head:{
     display:'flex', justifyContent:'space-between', alignItems:'center',
     padding:'14px 18px', borderBottom:'1px solid var(--border-dim)',

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Clock, Plus, Minus, LogIn, LogOut, FileText, AlertCircle } from 'lucide-react'
+import Modal from '../components/Modal'
 import { t, fmtMoney, formatDateTime, formatTime } from '../i18n'
 
 export default function ShiftPage({ store, session }) {
@@ -199,7 +200,7 @@ export default function ShiftPage({ store, session }) {
       </div>
 
       {showOpen && (
-        <Modal title={t('shift.open')} onClose={()=>setShowOpen(false)}>
+        <Modal title={t('shift.open')} onClose={()=>setShowOpen(false)} maxWidth={380} overlayStyle={{ background:'rgba(0,0,0,0.4)', backdropFilter:'none' }}>
           <Field label={t('shift.cashier')}><div style={{padding:'10px 14px', fontSize:14}}>{session?.username}</div></Field>
           <Field label={t('shift.opening_float')}>
             <input className="field" type="number" inputMode="numeric" value={openCash} onChange={e=>setOpenCash(e.target.value)} placeholder="0" autoFocus/>
@@ -209,7 +210,7 @@ export default function ShiftPage({ store, session }) {
       )}
 
       {showClose && (
-        <Modal title={t('shift.close')} onClose={()=>setShowClose(false)}>
+        <Modal title={t('shift.close')} onClose={()=>setShowClose(false)} maxWidth={380} overlayStyle={{ background:'rgba(0,0,0,0.4)', backdropFilter:'none' }}>
           <div style={{background:'var(--bg-overlay)', padding:'12px 14px', borderRadius:8, marginBottom:12}}>
             <div style={{display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4}}>
               <span style={{color:'var(--text-secondary)'}}>{t('shift.expected_cash')}</span>
@@ -237,7 +238,7 @@ export default function ShiftPage({ store, session }) {
       )}
 
       {showCash && (
-        <Modal title={t('shift.cash_in_out')} onClose={()=>setShowCash(false)}>
+        <Modal title={t('shift.cash_in_out')} onClose={()=>setShowCash(false)} maxWidth={380} overlayStyle={{ background:'rgba(0,0,0,0.4)', backdropFilter:'none' }}>
           <Field label={t('shift.type')}>
             <div style={{display:'flex', gap:8}}>
               {[['in',t('shift.cash_in')],['out',t('shift.cash_out')]].map(([k,l]) => (
@@ -261,7 +262,7 @@ export default function ShiftPage({ store, session }) {
       )}
 
       {closeSummary && (
-        <Modal title={t('shift.close_result_title')} onClose={()=>setCloseSummary(null)}>
+        <Modal title={t('shift.close_result_title')} onClose={()=>setCloseSummary(null)} maxWidth={380} overlayStyle={{ background:'rgba(0,0,0,0.4)', backdropFilter:'none' }}>
           <div style={{display:'flex', flexDirection:'column', gap:14}}>
             <Row label={t('shift.expected_cash')} value={fmtMoney(closeSummary.expected)}/>
             <Row label={t('shift.actual_cash')} value={fmtMoney(closeSummary.actual)}/>
@@ -317,21 +318,6 @@ function Row({ label, value }) {
   )
 }
 
-function Modal({ title, onClose, children }) {
-  return (
-    <>
-      <div style={mod.overlay} onClick={onClose}/>
-      <div style={mod.box}>
-        <div style={mod.head}>
-          <span style={{fontSize:15, fontWeight:600}}>{title}</span>
-          <button onClick={onClose} style={{padding:4}}>✕</button>
-        </div>
-        <div style={{padding:'16px 18px'}}>{children}</div>
-      </div>
-    </>
-  )
-}
-
 const sh = {
   root: { flex:1, overflowY:'auto', padding:'20px 24px', background:'var(--bg-base)' },
   header: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 },
@@ -344,18 +330,6 @@ const sh = {
   },
   table: {
     width:'100%', fontSize:13, borderCollapse:'collapse',
-  },
-}
-const mod = {
-  overlay:{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:998},
-  box:{
-    position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)',
-    background:'var(--bg-raised)', borderRadius:12, width:380, maxWidth:'90vw',
-    boxShadow:'var(--shadow-lg)', zIndex:999, overflow:'hidden',
-  },
-  head:{
-    display:'flex', justifyContent:'space-between', alignItems:'center',
-    padding:'14px 18px', borderBottom:'1px solid var(--border-dim)',
   },
 }
 

@@ -16,6 +16,8 @@ import { pushAll, pullAll, SYNC_TABLES } from '../utils/cloudSync'
 import { getWebhookConfig, saveWebhookConfig, fireWebhook, WEBHOOK_EVENTS } from '../utils/webhook'
 import { friendlyError } from '../utils/friendlyError'
 import { setSoundEnabledCache } from '../utils/sound'
+import Modal from '../components/Modal'
+import { Z } from '../utils/zIndex'
 import { t, fmtMoney, formatDateTime, LanguageSwitcher } from '../i18n'
 
 const TABS = [
@@ -516,8 +518,7 @@ function UsersTab({ session }) {
 
       {/* ── 新增帳號 Modal ── */}
       {adding && (
-        <div style={ss.overlay}>
-          <div style={ss.modal} className="animate-scale">
+        <Modal maxWidth={420}>
             <div style={{display:'flex',justifyContent:'space-between',marginBottom:18}}>
               <span style={{fontWeight:700}}>{t('settings.add_staff_account')}</span>
               <button className="btn-icon" onClick={()=>setAdding(false)}><X size={16}/></button>
@@ -538,14 +539,12 @@ function UsersTab({ session }) {
               <button className="btn btn-primary" style={{flex:1}} onClick={handleAdd} disabled={saving}>{saving?t('settings.saving'):t('common.save')}</button>
               <button className="btn btn-ghost"   style={{flex:1}} onClick={()=>setAdding(false)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* ── 變更密碼 Modal ── */}
       {changePw && (
-        <div style={ss.overlay}>
-          <div style={ss.modal} className="animate-scale">
+        <Modal maxWidth={420}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <div>
                 <div style={{fontWeight:700,fontSize:15}}>
@@ -621,8 +620,7 @@ function UsersTab({ session }) {
               </button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setChangePw(null)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   )
@@ -1051,8 +1049,7 @@ function BackupTab({ session }) {
       </div>
 
       {restoring && (
-        <div style={ss.overlay}>
-          <div style={{...ss.modal,maxWidth:360}} className="animate-scale">
+        <Modal maxWidth={360}>
             <div style={{textAlign:'center',padding:'8px 0 20px'}}>
               <div style={{fontSize:36,marginBottom:12}}>⚠️</div>
               <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>{t('settings.confirm_restore')}</div>
@@ -1062,13 +1059,11 @@ function BackupTab({ session }) {
               <button className="btn btn-danger" style={{flex:1}} onClick={()=>doRestore(restoring)}>{t('settings.confirm_restore_btn')}</button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setRestoring(null)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {importing && (
-        <div style={ss.overlay}>
-          <div style={{...ss.modal,maxWidth:360}} className="animate-scale">
+        <Modal maxWidth={360}>
             <div style={{textAlign:'center',padding:'8px 0 20px'}}>
               <div style={{fontSize:36,marginBottom:12}}>⚠️</div>
               <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>{t('settings.confirm_import')}</div>
@@ -1078,8 +1073,7 @@ function BackupTab({ session }) {
               <button className="btn btn-danger" style={{flex:1}} onClick={doImport}>{t('settings.confirm_import_btn')}</button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setImporting(null)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   )
@@ -1477,13 +1471,12 @@ function CloudSyncTab({ session }) {
           background: msg.startsWith('✗') ? 'var(--red-dim)' : 'var(--green-dim)',
           color: msg.startsWith('✗') ? 'var(--red)' : 'var(--green)',
           border: `1px solid ${msg.startsWith('✗') ? 'var(--red)' : 'var(--green)'}`,
-          fontSize:13, zIndex:300, boxShadow:'var(--shadow-md)',
+          fontSize:13, zIndex:Z.TOAST, boxShadow:'var(--shadow-md)',
         }}>{msg}</div>
       )}
 
       {confirmPull && (
-        <div style={ss.overlay}>
-          <div style={{...ss.modal, maxWidth:400}} className="animate-scale">
+        <Modal maxWidth={400}>
             <div style={{textAlign:'center', padding:'8px 0 18px'}}>
               <AlertTriangle size={36} style={{color:'var(--amber)', marginBottom:12}}/>
               <div style={{fontWeight:700, fontSize:15, marginBottom:8}}>{t('settings.confirm_pull_title')}</div>
@@ -1496,8 +1489,7 @@ function CloudSyncTab({ session }) {
               <button className="btn btn-danger" style={{flex:1}} onClick={handlePull}>{t('settings.confirm_pull_btn')}</button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setConfirmPull(false)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   )
@@ -1510,7 +1502,4 @@ const ss = {
   // RWD-02：overflowX auto（照 POSPage ps.catWrap 模式）——9 個分頁籤在手機上可橫捲，不再被硬裁 6 個進不去
   tabBar:{display:'flex',borderBottom:'1px solid var(--border-dim)',flexShrink:0,overflowX:'auto'},
   tab:{display:'flex',alignItems:'center',gap:7,padding:'9px 14px',fontSize:13,fontWeight:500,transition:'all 150ms',borderRadius:0,letterSpacing:'.01em',whiteSpace:'nowrap',flexShrink:0},
-  overlay:{position:'fixed',inset:0,background:'rgba(44,42,38,0.25)',backdropFilter:'blur(2px)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200},
-  // RWD-01：maxHeight + overflowY，手機上表單長於視窗時可捲動
-  modal:{background:'var(--bg-raised)',border:'1px solid var(--border-dim)',borderRadius:'var(--r4)',padding:24,width:'90%',maxWidth:420,maxHeight:'88vh',overflowY:'auto'},
 }

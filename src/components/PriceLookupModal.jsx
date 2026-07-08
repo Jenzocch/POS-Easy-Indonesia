@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { Search, X, Tag } from 'lucide-react'
+import Modal from './Modal'
 import { t, fmtMoney } from '../i18n'
 
 export default function PriceLookupModal({ products, onClose }) {
@@ -16,9 +17,12 @@ export default function PriceLookupModal({ products, onClose }) {
   }, [q, products])
 
   return (
-    <>
-      <div style={pl.overlay} onClick={onClose}/>
-      <div style={pl.box}>
+    <Modal
+      onClose={onClose}
+      maxWidth={600}
+      overlayStyle={{ background:'rgba(0,0,0,0.5)', backdropFilter:'none', alignItems:'flex-start' }}
+      panelStyle={{ padding:0, display:'flex', flexDirection:'column', marginTop:'10vh', maxHeight:'80vh', overflowY:'hidden' }}
+    >
         <div style={pl.head}>
           <Search size={16} color="var(--text-tertiary)"/>
           <input ref={inputRef} value={q} onChange={e=>setQ(e.target.value)}
@@ -63,19 +67,11 @@ export default function PriceLookupModal({ products, onClose }) {
         <div style={pl.foot}>
           <span style={{fontSize:11, color:'var(--text-tertiary)'}}>{t('pos.lookup_footer', { n: results.length })}</span>
         </div>
-      </div>
-    </>
+    </Modal>
   )
 }
 
 const pl = {
-  overlay:{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:998},
-  box:{
-    position:'fixed', top:'10%', left:'50%', transform:'translateX(-50%)',
-    background:'var(--bg-raised)', borderRadius:12, width:600, maxWidth:'92vw',
-    maxHeight:'80vh', overflow:'hidden', display:'flex', flexDirection:'column',
-    boxShadow:'var(--shadow-lg)', zIndex:999,
-  },
   head:{
     display:'flex', alignItems:'center', gap:10,
     padding:'14px 18px', borderBottom:'1px solid var(--border-dim)',

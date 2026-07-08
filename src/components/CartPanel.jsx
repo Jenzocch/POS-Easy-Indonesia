@@ -3,6 +3,7 @@ import { Trash2, Plus, Minus, User, X, CreditCard, Banknote, Check, ChevronRight
 import { maskPhone } from '../utils/security'
 import { applyPromotions } from '../utils/promotions'
 import { playSuccessBeep } from '../utils/sound'
+import Modal from './Modal'
 import { t, fmtMoney, parseCurrencyInput } from '../i18n'
 
 export default function CartPanel({
@@ -514,9 +515,12 @@ export default function CartPanel({
       )}
 
       {showHoldDlg && (
-        <>
-          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:998}} onClick={()=>setShowHoldDlg(false)}/>
-          <div style={{position:'fixed', top:'40%', left:'50%', transform:'translate(-50%,-50%)', background:'var(--bg-raised)', borderRadius:12, width:340, maxWidth:'90vw', boxShadow:'var(--shadow-lg)', zIndex:999, padding:20}}>
+        <Modal
+          onClose={()=>setShowHoldDlg(false)}
+          maxWidth={340}
+          overlayStyle={{ background:'rgba(0,0,0,0.5)', backdropFilter:'none' }}
+          panelStyle={{ padding:20, alignSelf:'flex-start', marginTop:'40vh', transform:'translateY(-50%)' }}
+        >
             <div style={{fontWeight:600, fontSize:15, marginBottom:12}}>{t('pos.hold')}</div>
             <input className="field" placeholder={t('pos.hold_label_placeholder')} value={holdLabel} onChange={e=>setHoldLabel(e.target.value)} autoFocus
               onKeyDown={e=>{ if(e.key==='Enter') handleHold() }}/>
@@ -524,8 +528,7 @@ export default function CartPanel({
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setShowHoldDlg(false)}>{t('common.cancel')}</button>
               <button className="btn btn-primary" style={{flex:1}} onClick={handleHold}>{t('pos.hold')}</button>
             </div>
-          </div>
-        </>
+        </Modal>
       )}
     </div>
   )

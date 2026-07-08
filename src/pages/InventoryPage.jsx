@@ -6,6 +6,8 @@ import { getExpiringProducts, getProductHistory } from '../utils/analytics'
 import { parseCSV, stringifyCSV, downloadCSV, readFileAsText, PRODUCT_CSV_HEADERS, productToCSVRow, csvRowToProduct } from '../utils/csv'
 import { isLowStock, isOutOfStock } from '../utils/stock'
 import { friendlyError } from '../utils/friendlyError'
+import Modal from '../components/Modal'
+import { Z } from '../utils/zIndex'
 import { t, fmtMoney, parseCurrencyInput } from '../i18n'
 const BarcodeScannerModal = lazy(() => import('../components/BarcodeScannerModal'))
 
@@ -430,8 +432,7 @@ export default function InventoryPage({ store }) {
 
       {/* Edit drawer */}
       {editing && (
-        <div style={iv.overlay}>
-          <div style={iv.drawer} className="animate-scale">
+        <Modal maxWidth={460} overlayStyle={{ background:'rgba(44,42,38,0.3)' }}>
             <div style={iv.drawerHeader}>
               <span style={{fontWeight:600, fontSize:15}}>{editing==='new'?t('inv.add_product'):t('inv.edit_product')}</span>
               <button className="btn-icon" onClick={()=>setEditing(null)}><X size={16}/></button>
@@ -616,14 +617,12 @@ export default function InventoryPage({ store }) {
               <button className="btn btn-primary" style={{flex:1}} onClick={save}><Check size={15}/>{t('common.save')}</button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setEditing(null)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Delete confirm */}
       {confirmDel && (
-        <div style={iv.overlay}>
-          <div style={{...iv.drawer, maxWidth:360}} className="animate-scale">
+        <Modal maxWidth={360} overlayStyle={{ background:'rgba(44,42,38,0.3)' }}>
             <div style={{textAlign:'center', padding:'8px 0 20px'}}>
               <div style={{fontSize:32, marginBottom:12}}>🗑️</div>
               <div style={{fontWeight:600, marginBottom:6}}>{t('inv.confirm_delete')}</div>
@@ -633,14 +632,12 @@ export default function InventoryPage({ store }) {
               <button className="btn btn-danger" style={{flex:1}} onClick={()=>handleDelete(confirmDel)}>{t('inv.confirm_delete_btn')}</button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setConfirmDel(null)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* 條碼預覽 Modal */}
       {barcodePreview && (
-        <div style={iv.overlay} onClick={() => setBarcodePreview(null)}>
-          <div style={{...iv.drawer, maxWidth:420, textAlign:'center'}} className="animate-scale" onClick={e => e.stopPropagation()}>
+        <Modal maxWidth={420} onClose={() => setBarcodePreview(null)} overlayStyle={{ background:'rgba(44,42,38,0.3)' }} panelStyle={{ textAlign:'center' }}>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16}}>
               <h3 style={{fontSize:15, fontWeight:600}}>{t('inv.barcode_preview')}</h3>
               <button className="btn-icon btn-sm" onClick={() => setBarcodePreview(null)}><X size={16}/></button>
@@ -664,14 +661,12 @@ export default function InventoryPage({ store }) {
               </button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={() => setBarcodePreview(null)}>{t('common.close')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* CSV 匯入預覽 */}
       {csvImport && (
-        <div style={iv.overlay}>
-          <div style={{...iv.drawer, maxWidth:680}} className="animate-scale">
+        <Modal maxWidth={680} overlayStyle={{ background:'rgba(44,42,38,0.3)' }}>
             <div style={iv.drawerHeader}>
               <span style={{fontWeight:600, fontSize:15}}>{t('inv.csv_preview')}</span>
               <button className="btn-icon" onClick={()=>setCsvImport(null)}><X size={16}/></button>
@@ -743,8 +738,7 @@ export default function InventoryPage({ store }) {
               </button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setCsvImport(null)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* 相機掃條碼 */}
@@ -761,7 +755,7 @@ export default function InventoryPage({ store }) {
       {/* 浮動批量操作工具列 */}
       {selectedIds.size > 0 && (
         <div style={{
-          position:'fixed', bottom:24, right:24, zIndex:100,
+          position:'fixed', bottom:24, right:24, zIndex:Z.FLOATING,
           display:'flex', gap:8, alignItems:'center',
           background:'var(--bg-raised)', padding:'10px 14px',
           borderRadius:'var(--r-pill)', boxShadow:'0 6px 20px rgba(0,0,0,0.18)',
@@ -786,8 +780,7 @@ export default function InventoryPage({ store }) {
 
       {/* 批量編輯 modal */}
       {showBatch && (
-        <div style={iv.overlay}>
-          <div style={iv.drawer} className="animate-scale">
+        <Modal maxWidth={460} overlayStyle={{ background:'rgba(44,42,38,0.3)' }}>
             <div style={iv.drawerHeader}>
               <span style={{fontWeight:600, fontSize:15}}>{t('inv.batch_title', { n: selectedIds.size })}</span>
               <button className="btn-icon" onClick={()=>setShowBatch(false)}><X size={16}/></button>
@@ -840,8 +833,7 @@ export default function InventoryPage({ store }) {
               </button>
               <button className="btn btn-ghost" style={{flex:1}} onClick={()=>setShowBatch(false)}>{t('common.cancel')}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   )
@@ -863,8 +855,5 @@ const iv = {
   rowHead:{ background:'var(--bg-overlay)', flexShrink:0 },
   colHead:{ display:'flex', alignItems:'center', gap:4, fontSize:11, color:'var(--text-tertiary)', letterSpacing:'.06em', textTransform:'uppercase', cursor:'pointer', background:'none', fontFamily:'var(--font-sans)' },
   empty:{ textAlign:'center', padding:'48px', color:'var(--text-tertiary)', fontSize:13 },
-  overlay:{ position:'fixed', inset:0, background:'rgba(44,42,38,0.3)', backdropFilter:'blur(2px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:100 },
-  // RWD-01：maxHeight + overflowY，手機上表單長於視窗時可捲動、儲存鈕不再按不到（照抄 RefundModal 範本）
-  drawer:{ background:'var(--bg-raised)', border:'1px solid var(--border-dim)', borderRadius:16, padding:24, width:'90%', maxWidth:460, maxHeight:'88vh', overflowY:'auto', boxShadow:'var(--shadow-lg)' },
   drawerHeader:{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 },
 }
