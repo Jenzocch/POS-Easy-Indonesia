@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   validateCreateKasbon,
   validateRecordPayment,
-  validateKastonLimit
+  validateKasbonLimit
 } from './kasbon-validation'
 
 describe('Kasbon Validation', () => {
@@ -77,7 +77,7 @@ describe('Kasbon Validation', () => {
   describe('validateRecordPayment', () => {
     it('accepts valid payment', () => {
       const result = validateRecordPayment({
-        kastonRecordId: 'KR123',
+        kasbonRecordId: 'KR123',
         amount: 50000,
         paymentDate: '2026-07-15',
         paymentMethod: 'cash',
@@ -87,18 +87,18 @@ describe('Kasbon Validation', () => {
       expect(result.errors).toHaveLength(0)
     })
 
-    it('rejects missing kastonRecordId', () => {
+    it('rejects missing kasbonRecordId', () => {
       const result = validateRecordPayment({
         amount: 50000,
         paymentDate: '2026-07-15'
       })
       expect(result.valid).toBe(false)
-      expect(result.errors.some(e => e.includes('kastonRecordId'))).toBe(true)
+      expect(result.errors.some(e => e.includes('kasbonRecordId'))).toBe(true)
     })
 
     it('rejects missing paymentDate', () => {
       const result = validateRecordPayment({
-        kastonRecordId: 'KR123',
+        kasbonRecordId: 'KR123',
         amount: 50000
       })
       expect(result.valid).toBe(false)
@@ -107,7 +107,7 @@ describe('Kasbon Validation', () => {
 
     it('rejects invalid amount', () => {
       const result = validateRecordPayment({
-        kastonRecordId: 'KR123',
+        kasbonRecordId: 'KR123',
         amount: -50000,
         paymentDate: '2026-07-15'
       })
@@ -117,7 +117,7 @@ describe('Kasbon Validation', () => {
 
     it('rejects payment exceeding balance', () => {
       const result = validateRecordPayment({
-        kastonRecordId: 'KR123',
+        kasbonRecordId: 'KR123',
         amount: 150000,
         paymentDate: '2026-07-15',
         balanceDue: 100000
@@ -128,7 +128,7 @@ describe('Kasbon Validation', () => {
 
     it('rejects invalid payment method', () => {
       const result = validateRecordPayment({
-        kastonRecordId: 'KR123',
+        kasbonRecordId: 'KR123',
         amount: 50000,
         paymentDate: '2026-07-15',
         paymentMethod: 'crypto'
@@ -141,7 +141,7 @@ describe('Kasbon Validation', () => {
       const methods = ['cash', 'transfer', 'check', 'other']
       for (const method of methods) {
         const result = validateRecordPayment({
-          kastonRecordId: 'KR123',
+          kasbonRecordId: 'KR123',
           amount: 50000,
           paymentDate: '2026-07-15',
           paymentMethod: method
@@ -151,26 +151,26 @@ describe('Kasbon Validation', () => {
     })
   })
 
-  describe('validateKastonLimit', () => {
+  describe('validateKasbonLimit', () => {
     it('accepts payment within limit', () => {
-      const result = validateKastonLimit(50000, 50000, 100000)
+      const result = validateKasbonLimit(50000, 50000, 100000)
       expect(result.valid).toBe(true)
     })
 
     it('rejects payment exceeding limit', () => {
-      const result = validateKastonLimit(50000, 60000, 100000)
+      const result = validateKasbonLimit(50000, 60000, 100000)
       expect(result.valid).toBe(false)
       expect(result.error).toBeDefined()
       expect(result.difference).toBe(10000)
     })
 
     it('accepts payment exactly at limit', () => {
-      const result = validateKastonLimit(50000, 50000, 100000)
+      const result = validateKasbonLimit(50000, 50000, 100000)
       expect(result.valid).toBe(true)
     })
 
     it('rejects when current balance equals limit', () => {
-      const result = validateKastonLimit(100000, 1, 100000)
+      const result = validateKasbonLimit(100000, 1, 100000)
       expect(result.valid).toBe(false)
     })
   })
