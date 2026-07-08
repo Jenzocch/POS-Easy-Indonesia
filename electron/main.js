@@ -43,7 +43,9 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      // preload 只用 contextBridge/ipcRenderer（sandbox 白名單內的 API），可安全開啟。
+      // 開了之後 renderer 即使被打穿也拿不到 Node 能力，Chromium 漏洞的殺傷力大幅下降。
+      sandbox: true,
     },
   })
 
@@ -60,6 +62,32 @@ function createWindow() {
     mainWindow = null
   })
 }
+
+// ===== 導航鎖定 =====
+// 這台 App 唯一合法的內容來源是安裝包內的 dist/（file:// 協定）。任何導航到外部
+// URL、任何 window.open 都不該在 Electron 內發生——這是把「載入外部內容」這條
+// Chromium 漏洞攻擊路徑整條焊死的根治法（比追著升級 Electron 版本可靠）。
+// http(s) 連結一律丟給系統預設瀏覽器開，POS 視窗永遠停在本地頁面。
+app.on('web-contents-created', (_event, contents) => {
+  contents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      shell.openExternal(url).catch(() => {})
+    }
+    return { action: 'deny' }
+  })
+  contents.on('will-navigate', (event, url) => {
+    // 只允許停留在本地打包頁面（loadFile 產生的 file:// URL）；其餘全部攔下
+    if (!url.startsWith('file://')) {
+      event.preventDefault()
+      if (url.startsWith('https://') || url.startsWith('http://')) {
+        shell.openExternal(url).catch(() => {})
+      }
+    }
+  })
+  contents.on('will-redirect', (event, url) => {
+    if (!url.startsWith('file://')) event.preventDefault()
+  })
+})
 
 // ===== 初始化 =====
 app.whenReady().then(async () => {
