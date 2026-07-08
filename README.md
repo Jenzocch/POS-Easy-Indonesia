@@ -12,7 +12,7 @@
 <p align="center">
   <img alt="version" src="https://img.shields.io/badge/version-2.5.0-b8895a">
   <img alt="platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20PWA-555">
-  <img alt="tests" src="https://img.shields.io/badge/tests-76%20passing-3f9c5e">
+  <img alt="tests" src="https://img.shields.io/badge/tests-134%20passing-3f9c5e">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-green">
 </p>
 

@@ -1,13 +1,13 @@
-# POS Easy 實機測試檢查表 (v2.4.0)
+# POS Easy 實機測試檢查表 (v2.5.0)
 
 部署後，請在**真的 iPhone / iPad / 桌機**逐項勾選驗證。
-所有功能都已通過 build + 57 個單元測試，但相機、PWA、雲端同步這些必須實機才算數。
+所有功能都已通過 build + 134 個單元測試，但相機、PWA、雲端同步這些必須實機才算數。
 
 ---
 
 ## 0. 部署前
 
-- [ ] `npm test` 全綠（57 tests）
+- [ ] `npm test` 全綠（134 tests）
 - [ ] `npm run build` 成功，`dist/` 有產生
 - [ ] 已部署到 HTTPS 網址（Netlify / Cloudflare Pages）
 - [ ] 記下網址：__________________________

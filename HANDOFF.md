@@ -3,9 +3,27 @@
 ## 目前進度
 - 版本：v2.5.0
 - 狀態：可打包成 .exe，也可作為 PWA 部署給 iPhone/iPad（Safari「加到主畫面」即可當 app 使用）
-- v2.5.0（第三輪全面 audit 強化）：修 2 個會造成「本機資料整庫遺失」的雲端/還原 bug、2 個金額/點數錯誤（生日贈點重複發、部分退貨可重複超退）、會計引擎退貨沖回與折抵修正、時區/防呆/相機洩漏一批，測試 57→70
+- v2.5.0（第三輪全面 audit 強化 + Kasbon 賒帳系統 + 授權金鑰系統 + 三語 i18n）：修 2 個會造成「本機資料整庫遺失」的雲端/還原 bug、2 個金額/點數錯誤（生日贈點重複發、部分退貨可重複超退）、會計引擎退貨沖回與折抵修正、時區/防呆/相機洩漏一批；新增 Kasbon（賒帳/信用額度）功能、Ed25519 授權金鑰分級系統、印尼文/英文/中文三語 i18n 層，測試現有 134 個（8 個測試檔）
 - v2.4.0 新增：相機條碼掃描、CSV 匯入匯出、商品變動歷史、通用 webhook 通知、AI 智慧補貨、會員 RFM、商品熱賣/滯銷分析、庫存批量操作、員工績效、過期警示、bundle code-split
 - v2.3.0 新增：PWA 化 + 雲端同步 (Supabase) + 商品綁定主要供應商 + 一鍵低庫存補貨 + 進貨歷史單價記憶 + 行動版 RWD
+
+## v2.5.0 新增功能
+
+### Kasbon 賒帳/信用額度（`electron/kasbon-routes.js`、`electron/kasbon-shared.js`、`src/pages/KastonPage.jsx`）
+- 商業邏輯集中在 `electron/kasbon-shared.js`（純 CJS，IPC 與 HTTP 路徑共用，不 require `src/`）；`kasbon-routes.js` 只負責 Express 路由與狀態碼對應，且限定本機呼叫（loopback only，含 cloudflared tunnel header 偵測拒絕）
+- 資料表：`kasbon_records`（賒帳主檔）、`kasbon_payments`（還款紀錄，FK CASCADE → kasbon_records）、`member_kasbon_balance`（會員賒帳彙總，含黑名單旗標）
+- 前端：`src/pages/KastonPage.jsx`（Sidebar 新增「賒帳」導航項、`App.jsx` 新增 `kasbon` route）、`src/utils/kasbon-validation.js`（含測試 `kasbon-validation.test.js`）、`src/types/kasbon.ts`（`KASBON_LIMITS` 分級額度定義）、`src/i18n/keys/kasbon.js`（賒帳專用翻譯字串）
+- 備份/還原相容：舊備份無 kasbon 鍵時「保留」本機現有賒帳資料不清空，並由存活的 `kasbon_records` 重算 `member_kasbon_balance`
+
+### 授權金鑰系統（`electron/license.js`、`tools/generate-license.js`）
+- Ed25519 簽章授權碼，用於解鎖 Kasbon 分級額度（`free` / `warung` / `resto`）；`electron/license.js` 只內嵌公鑰、對外一律不 throw（回傳 `{valid, ...}` 結構化結果）
+- `tools/generate-license.js` 是**店家/開發者專用的離線 CLI 工具**，用來簽發授權碼並產生 Ed25519 keypair；私鑰只存在本機、不進版控、不隨安裝包出貨（不在 electron-builder 的 files 允許清單內）
+
+### 三語 i18n 層（`src/i18n/`）
+- `src/i18n/translations.js` 為核心，依語言合併 `src/i18n/keys/` 下各功能模組的翻譯片段（common/login/nav/pos/settings/inventory/members/purchase/reports/kasbon）
+- `src/i18n/formatting.js` 負責 Rupiah/日期時間格式化；`src/i18n/LanguageSwitcher.jsx` 三顆按鈕切換 印尼文（ID）/ 英文（EN）/ 中文，切換後整頁 reload 讓 `t()` 全部生效
+- `src/hooks/useIsMobile.js` 共用行動裝置偵測 hook；`src/utils/stock.js` 統一低庫存/缺貨判定語意；`src/components/SyncStatusBadge.jsx` 顯示雲端同步狀態徽章
+- 補齊架構圖中原本沒列出的既有 utils：`src/utils/analytics.js`、`csv.js`、`webhook.js`、`categories.js`、`cloudSync.js`、`supabaseClient.js`
 
 ## v2.5.0 第三輪 audit 修正（重點）
 
@@ -28,7 +46,7 @@
 - `BarcodeScannerModal`：修 StrictMode 兩次掛載的鏡頭洩漏（本實例專屬 + 先判 running 再鎖 stopping）。
 - `StocktakePage`：把 `setScanFeedback` 移出 `setCounts` updater（用 countsRef）；input ref 卸載時清除；export 改用共用 `stringifyCSV`。
 - 共用 `useIsMobile`（`src/hooks/useIsMobile.js`，matchMedia，取代 4 份各自監聽 resize 的複本）；POSPage 商品過濾 `useMemo`；CartPanel 會員選取改用 `onSelectMember` prop（移除 `onFindMember._select` 反模式）；content-visibility intrinsic-size 調準 + 手機購物車/FAB 加 safe-area。
-- 測試：57 → 70（新增退貨沖回 COGS、折抵不虛減現金、時區到期、CSV 貨幣/四捨五入、RFM 退貨、webhook NaN 等回歸測試）。
+- 測試：新增退貨沖回 COGS、折抵不虛減現金、時區到期、CSV 貨幣/四捨五入、RFM 退貨、webhook NaN 等回歸測試，現行測試套件共 134 個（8 個測試檔）全綠。
 
 ## v2.4.0 新增功能
 
@@ -112,13 +130,27 @@ pos-system/
 │   ├── database.js    ← better-sqlite3 schema + CRUD（核心！）
 │   ├── printer.js     ← ESC/POS 熱感印表機 + 錢箱
 │   ├── barcode.js     ← JsBarcode 條碼產生
-│   └── server.js      ← Express + WebSocket（顧客點餐用，含 cloudflared tunnel）
+│   ├── server.js      ← Express + WebSocket（顧客點餐用，含 cloudflared tunnel）
+│   ├── kasbon-routes.js  ← Kasbon 賒帳 HTTP 路由（限本機呼叫，loopback only）
+│   ├── kasbon-shared.js  ← Kasbon 商業邏輯（IPC + HTTP 共用，純 CJS）
+│   └── license.js        ← 授權金鑰驗證（Ed25519 簽章，只內嵌公鑰）
+│
+├── tools/             ← 開發者/店家專用離線 CLI（不隨安裝包出貨）
+│   └── generate-license.js  ← 簽發 Kasbon 分級授權碼（私鑰留在本機，gitignored）
 │
 ├── src/               ← React 前端
 │   ├── App.jsx        ← 路由 + 登入檢查
 │   ├── main.jsx       ← 入口（initTheme + ErrorBoundary）
 │   ├── store/
 │   │   └── useStore.js ← 全域狀態 + 所有業務邏輯（重要！）
+│   ├── hooks/
+│   │   └── useIsMobile.js   ← 共用行動裝置偵測（matchMedia）
+│   ├── i18n/          ← 三語（印尼文/英文/中文）i18n 層
+│   │   ├── translations.js  ← 核心，依語言合併 keys/ 下各模組翻譯
+│   │   ├── formatting.js    ← Rupiah / 日期時間格式化
+│   │   ├── LanguageSwitcher.jsx ← ID/EN/中文 切換（切換後 reload）
+│   │   ├── index.js         ← 統一匯出（t / fmtMoney / formatDate 等）
+│   │   └── keys/            ← 各功能模組翻譯片段（common/login/nav/pos/settings/inventory/members/purchase/reports/kasbon）
 │   ├── pages/         ← 各頁面
 │   │   ├── DashboardPage    ← 首頁儀表板
 │   │   ├── POSPage          ← 收銀台
@@ -128,6 +160,7 @@ pos-system/
 │   │   ├── PurchasePage     ← 進貨 + 應付帳款
 │   │   ├── PromotionsPage   ← 促銷
 │   │   ├── MembersPage      ← 會員（含儲值/退貨）
+│   │   ├── KastonPage       ← Kasbon 賒帳/信用額度（含還款、AR 帳齡報表）
 │   │   ├── ReportsPage      ← 報表 + ABC 分類 + Excel 匯出
 │   │   ├── AccountingPage   ← 會計帳務（複式記帳）
 │   │   ├── OrdersPage       ← 顧客點餐管理
@@ -140,13 +173,25 @@ pos-system/
 │   │   ├── RefundModal      ← 退貨對話框
 │   │   ├── HeldOrdersModal  ← 掛單列表
 │   │   ├── PriceLookupModal ← 快速查價 (F1)
+│   │   ├── SyncStatusBadge  ← 雲端同步狀態徽章
+│   │   ├── BarcodeScannerModal ← 相機條碼掃描（lazy load）
 │   │   └── ErrorBoundary    ← React 錯誤捕捉
+│   ├── types/
+│   │   └── kasbon.ts        ← Kasbon 型別 + KASBON_LIMITS 分級額度定義
 │   └── utils/
 │       ├── dataAccess.js    ← SQLite ↔ localStorage 抽象層（重要！）
 │       ├── accounting.js    ← 會計引擎（複式記帳、損益表、資產負債表）
 │       ├── security.js      ← PBKDF2 密碼 + RBAC + 稽核日誌 + 備份
 │       ├── theme.js         ← 主題切換
-│       └── exportXLS.js     ← Excel 匯出工具
+│       ├── exportXLS.js     ← Excel 匯出工具
+│       ├── stock.js         ← 低庫存/缺貨判定語意（全案唯一標準）
+│       ├── analytics.js     ← 銷售速度/AI 補貨/RFM/熱賣滯銷分析（pure functions）
+│       ├── csv.js           ← CSV 匯入匯出 parser
+│       ├── webhook.js       ← Discord/Slack 通用 webhook 通知
+│       ├── categories.js    ← 商品分類（17 個預設分類 + emoji）
+│       ├── cloudSync.js     ← 雲端同步 pushAll()/pullAll()
+│       ├── supabaseClient.js ← Supabase 客戶端（設定存 localStorage，也支援 env）
+│       └── kasbon-validation.js ← Kasbon 表單/金額驗證
 │
 ├── public/menu/       ← 顧客手機點餐頁面（vanilla HTML/JS）
 ├── build/             ← App icon (icon.ico, icon.png)
@@ -174,6 +219,9 @@ pos-system/
 - `cash_log` 現金流水
 - `waste_log` 損耗紀錄
 - `member_topups` 會員儲值紀錄
+- `kasbon_records` Kasbon 賒帳主檔（memberId、transactionType、status、principalAmount、paidAmount、dueDate）
+- `kasbon_payments` Kasbon 還款紀錄（FK → kasbon_records，ON DELETE CASCADE）
+- `member_kasbon_balance` 會員賒帳彙總（totalCredit、totalPaid、balanceDue、isBlacklisted）
 - `suppliers` `purchases` `promotions` `users` `audit_log` `manual_journal` `backups` `settings`
 
 **改 schema 的標準作法**：
